@@ -54,7 +54,7 @@
 #--------------------------------------------
 
 #List of future enhancements
-# Move to www.github.com/kimmeyh repository
+# 02/10/2025 Harold Kimmey Completeed move to www.github.com/kimmeyh/spamfilter.git repository
 # Add "easy to add to Outlook Rules"
 #  - Track all the "No conditions or phishing indicators found" as you go by Outlook Rule:
 #     - so that you can write a summary at the end, keep a record for each of From:, Subject:, Body:, Header:
