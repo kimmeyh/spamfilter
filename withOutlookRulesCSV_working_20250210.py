@@ -21,9 +21,6 @@
 # 2. Run the script - it will automatically target the Bulk Mail folder
 # 3. Suspicious emails will be moved to a "Security Review" subfolder within Bulk Mail
 
-# Todo
-# Convert from using win32com to using o365
-# from O365 import Account
 
 # credentials = ('your_client_id', 'your_client_secret')
 # account = Account(credentials)
@@ -55,6 +52,9 @@
 #     print(result.get("error"))
 #     print(result.get("error_description"))
 #--------------------------------------------
+
+#List of future enhancements
+# Move to www.github.com/kimmeyh repository
 # Add "easy to add to Outlook Rules"
 #  - Track all the "No conditions or phishing indicators found" as you go by Outlook Rule:
 #     - so that you can write a summary at the end, keep a record for each of From:, Subject:, Body:, Header:
@@ -66,9 +66,18 @@
 # Add ability to do auto-updates to the Outlook Rules for SpamAutoDeleteBody to list of Conditions_obj.Body.Text: add both .<domain>. and /<domain>.
 # Add ability to do auto-updates to the Outlook Rule for SpamAutoDeleteHeader to list of Conditions_obj.MessageHeader.Text: from From: trimmed to "@<domain>."
 # Export rules so that they can be maintained in a seperate JSON file (the can be tranferred between machines and platforms (Windows, Mac, Linux, Android, iOS, etc.))
+#   Spam filter rules
+#   Safe Senders, Safe recipients, Blocked Senders, contacts
+#   implement: disable rules for spam and phishing rules before deleting
+#   Warning about supicious domain names and email addresses
+#   safe sender domains and email addresses (pull from header "From")
+#       use after @ and match domain exactly, but partials, ex. %.microsoft.com...
+#   import contacts and trust email from contacts
+#   implement flag for automatically add people I email to safe senders list
+#   implement "Blocked Senders" or incorporate into header rules
+#   implement international rules (block all but a few "organizations" "*.jp" to Bulk Mail)
+# (not in this order, probably later) Convert from using win32com to using o365
 #
-# Possible future enhancements:
-# Move to www.github.com/kimmeyh repository
 # Successfully export rules to a CSV file that logically matches the JSON object at the end of the run
 # Successfully import rules from the CSV file at the beginning of the run that matches the JSON object from get_outlook_rules
 # Start to use the CSV file as the primary source of rules
@@ -78,6 +87,7 @@
 #   read from CSV and convert back to JSON object
 #   add field to rules JSON for outlook "flag" to be applied
 #   add rules from outlook for Junk Email "Safe Senders", "Safe Recipients" and "Blocked Snders"
+# For Outlook only - may have to async the delete and try 10 times with 1 second delay - get around "can't delete because message has been changed error"
 # Change to a phone app that processes emails from cloud provider email accounts:  aol, gmail, yahoo, etc.
 #   - in a language that can be used on all platforms:  Android, iOS, Windows, Mac, Linux
 #   - use the same JSON rules file for all platforms
@@ -1106,6 +1116,100 @@ class OutlookSecurityAgent:
 
         return indicators
 
+    def delete_email_with_retry(self, email, max_retries=10, delay=1):
+        """
+        Attempt to delete an email with retries.
+
+        Args:
+            email: The email object to delete.
+            max_retries: Maximum number of retries.
+            delay: Delay between retries in seconds.
+        """
+
+        import time
+        for attempt in range(max_retries):
+            try:
+                email.Delete()
+                self.log_print(f"Email deleted successfully on attempt {attempt + 1}")
+                return
+            except Exception as e:
+                self.log_print(f"Error deleting email on attempt {attempt + 1}: {str(e)}")
+                if attempt < max_retries - 1:
+                    time.sleep(delay)
+                else:
+                    raise
+        return
+
+    def mark_email_read_with_retry(self, email, max_retries=10, delay=1):
+        """
+        Attempt to mark an email as unread with retries.
+
+        Args:
+            email: The email object to mark as unread.
+        """
+
+        import time
+        for attempt in range(max_retries):
+            try:
+                if email.UnRead:
+                    email.UnRead = False
+                    email.Save()
+                    self.log_print(f"Email marked as read successfully on attempt  {attempt + 1}")
+                return
+            except Exception as e:
+                self.log_print(f"Error marking email as read on attempt {attempt + 1}: {str(e)}")
+                if attempt < max_retries - 1:
+                    time.sleep(delay)
+                else:
+                    raise
+        return
+
+    def clear_email_flag_with_retry(self, email, max_retries=10, delay=1):
+        """
+        Attempt to clear the flag on an email; with with retries.
+
+        Args:
+            email: The email object to clear the flag.
+        """
+
+        import time
+        for attempt in range(max_retries):
+            try:
+                email.Flag.Clear()
+                # email.Save()
+                self.log_print(f"Email flag cleared successfully on attempt  {attempt + 1}")
+                return
+            except Exception as e:
+                self.log_print(f"Error clearing flag on email on attempt {attempt + 1}: {str(e)}")
+                if attempt < max_retries - 1:
+                    time.sleep(delay)
+                else:
+                    raise
+        return
+
+    def assign_category_to_email_with_retry(self, email, category_name, max_retries=10, delay=1):
+        """
+        Attempt to mark an email as unread with retries.
+
+        Args:
+            email: The email object to mark as unread.
+        """
+
+        import time
+        for attempt in range(max_retries):
+            try:
+                email.Categories = category_name
+                email.Save()
+                self.log_print(f"Email category {category_name} assigned successfully on attempt  {attempt + 1}")
+                return
+            except Exception as e:
+                self.log_print(f"Error assigning {category_name} to email on attempt {attempt + 1}: {str(e)}")
+                if attempt < max_retries - 1:
+                    time.sleep(delay)
+                else:
+                    raise
+        return
+
     def process_emails(self, rules_json, days_back=DAYS_BACK_DEFAULT):
         """Process emails based on the rules in the rules_json object"""
         self.log_print(f"\n\nStarting email processing")
@@ -1293,17 +1397,24 @@ class OutlookSecurityAgent:
                             #     email.Save()
                             # self.log_print(f"Email assigned to category '{category_name}'")
                             if 'assign_to_category' in actions and actions['assign_to_category']['category_name']:
-                                # ***category name is now being added to the rules JSON object during get_outlook_rules
-                                email.Categories = actions['assign_to_category']['category_name']
-                                email.Save()
-                                self.log_print(f"Email assigned to category '{actions['assign_to_category']['category_name']}'")
+                                try: # to assign category based on rule name
+                                    category_name = actions['assign_to_category']['category_name']
+                                    self.assign_category_to_email_with_retry(email, category_name)
+                                    self.log_print(f"Email assigned to category '{category_name}'", "DEBUG")
+                                except Exception as e:
+                                    self.log_print(f"Error assigning category to email: {str(e)}")
+                                # # ***category name is now being added to the rules JSON object during get_outlook_rules
+                                # email.Categories = actions['assign_to_category']['category_name']
+                                # email.Save()
+                                # self.log_print(f"Email assigned to category '{actions['assign_to_category']['category_name']}'")
                             if 'mark_as_read' in actions and actions['mark_as_read']:
                                 # this flag is not being passed by outlook, so will never be set.  Keeping in case fixed in the future
-                                email.UnRead = False
-                                self.log_print("Email marked as read")
+                                if email.UnRead:
+                                    self.mark_email_read_with_retry(email)
+                                    self.log_print("Email marked as read")
                             if 'clear_flag' in actions and actions['clear_flag']:
                                 # this flag is not being passed by outlook, so will never be set.  Keeping in case fixed in the future
-                                email.Flag.Clear()
+                                self.clear_email_flag_with_retry(email)
                                 self.log_print("Email flag cleared")
                             if 'set_importance' in actions and actions['set_importance']['importance_level']:
                                 email.Importance = actions['set_importance']['importance_level']
@@ -1365,28 +1476,39 @@ class OutlookSecurityAgent:
                                 self.log_print("Stopping processing more rules")
                                 # this flag is not being passed by outlook, so will never be set.  Keeping in case fixed in the future
                             if 'delete' in actions and actions['delete']:
-                                if email.UnRead:
-                                    email.UnRead = False  # Delete implies marking the item as read
-                                    self.log_print(f"Email marked as read", "DEBUG")
-                                if hasattr(email, 'Flag'):
-                                    email.Flag.Clear()      # Delete implies clearing the flag
-                                    self.log_print(f"Email flag was cleared", "DEBUG")
-                                # assign category based on rule name
-                                try:
-                                    rule_name = rule['name']
-                                    category_name = self.rule_to_category.get(rule_name, actions['assign_to_category']['category_name'])
-                                    email.Categories = category_name
-                                    email.Save()
-                                    self.log_print(f"Email assigned to category '{category_name}'", "DEBUG")
-                                except Exception as e:
-                                    self.log_print(f"Error assigning category to email: {str(e)}")
+                                try: #to mark email as read if unread
+                                    if email.UnRead:
+                                        self.mark_email_read_with_retry(email)
+                                        # email.UnRead = False  # Delete implies marking the item as read
+                                        self.log_print(f"Email marked as read", "DEBUG")
+                                except:
+                                    self.log_print(f"Error marking email as read", "DEBUG")
+
+                                try: #to clear the flag on email
+                                    if hasattr(email, 'Flag'):
+                                        self.clear_email_flag_with_retry(email)
+                                        # email.Flag.Clear()      # Delete implies clearing the flag
+                                        self.log_print(f"Email flag was cleared", "DEBUG")
+                                except:
+                                    self.log_print(f"Error clearing flag", "DEBUG")
+
+                                # Now always done in category assignment above and no longer needed here.
+                                # try: # to assign category based on rule name
+                                #     rule_name = rule['name']
+                                #     category_name = self.rule_to_category.get(rule_name, actions['assign_to_category']['category_name'])
+                                #     self.assign_category_to_email_with_retry(email, category_name)
+                                #     # email.Categories = category_name
+                                #     # email.Save()
+                                #     self.log_print(f"Email assigned to category '{category_name}'", "DEBUG")
+                                # except Exception as e:
+                                #     self.log_print(f"Error assigning category to email: {str(e)}")
 
                                 try:
                                     # delete email
-                                    email.Delete()
+                                    self.delete_email_with_retry(email)
                                     email_deleted = True
                                     deleted_total += 1
-                                    self.log_print("Email: marked as read, flag cleared and deleted")
+                                    self.log_print("Email marked as read, flag cleared and deleted")
                                     # self.simple_print(f"Deleted email from: {self._sanitize_string(email.SenderEmailAddress)}")
                                     # delete implies "Stop Processing More Rules".  Continue will go to next email
                                 except Exception as e:
