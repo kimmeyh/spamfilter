@@ -1,0 +1,7 @@
+
+#HK 20241023 Initial
+pywin32
+o365            # also installed: urllib3, tzdata, soupsieve, PyJWT, pycparser, oauthlib, idna, charset-normalizer, certifi,
+                #   tzlocal, requests, cffi, beautifulsoup4, requests-oauthlib, cryptography, o365, msal
+requests        # Already installed via O365, but will use directly
+msal
