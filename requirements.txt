@@ -5,3 +5,4 @@ o365            # also installed: urllib3, tzdata, soupsieve, PyJWT, pycparser, 
                 #   tzlocal, requests, cffi, beautifulsoup4, requests-oauthlib, cryptography, o365, msal
 requests        # Already installed via O365, but will use directly
 msal
+PyYAML          # all other requirements are already installed

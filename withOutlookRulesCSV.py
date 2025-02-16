@@ -1,4 +1,7 @@
+# HK 02/15/25 Add YAML rules exports of outlook rules
+# HK 02/15/25 All working as expected
 # HK 01/24/25 All working as expected
+#
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
 
 # 1. Account/Folder Targeting:
@@ -55,6 +58,22 @@
 
 #List of future enhancements
 # 02/10/2025 Harold Kimmey Completeed move to www.github.com/kimmeyh/spamfilter.git repository
+# 02/15/2025 Harold Kimmey Start YAML rules exports of outlook rules to YAML files
+#     body, header, subject rules
+    # Export rules so that they can be maintained in a separate YAML file (the can be transferred between machines and platforms (Windows, Mac, Linux, Android, iOS, etc.))
+    #   Spam filter rules
+    #   Safe Senders, Safe recipients, Blocked Senders, contacts
+    #   implement: disable rules for spam and phishing rules before deleting
+    #   Warning about suspicious domain names and email addresses
+    #   safe sender domains and email addresses (pull from header "From")
+    #       use after @ and match domain exactly, but partials, ex. %.microsoft.com...
+    #   import contacts and trust email from contacts
+    #   implement flag for automatically add people I email to safe senders list
+    #   implement "Blocked Senders" or incorporate into header rules
+    #   implement international rules (block all but a few "organizations" "*.jp" to Bulk Mail)
+# Convert all rules interpretation to be exact strings unless regex content '(i?)" is found, F
+#    then assume they are regex
+#
 # Add "easy to add to Outlook Rules"
 #  - Track all the "No conditions or phishing indicators found" as you go by Outlook Rule:
 #     - so that you can write a summary at the end, keep a record for each of From:, Subject:, Body:, Header:
@@ -65,17 +84,8 @@
 #   Subject/From - one line with From: trimmed to "@<domain>.", Subject: <subject>
 # Add ability to do auto-updates to the Outlook Rules for SpamAutoDeleteBody to list of Conditions_obj.Body.Text: add both .<domain>. and /<domain>.
 # Add ability to do auto-updates to the Outlook Rule for SpamAutoDeleteHeader to list of Conditions_obj.MessageHeader.Text: from From: trimmed to "@<domain>."
-# Export rules so that they can be maintained in a seperate JSON file (the can be tranferred between machines and platforms (Windows, Mac, Linux, Android, iOS, etc.))
-#   Spam filter rules
-#   Safe Senders, Safe recipients, Blocked Senders, contacts
-#   implement: disable rules for spam and phishing rules before deleting
-#   Warning about supicious domain names and email addresses
-#   safe sender domains and email addresses (pull from header "From")
-#       use after @ and match domain exactly, but partials, ex. %.microsoft.com...
-#   import contacts and trust email from contacts
-#   implement flag for automatically add people I email to safe senders list
-#   implement "Blocked Senders" or incorporate into header rules
-#   implement international rules (block all but a few "organizations" "*.jp" to Bulk Mail)
+#
+# ----------------------------------------------------
 # (not in this order, probably later) Convert from using win32com to using o365
 #
 # Successfully export rules to a CSV file that logically matches the JSON object at the end of the run
@@ -117,6 +127,7 @@ import sys
 import json
 import os
 import csv
+import yaml
 
 #Imports for packages that need to be installed
 import win32com.client
@@ -135,6 +146,18 @@ OUTLOOK_SECURITY_LOG = OUTLOOK_SECURITY_LOG_PATH + "OutlookRulesProcessingDEBUG_
 OUTLOOK_SIMPLE_LOG = OUTLOOK_SECURITY_LOG_PATH + "OutlookRulesProcessingSimple.log"
 OUTLOOK_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
 OUTLOOK_RULES_FILE = OUTLOOK_RULES_PATH + "outlook_rules.csv"
+YAML_RULES_PATH                 = f"D:/data/harold/github/OutlookMailSpamFilter/"
+YAML_RULES_ALL_FILE             = YAML_RULES_PATH + "rules_all.yaml"
+YAML_RULES_BODY_FILE            = YAML_RULES_PATH + "rules_body.yaml"
+YAML_RULES_HEADER_FILE          = YAML_RULES_PATH + "rules_header.yaml"
+YAML_RULES_SUBJECT_FILE         = YAML_RULES_PATH + "rules_subject.yaml"
+YAML_RULES_SPAM_FILTER_FILE     = YAML_RULES_PATH + "rules_spam_filter.yaml"
+YAML_RULES_SAFE_SENDERS_FILE    = YAML_RULES_PATH + "rules_safe_senders.yaml"
+YAML_RULES_SAFE_RECIPIENTS_FILE = YAML_RULES_PATH + "rules_safe_recipients.yaml"
+YAML_RULES_BLOCKED_SENDERS_FILE = YAML_RULES_PATH + "rules_blocked_senders.yaml"
+YAML_RULES_CONTACTS_FILE        = YAML_RULES_PATH + "rules_contacts.yaml"           # periodically review email account contacts and update
+YAML_RULES_EMAIL_TO_FILE        = YAML_RULES_PATH + "rules_email_to.yaml"           # periodically review emails sent and add targeted recipients to secondary "Safe Senders" file (name?)
+YAML_INTERNATIONAL_RULES_FILE   = YAML_RULES_PATH + "rules_international.yaml"      # send all but a few "organizations" "*.<>" to Bulk Mail .jp, .cz...
 
 OUTLOOK_RULES_SUBSET = "SpamAutoDelete"
 DAYS_BACK_DEFAULT = 365 #default number of days to go back in the calendar
@@ -147,6 +170,29 @@ def simple_print(message):
             f.write(message + '\n')
     else: #write to the console
         print(message)
+
+def export_rules_yaml (rules_json, rules_yaml):  # try without executing
+    """Export rules to a YAML file"""
+    import yaml
+
+    try:
+        with open(rules_yaml, 'w') as yaml_file:
+            yaml.dump(rules_json, yaml_file, default_flow_style=False)
+        simple_print(f"Rules exported to {rules_yaml}")
+    except Exception as e:
+        simple_print(f"Error exporting rules to {rules_yaml}: {str(e)}")
+
+def import_rules_yaml(rules_yaml):
+    """Import rules from a YAML file"""
+    import yaml
+    try:
+        with open(rules_yaml, 'r') as yaml_file:
+            rules_json = yaml.safe_load(yaml_file)
+        print(f"Rules imported from {rules_yaml}")
+        return rules_json
+    except Exception as e:
+        print(f"Error importing rules from {rules_yaml}: {str(e)}")
+        return None
 
 class OutlookSecurityAgent:
     def __init__(self, email_address=EMAIL_ADDRESS, folder_name=EMAIL_FOLDER_NAME, debug_mode=DEBUG):
@@ -580,16 +626,17 @@ class OutlookSecurityAgent:
 
     def get_rules(self):
         """Get rules from CSV if available, otherwise from Outlook"""
-        CSV_rules = []
-        CSV_rules = self.import_rules()
-        self.log_print(f"Import rules from CSV ({OUTLOOK_RULES_FILE})")
+        # disabling outlook rules via CSV file - was not working
+        # CSV_rules = []
+        # CSV_rules = self.import_rules()
+        # self.log_print(f"Import rules from CSV ({OUTLOOK_RULES_FILE})")
 
-        outlook_rules = []
+        # outlook_rules = []
         outlook_rules = self.get_outlook_rules()
         self.log_print(f"Import rules from Outlook")
 
         # debugging - compare CSV_rules to Outlook_rules and print the differences between them
-        self.output_rules_differences(outlook_rules, CSV_rules) #outlook rules are currently the primary source
+        # self.output_rules_differences(outlook_rules, CSV_rules) #outlook rules are currently the primary source
 
         # debugging - for this run, set the rules to be from Outlook
         rules = outlook_rules
@@ -1567,6 +1614,8 @@ class OutlookSecurityAgent:
             self.log_print(f"Error in process_emails: {str(e)}")
             raise
 
+
+
 # Main program execution
 def main():
     """Main function to run the security agent"""
@@ -1581,14 +1630,17 @@ def main():
         agent = OutlookSecurityAgent()  # call with defaults
         rules_json = agent.get_rules()  # updated for new CSV code - was get_outlook_rules()
         rules_before = rules_json
-        simple_print(f"JSON Rules\n{rules_json}") if DEBUG else None
+        #simple_print(f"JSON Rules\n{rules_json}") if DEBUG else None
 
         # Process last N days of emails - see DAYS_BACK_DEFAULT
         agent.process_emails(rules_json)
 
         # Export rules if they've been updated
-        if rules_before != rules_json:
-            agent.export_rules()
+        # if rules_before != rules_json:
+        #     agent.export_rules()
+
+        export_rules_yaml(rules_json, YAML_RULES_ALL_FILE)
+
 
         simple_print(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}")
         simple_print(f"=============================================================\n")
