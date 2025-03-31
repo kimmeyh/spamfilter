@@ -78,13 +78,13 @@
 #   implement international rules (block all but a few "organizations" "*.jp" to Bulk Mail)
 # (not in this order, probably later) Convert from using win32com to using o365
 #
-# Successfully export rules to a CSV file that logically matches the JSON object at the end of the run
-# Successfully import rules from the CSV file at the beginning of the run that matches the JSON object from get_outlook_rules
-# Start to use the CSV file as the primary source of rules
+# Successfully export rules to a yaml file that logically matches the JSON object at the end of the run
+# Successfully import rules from the yaml file at the beginning of the run that matches the JSON object from get_outlook_rules
+# Start to use the yaml file as the primary source of rules
 # Add logic to add items to the rules JSON object via user input at the end of the run
-#   - verify that the CSV file is updated with the new rules and can read them back in successfully
-# Move all the appropriate rules to a CSV file structure
-#   read from CSV and convert back to JSON object
+#   - verify that the yaml file is updated with the new rules and can read them back in successfully
+# Move all the appropriate rules to a yaml file structure
+#   read from yaml and convert back to JSON object
 #   add field to rules JSON for outlook "flag" to be applied
 #   add rules from outlook for Junk Email "Safe Senders", "Safe Recipients" and "Blocked Snders"
 # For Outlook only - may have to async the delete and try 10 times with 1 second delay - get around "can't delete because message has been changed error"
@@ -116,7 +116,7 @@ import logging
 import sys
 import json
 import os
-import csv
+import yaml
 
 #Imports for packages that need to be installed
 import win32com.client
@@ -135,7 +135,8 @@ OUTLOOK_SECURITY_LOG = OUTLOOK_SECURITY_LOG_PATH + "OutlookRulesProcessingDEBUG_
 OUTLOOK_SIMPLE_LOG = OUTLOOK_SECURITY_LOG_PATH + "OutlookRulesProcessingSimple.log"
 OUTLOOK_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
 OUTLOOK_RULES_FILE = OUTLOOK_RULES_PATH + "outlook_rules.csv"
-
+YAML_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
+YAML_RULES_FILE = YAML_RULES_PATH + "rules.yaml"
 OUTLOOK_RULES_SUBSET = "SpamAutoDelete"
 DAYS_BACK_DEFAULT = 365 #default number of days to go back in the calendar
 
@@ -299,9 +300,9 @@ class OutlookSecurityAgent:
             'modified_rules': modified_rules
         }
 
-    def output_rules_differences(self, outlook_rules, CSV_rules):
-        """Output the differences between CSV_rules and outlook_rules"""
-        differences = self.compare_rules(outlook_rules, CSV_rules)
+    def output_rules_differences(self, outlook_rules, yaml_rules):
+        """Output the differences between yaml_rules and outlook_rules"""
+        differences = self.compare_rules(outlook_rules, yaml_rules)
 
         # Print the differences
         if differences['rules_only_in_1']:
@@ -310,7 +311,7 @@ class OutlookSecurityAgent:
                 self.log_print(f"- {rule['name']}")
 
         if differences['rules_only_in_2']:
-            self.log_print("\nRules only in CSV_Rules set:")
+            self.log_print("\nRules only in yaml_Rules set:")
             for rule in differences['rules_only_in_2']:
                 self.log_print(f"- {rule['name']}")
 
@@ -327,7 +328,6 @@ class OutlookSecurityAgent:
         Convert Outlook rules to JSON format with comprehensive error checking.
         Returns a list of rule dictionaries with all available properties.
         """
-        self.log_print("Converting Outlook rules to JSON format...")
         rules_json = []
         rules_dict = {}
         timestamp = datetime.now().isoformat()
@@ -340,8 +340,12 @@ class OutlookSecurityAgent:
             #   Also, the "AssignToCategory" is not returning the category name
 
             # Get all rules that start with the subset name
-            outlook_rules = [rule for rule in self.outlook.Session.DefaultStore.GetRules() if rule.Name.startswith(OUTLOOK_RULES_SUBSET)]
-
+            self.log_print("Importing Outlook rules and converting to JSON format...")
+            outlook_rules_raw = self.outlook.Session.DefaultStore.GetRules()
+            if outlook_rules_raw is None:
+                self.log_print("Error: No rules found in Outlook. Ensure rules are configured.")
+                return []
+            outlook_rules = [rule for rule in outlook_rules_raw if rule.Name.startswith(OUTLOOK_RULES_SUBSET)]
             self.log_print(f"Processing {len(outlook_rules)} rules...")
 
             for rule in outlook_rules:
@@ -404,89 +408,50 @@ class OutlookSecurityAgent:
             return json.dumps({"error": str(e)})
 
 
-    def import_rules(self, rules_file=OUTLOOK_RULES_FILE):
-        """Import rules from CSV file and return as JSON object (not string)"""
-        self.log_print("Converting CSV rules to JSON format...")
+    def get_yaml_rules(self, rules_file):
+        """Import rules from yaml file and return as JSON object (not string)"""
+        self.log_print("Importing rules from YAML file...")
         try:
             if not os.path.exists(rules_file):
-                self.log_print("Rules CSV file not found")
-                return None
+                self.log_print(f"Rules YAML file not found: {rules_file}")
+                return []
 
-            rules_dict = {}
+            # Read YAML file and convert to Python object
+            with open(rules_file, 'r', encoding='utf-8') as yaml_file:
+                rules = yaml.safe_load(yaml_file)
+
+            if not rules:
+                self.log_print("No rules found in YAML file")
+                return []
+
+            # Ensure rules is a list
+            if not isinstance(rules, list):
+                rules = [rules]
+
+            # Update timestamp for each rule
             timestamp = datetime.now().isoformat()
+            for rule in rules:
+                if isinstance(rule, dict):
+                    rule['last_modified'] = timestamp
 
-            with open(rules_file, 'r', encoding='utf-8', newline='') as f:
-                reader = csv.DictReader(f)
+            self.log_print(f"Successfully imported {len(rules)} rules from YAML file")
 
-                for row in reader:
-                    rule_name = row['rule_name']
-
-                    # Initialize rule if we haven't seen it before
-                    if rule_name not in rules_dict:
-                        rules_dict[rule_name] = {
-                            'name': rule_name,
-                            'enabled': row['enabled'].lower() == 'true',
-                            'isLocal': True,
-                            'executionOrder': int(row['execution_order']),
-                            'conditions': {
-                                'from': [],
-                                'subject': [],
-                                'body': [],
-                                'header': []
-                            },
-                            'actions': {
-                                'move_to_folder': {'folder_path': None, 'folder_name': None},
-                                'copy_to_folder': {'folder_path': None, 'folder_name': None},
-                                'assign_to_category': {'category_name': None},
-                                'delete': row['action_delete'].lower() == 'true',
-                                'forward': [],
-                                'redirect': [],
-                                'play_sound': {'sound_file': None},
-                                'mark_as_task': {'task_due_date': None}
-                            },
-                            'exceptions': {
-                                'from': [],
-                                'subject': [],
-                                'body': [],
-                                'header': []
-                            },
-                            'last_modified': timestamp  # Add last_modified with default timestamp
-                        }
-
-                    # Get the value and unescape if needed
-                    value = row['condition_value']
-                    if row['needs_special_handling'].lower() == 'true':
-                        value = self._unescape_pattern(value)
-
-                    # Add to either conditions or exceptions
-                    if row['is_exception'].lower() == 'true':
-                        rules_dict[rule_name]['exceptions'][row['condition_type']].append(value)
-                    else:
-                        rules_dict[rule_name]['conditions'][row['condition_type']].append(value)
-
-            # Convert dictionary to list of rules
-            #rules = json.dumps(list(rules_dict.values()))
-
-            # Convert to JSON object of rules
-            rules = json.loads(json.dumps(rules_dict))
-            ###*** something wrong here, maybe all should export json dumps than JSON object...???
-
-            self.log_print(f"Successfully imported {len(rules)} rules from CSV")
-
-            return rules  # Return a JSON object of the rules
+            # Convert to JSON-compatible structure
+            rules_json = json.loads(json.dumps(rules, default=str))
+            return rules_json
 
         except Exception as e:
-            self.log_print(f"Error importing rules from CSV: {str(e)}")
+            self.log_print(f"Error importing rules from YAML: {str(e)}")
             self.log_print(f"Error details: {str(e.__class__.__name__)}")
             import traceback
             self.log_print(f"Traceback: {traceback.format_exc()}")
-            return None
+            return []
 
-    def export_rules(self, rules_json=None, rules_file=OUTLOOK_RULES_FILE):
-        """Export Outlook rules to CSV file"""
+    def export_rules(self, rules_json=None, rules_file=YAML_RULES_FILE):
+        """Export Outlook rules to yaml file"""
         try:
             if rules_json is None:   #this should never happen
-                self.log_print("Rules JSON is Empty, do not overwrite rules_file CSV and exit with error")
+                self.log_print("Rules JSON is Empty, do not overwrite rules_file yaml and exit with error")
                 return None
 
             # Convert rules_json to JSON object if it's a string or dict
@@ -504,70 +469,15 @@ class OutlookSecurityAgent:
             rules = json.loads(rules_json) if isinstance(rules_json, str) else rules_json
             self.log_print(f"Processing {len(rules)} rules")
 
-            with open(OUTLOOK_RULES_FILE, 'w', encoding='utf-8', newline='') as f:
-                writer = csv.DictWriter(f, fieldnames=[
-                    'last_modified',
-                    'rule_name',
-                    'enabled',
-                    'execution_order',
-                    'condition_type',
-                    'condition_value',
-                    'is_exception',
-                    'action_delete',
-                    'needs_special_handling'
-                ])
-                writer.writeheader()
+            # 03/31/2025 Harold Kimmey Write json_rules to YAML file
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(rules_file), exist_ok=True)
 
-                timestamp = datetime.now().isoformat()
+            # Convert JSON object to YAML and write to file
+            with open(rules_file, 'w', encoding='utf-8') as yaml_file:
+                yaml.dump(rules, yaml_file, sort_keys=False, default_flow_style=False)
 
-                # Process each rule
-                for rule in rules:
-                    rule_name = rule['name']
-                    enabled = rule['enabled']
-                    execution_order = rule['executionOrder']
-                    delete_action = rule['actions']['delete']
-
-                    # Process conditions
-                    for cond_type in ['from', 'subject', 'body', 'header']:
-                        values = rule['conditions'].get(cond_type, [])
-                        if values:  # Only process if there are values
-                            for value in values:
-                                if isinstance(value, dict) and 'address' in value:
-                                    value = value['address']
-                                escaped_value, needs_special = self._escape_pattern(str(value))
-                                writer.writerow({
-                                    'last_modified': timestamp,
-                                    'rule_name': rule_name,
-                                    'enabled': str(enabled).lower(),
-                                    'execution_order': execution_order,
-                                    'condition_type': cond_type,
-                                    'condition_value': escaped_value,
-                                    'is_exception': 'false',
-                                    'action_delete': str(delete_action).lower(),
-                                    'needs_special_handling': str(needs_special).lower()
-                                })
-
-                    # Process exceptions
-                    for exc_type in ['from', 'subject', 'body', 'header']:
-                        values = rule['exceptions'].get(exc_type, [])
-                        if values:  # Only process if there are values
-                            for value in values:
-                                if isinstance(value, dict) and 'address' in value:
-                                    value = value['address']
-                                escaped_value, needs_special = self._escape_pattern(str(value))
-                                writer.writerow({
-                                    'last_modified': timestamp,
-                                    'rule_name': rule_name,
-                                    'enabled': str(enabled).lower(),
-                                    'execution_order': execution_order,
-                                    'condition_type': exc_type,
-                                    'condition_value': escaped_value,
-                                    'is_exception': 'true',
-                                    'action_delete': str(delete_action).lower(),
-                                    'needs_special_handling': str(needs_special).lower()
-                                })
-
-            self.log_print(f"Rules successfully exported to {self.rules_file}")
+            self.log_print(f"Successfully exported {len(rules)} rules to YAML file: {rules_file}")
             return True
 
         except Exception as e:
@@ -579,23 +489,27 @@ class OutlookSecurityAgent:
 
 
     def get_rules(self):
-        """Get rules from CSV if available, otherwise from Outlook"""
-        CSV_rules = []
-        CSV_rules = self.import_rules()
-        self.log_print(f"Import rules from CSV ({OUTLOOK_RULES_FILE})")
+        """Get rules from YAML file if available, otherwise from Outlook"""
+        # 03/31/2025 Harold Kimmey Changing import rules from CSV to YAML file (easy import/export via JSON/YAML)
+
+        YAML_rules = []
+        YAML_rules = self.get_yaml_rules(YAML_RULES_FILE)
+        self.log_print(f"Import rules from YAML ({YAML_RULES_FILE})")
 
         outlook_rules = []
         outlook_rules = self.get_outlook_rules()
         self.log_print(f"Import rules from Outlook")
 
-        # debugging - compare CSV_rules to Outlook_rules and print the differences between them
-        self.output_rules_differences(outlook_rules, CSV_rules) #outlook rules are currently the primary source
+        # debugging - compare YAML_rules to Outlook_rules and print the differences between them
+        #outlook rules are currently the primary source
+        self.output_rules_differences(outlook_rules, YAML_rules)
+
 
         # debugging - for this run, set the rules to be from Outlook
         rules = outlook_rules
 
         #To be moved elsewhere
-        # self.log_print(f"Export rules to CSV ({OUTLOOK_RULES_FILE}): {rules}")
+        # self.log_print(f"Export rules to yaml ({OUTLOOK_RULES_FILE}): {rules}")
         # self.export_rules(rules)
 
         # debugging to show the rules
@@ -608,7 +522,7 @@ class OutlookSecurityAgent:
         return rules
 
     def print_rules_summary(self, rules):   # rules should be a JSON object
-        """Print a summary of all rules in the CSV file"""
+        """Print a summary of all rules in the yaml file"""
         try:
             # add a check to convert to a JSON object (if it a string or dict)
             if isinstance(rules, str) or isinstance(rules, dict):
@@ -1579,7 +1493,7 @@ def main():
 
         # Initialize agent with debug mode enabled
         agent = OutlookSecurityAgent()  # call with defaults
-        rules_json = agent.get_rules()  # updated for new CSV code - was get_outlook_rules()
+        rules_json = agent.get_rules()  # updated for new yaml code - was get_outlook_rules()
         rules_before = rules_json
         simple_print(f"JSON Rules\n{rules_json}") if DEBUG else None
 
