@@ -1,7 +1,10 @@
-# HK 02/15/25 Add YAML rules exports of outlook rules
-# HK 02/15/25 All working as expected
-# HK 01/24/25 All working as expected
-#
+# 02/15/25 Harold Kimmey Add YAML rules exports of outlook rules
+# 02/15/25 Harold Kimmey All working as expected
+# 01/24/25 Harold Kimmey All working as expected
+# 02/10/2025 Harold Kimmey Completeed move to www.github.com/kimmeyh/spamfilter.git repository
+# 02/15/2025 Harold Kimmey Start YAML rules exports of outlook rules to YAML files
+# 02/17/2025 Harold Kimmey Updated _process_actions to accurately pull the assign_to_category value by searching it as an object
+# 03/30/2025 Harold Kimmey All working as expected - commit and PR
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
 
 # 1. Account/Folder Targeting:
@@ -25,18 +28,21 @@
 # 3. Suspicious emails will be moved to a "Security Review" subfolder within Bulk Mail
 
 #--------------------------------------------
-# 02/10/2025 Harold Kimmey Completeed move to www.github.com/kimmeyh/spamfilter.git repository
-# 02/15/2025 Harold Kimmey Start YAML rules exports of outlook rules to YAML files
-# 02/17/2025 Harold Kimmey Updated _process_actions to accurately pull the assign_to_category value by searching it as an object
-
-#List of future enhancements
-#     body, header, subject rules
-# Export rules so that they can be maintained in a separate YAML file (the can be transferred between machines and platforms (Windows, Mac, Linux, Android, iOS, etc.))
+# 03/28/2025 Harold Kimmey Exported rules to JSON so that they can be maintained in a separate YAML file (the can be transferred between machines and platforms (Windows, Mac, Linux, Android, iOS, etc.))
 #   Spam filter rules - done
 #   Safe Senders - done
 #   Safe recipients - done (was empty)
 #   Blocked Senders - very small and were added manually to Outlook Rules - spam body
+# 03/29/2025 Harold Kimmey Add functionality to update YAML rules near the end when new domains are listed
+#       Simple Y/N to add to the "@<domain>" to the header rules in the YAML file
+#       Then make change to use the YAML file as the default (no longer outlook)
+
+#List of future enhancements
+#     body, header, subject rules
+
 # Temporary - before writing rules, add safe recipients from CSV
+# Not sure if I have a full list of OK'd domains and users.  May need to look through emails sent and stored and add - for
+#   when I will go directly against mail.aol.com and need to move messages to Bulk or leave in the inbox
 
 #   Contacts - will need to write this
 # Temporary - before writing rules, add safe recipients from CSV
@@ -758,7 +764,7 @@ class OutlookSecurityAgent:
 
         return None
 
-    def from_report(self, emails_to_process, emails_added_info):
+    def from_report(self, emails_to_process, emails_added_info, rules_json):
         """
         Generate a report of emails with phishing indicators or no rule matches, including the From domain.
 
@@ -797,6 +803,8 @@ class OutlookSecurityAgent:
                     from_domain = self.header_from(email_header)
 
                     output_string = from_domain.ljust(20) + f"| Email {email_index+1:>3} | Matched no rules"
+# 03/29/2025 Harold Kimmey Add functionality to update JSON rules by adding a simple Y/N to add to the "@<domain>"
+# to the header rules in the JSON rules
                     self.log_print(f"{output_string}", level="INFO")
                     simple_print(f"{output_string}")
 
@@ -1185,7 +1193,7 @@ class OutlookSecurityAgent:
                 for url in urls:
                     if 'http' in url.lower():
                         if url.lower() not in email.HTMLBody.lower():
-                            self.log_print(f"Phishing indicator: Found mismatched URL diplay text: {url}")
+                            self.log_print(f"Phishing indicator: Found mismatched URL display text: {url}")
                             indicators.append("Phishing indicator: Found Mismatched URL display text")
                             break
 
@@ -1642,7 +1650,7 @@ class OutlookSecurityAgent:
 
             # Print a list for Phishing OR Match=false with From: "@<domain>.<>" so they can be easily added to the rules
             self.log_print(f"\nProcessing Report of From's from phishing or match = False")
-            self.from_report(emails_to_process, emails_added_info)
+            self.from_report(emails_to_process, emails_added_info, rules_json)
 
             self.log_print(f"\nProcessing Summary:")
             self.log_print(f"Processed {processed_count} emails")
