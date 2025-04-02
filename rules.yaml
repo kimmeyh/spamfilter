@@ -1428,7 +1428,7 @@
     - .openai.com
     - '@lastpass.com'
     subject: []
-  last_modified: '2025-04-02T10:33:21.123110'
+  last_modified: '2025-04-02T10:50:13.589168'
 - name: SpamAutoDeleteBody
   enabled: true
   isLocal: true
@@ -2614,7 +2614,7 @@
       name: billing@lastpass.com
     header: []
     subject: []
-  last_modified: '2025-04-02T10:33:21.123110'
+  last_modified: '2025-04-02T10:50:13.589168'
 - name: SpamAutoDeleteFrom
   enabled: true
   isLocal: true
@@ -2684,7 +2684,7 @@
     - '@lastpass.com'
     - store+61395140851@t.shopifyemail.com
     subject: []
-  last_modified: '2025-04-02T10:33:21.123110'
+  last_modified: '2025-04-02T10:50:13.589168'
 - name: SpamAutoDeleteSubject
   enabled: true
   isLocal: true
@@ -2777,7 +2777,7 @@
     - '@ftc.com'
     - kaggle
     subject: []
-  last_modified: '2025-04-02T10:33:21.123110'
+  last_modified: '2025-04-02T10:50:13.589168'
 - name: SpamAutoDeleteBody-imgur.com
   enabled: true
   isLocal: true
@@ -2832,4 +2832,4 @@
     - kaggle
     - '@ftc.gov'
     subject: []
-  last_modified: '2025-04-02T10:33:21.123110'
+  last_modified: '2025-04-02T10:50:13.589168'

@@ -176,29 +176,6 @@ def simple_print(message):
     else: #write to the console
         print(message)
 
-def export_rules_yaml (rules_json, rules_yaml):  # try without executing
-    """Export rules to a YAML file"""
-    import yaml
-
-    try:
-        with open(rules_yaml, 'w') as yaml_file:
-            yaml.dump(rules_json, yaml_file, default_flow_style=False)
-        simple_print(f"Rules exported to {rules_yaml}")
-    except Exception as e:
-        simple_print(f"Error exporting rules to {rules_yaml}: {str(e)}")
-
-def import_rules_yaml(rules_yaml):
-    """Import rules from a YAML file"""
-    import yaml
-    try:
-        with open(rules_yaml, 'r') as yaml_file:
-            rules_json = yaml.safe_load(yaml_file)
-        print(f"Rules imported from {rules_yaml}")
-        return rules_json
-    except Exception as e:
-        print(f"Error importing rules from {rules_yaml}: {str(e)}")
-        return None
-
 class OutlookSecurityAgent:
     def __init__(self, email_address=EMAIL_ADDRESS, folder_name=EMAIL_FOLDER_NAME, debug_mode=DEBUG):
         """
@@ -382,6 +359,7 @@ class OutlookSecurityAgent:
 
         return
 
+    # NOTE: tried to get the outlook junk email options and lists, but could not get it to work
     # def get_outlook_junk_mail_options(self):
     #     """
     #     Retrieve the Outlook Junk Email Options settings (as shown in Outlook Classic > Home > Junk Email Options > Options)
@@ -413,10 +391,7 @@ class OutlookSecurityAgent:
     #         self.log_print(f"Junk Email Options retrieved: {options_dict}")
     #     return options_dict # will need to be converted and appended to the json rules object
 
-
-    # NOTE: tried to get the outlook junk email options and lists, but could not get it to work
-
-    def get_outlook_rules(self):
+    def get_outlook_rules(self):    # no longer in use unless YAML rules file cannot be read
         """
         Convert Outlook rules to JSON format with comprehensive error checking.
         Returns a list of rule dictionaries with all available properties.
@@ -634,16 +609,11 @@ class OutlookSecurityAgent:
         outlook_rules = self.get_outlook_rules()
 
         # debugging - compare YAML_rules to Outlook_rules and print the differences between them
-        #outlook rules are currently the primary source
         self.output_rules_differences(outlook_rules, YAML_rules)
 
         # debugging - for this run, set the rules to be from Outlook
         #rules = outlook_rules
-        rules = YAML_rules  # no using YAML rules from YAML file as primary source of rules
-
-        #To be moved elsewhere
-        # self.log_print(f"Export rules to yaml ({OUTLOOK_RULES_FILE}): {rules}")
-        # self.export_rules(rules)
+        rules = YAML_rules  # now using YAML rules from YAML file as primary source of rules
 
         # debugging to show the rules
         # self.log_print(f"Rules loaded: {rules}")
@@ -661,7 +631,7 @@ class OutlookSecurityAgent:
             if isinstance(rules, str) or isinstance(rules, dict):
                 rules = json.loads(json.dumps(rules))
 
-            self.log_print("\nRules Summary:")
+            self.log_print(f"{CRLF}Rules Summary:")
             for rule in rules:
                 self.log_print(f"\nRule: {rule['name']} (Enabled: {rule['enabled']})")
                 for cond_type, values in rule['conditions'].items():
@@ -670,7 +640,7 @@ class OutlookSecurityAgent:
                     self.log_print(f"  {cond_type} conditions:")
                     for value in values:
                         self.log_print(f"    - {value}")
-                self.log_print("  Actions:")
+                self.log_print(f"  Actions:")
                 for action, value in rule['actions'].items():
                     self.log_print(f"    - {action}: {value}")
 
