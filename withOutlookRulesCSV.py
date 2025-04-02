@@ -1,6 +1,11 @@
 # HK 01/24/25 All working as expected
 # 02/10/2025 Harold Kimmey Completeed move to www.github.com/kimmeyh/spamfilter.git repository
-# 03/30/2025 Harold Kimmey Added export and import of YAML rules
+# 02/17/2025 Harold Kimmey Updated _process_actions to accurately pull the assign_to_category value by searching it as an object
+# 03/28/2025 Harold Kimmey Exported rules to JSON so that they can be maintained in a separate YAML file (the can be transferred between machines and platforms (Windows, Mac, Linux, Android, iOS, etc.))
+#   Spam filter rules - done
+#   Safe Senders - done
+#   Safe recipients - done (was empty)
+#   Blocked Senders - very small and were added manually to Outlook Rules - spam body# 03/30/2025 Harold Kimmey Added export and import of YAML rules
 # 04/01/2025 Harold Kimmey Verified export of rules from Outloook to YAML file (at exit) matches rules from import of YAML file
 # 04/01/2025 Switch to using YAML file as import instead of Outlook rules
 # 04/01/2025 Committed changes, pushed, PR to Main branch of kimmeyh/spamfilter.git
@@ -151,6 +156,18 @@ OUTLOOK_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
 OUTLOOK_RULES_FILE = OUTLOOK_RULES_PATH + "outlook_rules.csv"
 YAML_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
 YAML_RULES_FILE = YAML_RULES_PATH + "rules.yaml"
+OUTLOOK_SAFE_SENDERS_FILE = OUTLOOK_RULES_PATH + "OutlookSafeSenders.csv"
+# not sure if these will be used
+YAML_RULES_BODY_FILE            = YAML_RULES_PATH + "rules_body.yaml"
+YAML_RULES_HEADER_FILE          = YAML_RULES_PATH + "rules_header.yaml"
+YAML_RULES_SUBJECT_FILE         = YAML_RULES_PATH + "rules_subject.yaml"
+YAML_RULES_SPAM_FILTER_FILE     = YAML_RULES_PATH + "rules_spam_filter.yaml"
+YAML_RULES_SAFE_SENDERS_FILE    = YAML_RULES_PATH + "rules_safe_senders.yaml"
+YAML_RULES_SAFE_RECIPIENTS_FILE = YAML_RULES_PATH + "rules_safe_recipients.yaml"
+YAML_RULES_BLOCKED_SENDERS_FILE = YAML_RULES_PATH + "rules_blocked_senders.yaml"
+YAML_RULES_CONTACTS_FILE        = YAML_RULES_PATH + "rules_contacts.yaml"           # periodically review email account contacts and update
+YAML_RULES_EMAIL_TO_FILE        = YAML_RULES_PATH + "rules_email_to.yaml"           # periodically review emails sent and add targeted recipients to secondary "Safe Senders" file (name?)
+YAML_INTERNATIONAL_RULES_FILE   = YAML_RULES_PATH + "rules_international.yaml"      # send all but a few "organizations" "*.<>" to Bulk Mail .jp, .cz...
 OUTLOOK_RULES_SUBSET = "SpamAutoDelete"
 DAYS_BACK_DEFAULT = 365 # default number of days to go back in the calendar
 CRLF = "\n"             # Carriage return and line feed for formatting
@@ -425,6 +442,26 @@ class OutlookSecurityAgent:
                         "processed": False
                     })
 
+#add test section
+            # Read additional rules from an OUTLOOK_SAFE_SENDERS CSV file
+            safe_senders = []
+            if os.path.exists(OUTLOOK_SAFE_SENDERS_FILE):
+                with open(OUTLOOK_SAFE_SENDERS_FILE, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line:
+                            safe_senders.append(line)
+
+            for rule in rules_json:
+                if rule.get("name") == "SpamAutoDeleteBody":
+                    if "body" not in rule["conditions"]:
+                        rule["conditions"]["body"] = []
+                    for sender in safe_senders:
+                        rule["conditions"]["body"].append({"address": sender})
+
+# test re-adding section
+
+
             # print (json.dumps(rules_json, indent=2, default=str)) #can be used for extra debugging information
             return json.loads(json.dumps(rules_json, indent=2, default=str))
 
@@ -473,7 +510,7 @@ class OutlookSecurityAgent:
             self.log_print(f"Traceback: {traceback.format_exc()}")
             return []
 
-    def export_rules(self, rules_json=None, rules_file=YAML_RULES_FILE):
+    def export_rules_to_yaml(self, rules_json=None, rules_file=YAML_RULES_FILE):
         """Export Outlook rules to yaml file"""
         try:
             if rules_json is None:   #this should never happen
@@ -561,7 +598,7 @@ class OutlookSecurityAgent:
 
         # debugging - for this run, set the rules to be from Outlook
         #rules = outlook_rules
-        rules = YAML_rules
+        rules = YAML_rules  # no using YAML rules from YAML file as primary source of rules
 
         #To be moved elsewhere
         # self.log_print(f"Export rules to yaml ({OUTLOOK_RULES_FILE}): {rules}")
@@ -1557,7 +1594,9 @@ def main():
 
         # Export rules if they've been updated
         if rules_before != rules_json:
-            agent.export_rules()
+            agent.export_rules_to_yaml(rules_json)
+        if DEBUG:
+            agent.export_rules_to_yaml(rules_json)
 
         simple_print(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}")
         simple_print(f"=============================================================\n")

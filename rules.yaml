@@ -1,19 +1,7 @@
-- actions:
-    assign_to_category:
-      category_name: SpamHeader
-    copy_to_folder:
-      folder_name: null
-      folder_path: null
-    delete: true
-    forward: []
-    mark_as_task:
-      task_due_date: null
-    move_to_folder:
-      folder_name: null
-      folder_path: null
-    play_sound:
-      sound_file: null
-    redirect: []
+- name: SpamAutoDeleteHeader
+  enabled: true
+  isLocal: true
+  executionOrder: 1
   conditions:
     body: []
     from: []
@@ -1402,7 +1390,22 @@
     - '@tawarkan.'
     - '@mail.ironchefai.com'
     subject: []
-  enabled: true
+  actions:
+    assign_to_category:
+      category_name: SpamHeader
+    copy_to_folder:
+      folder_name: null
+      folder_path: null
+    delete: true
+    forward: []
+    mark_as_task:
+      task_due_date: null
+    move_to_folder:
+      folder_name: null
+      folder_path: null
+    play_sound:
+      sound_file: null
+    redirect: []
   exceptions:
     body:
     - ClevelandWater.com
@@ -1425,26 +1428,11 @@
     - .openai.com
     - '@lastpass.com'
     subject: []
-  executionOrder: 1
+  last_modified: '2025-04-02T10:33:21.123110'
+- name: SpamAutoDeleteBody
+  enabled: true
   isLocal: true
-  last_modified: '2025-03-31T07:48:23.167076'
-  name: SpamAutoDeleteHeader
-- actions:
-    assign_to_category:
-      category_name: SpamBody
-    copy_to_folder:
-      folder_name: null
-      folder_path: null
-    delete: true
-    forward: []
-    mark_as_task:
-      task_due_date: null
-    move_to_folder:
-      folder_name: null
-      folder_path: null
-    play_sound:
-      sound_file: null
-    redirect: []
+  executionOrder: 2
   conditions:
     body:
     - Denton Bay Management
@@ -2583,7 +2571,22 @@
     from: []
     header: []
     subject: []
-  enabled: true
+  actions:
+    assign_to_category:
+      category_name: SpamBody
+    copy_to_folder:
+      folder_name: null
+      folder_path: null
+    delete: true
+    forward: []
+    mark_as_task:
+      task_due_date: null
+    move_to_folder:
+      folder_name: null
+      folder_path: null
+    play_sound:
+      sound_file: null
+    redirect: []
   exceptions:
     body: []
     from:
@@ -2611,26 +2614,11 @@
       name: billing@lastpass.com
     header: []
     subject: []
-  executionOrder: 2
+  last_modified: '2025-04-02T10:33:21.123110'
+- name: SpamAutoDeleteFrom
+  enabled: true
   isLocal: true
-  last_modified: '2025-03-31T07:48:23.167076'
-  name: SpamAutoDeleteBody
-- actions:
-    assign_to_category:
-      category_name: SpamHeader
-    copy_to_folder:
-      folder_name: null
-      folder_path: null
-    delete: true
-    forward: []
-    mark_as_task:
-      task_due_date: null
-    move_to_folder:
-      folder_name: null
-      folder_path: null
-    play_sound:
-      sound_file: null
-    redirect: []
+  executionOrder: 3
   conditions:
     body: []
     from:
@@ -2662,7 +2650,22 @@
       name: sebastian@corleoneweddingplanners.com
     header: []
     subject: []
-  enabled: true
+  actions:
+    assign_to_category:
+      category_name: SpamHeader
+    copy_to_folder:
+      folder_name: null
+      folder_path: null
+    delete: true
+    forward: []
+    mark_as_task:
+      task_due_date: null
+    move_to_folder:
+      folder_name: null
+      folder_path: null
+    play_sound:
+      sound_file: null
+    redirect: []
   exceptions:
     body:
     - ClevelandWater.com
@@ -2681,26 +2684,11 @@
     - '@lastpass.com'
     - store+61395140851@t.shopifyemail.com
     subject: []
-  executionOrder: 3
+  last_modified: '2025-04-02T10:33:21.123110'
+- name: SpamAutoDeleteSubject
+  enabled: true
   isLocal: true
-  last_modified: '2025-03-31T07:48:23.167076'
-  name: SpamAutoDeleteFrom
-- actions:
-    assign_to_category:
-      category_name: SpamSubject
-    copy_to_folder:
-      folder_name: null
-      folder_path: null
-    delete: true
-    forward: []
-    mark_as_task:
-      task_due_date: null
-    move_to_folder:
-      folder_name: null
-      folder_path: null
-    play_sound:
-      sound_file: null
-    redirect: []
+  executionOrder: 4
   conditions:
     body: []
     from: []
@@ -2743,7 +2731,22 @@
     - dates with me
     - Proud Patriots
     - dating me
-  enabled: true
+  actions:
+    assign_to_category:
+      category_name: SpamSubject
+    copy_to_folder:
+      folder_name: null
+      folder_path: null
+    delete: true
+    forward: []
+    mark_as_task:
+      task_due_date: null
+    move_to_folder:
+      folder_name: null
+      folder_path: null
+    play_sound:
+      sound_file: null
+    redirect: []
   exceptions:
     body:
     - ClevelandWater.com
@@ -2774,11 +2777,19 @@
     - '@ftc.com'
     - kaggle
     subject: []
-  executionOrder: 4
+  last_modified: '2025-04-02T10:33:21.123110'
+- name: SpamAutoDeleteBody-imgur.com
+  enabled: true
   isLocal: true
-  last_modified: '2025-03-31T07:48:23.167076'
-  name: SpamAutoDeleteSubject
-- actions:
+  executionOrder: 5
+  conditions:
+    body:
+    - .imgur.
+    - /imgur.
+    from: []
+    header: []
+    subject: []
+  actions:
     assign_to_category:
       category_name: SpamImgur
     copy_to_folder:
@@ -2794,14 +2805,6 @@
     play_sound:
       sound_file: null
     redirect: []
-  conditions:
-    body:
-    - .imgur.
-    - /imgur.
-    from: []
-    header: []
-    subject: []
-  enabled: true
   exceptions:
     body:
     - ClevelandWater.com
@@ -2829,7 +2832,4 @@
     - kaggle
     - '@ftc.gov'
     subject: []
-  executionOrder: 5
-  isLocal: true
-  last_modified: '2025-03-31T07:48:23.167076'
-  name: SpamAutoDeleteBody-imgur.com
+  last_modified: '2025-04-02T10:33:21.123110'
