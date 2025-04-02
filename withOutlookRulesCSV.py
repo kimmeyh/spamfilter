@@ -6,7 +6,7 @@
 #   Safe Senders - done
 #   Safe recipients - done (was empty)
 #   Blocked Senders - very small and were added manually to Outlook Rules - spam body# 03/30/2025 Harold Kimmey Added export and import of YAML rules
-# 04/01/2025 Harold Kimmey Verified export of rules from Outloook to YAML file (at exit) matches rules from import of YAML file
+# 04/01/2025 Harold Kimmey Verified export of rules from Outlook to YAML file (at exit) matches rules from import of YAML file
 # 04/01/2025 Switch to using YAML file as import instead of Outlook rules
 # 04/01/2025 Committed changes, pushed, PR to Main branch of kimmeyh/spamfilter.git
 
