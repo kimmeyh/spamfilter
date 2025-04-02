@@ -1,11 +1,7 @@
 # HK 01/24/25 All working as expected
 # 02/10/2025 Harold Kimmey Completeed move to www.github.com/kimmeyh/spamfilter.git repository
 # 03/30/2025 Harold Kimmey Added export and import of YAML rules
-# 04/01/2025 Harold Kimmey Verified export of rules from Outloook to YAML file (at exit) matches rules from import of YAML file
-# 04/01/2025 Switch to using YAML file as import instead of Outlook rules
-# 04/01/2025 Committed changes, pushed, PR to Main branch of kimmeyh/spamfilter.git
 
-#------------------General Documentation------------------
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
 
 # 1. Account/Folder Targeting:
@@ -58,8 +54,11 @@
 # else:
 #     print(result.get("error"))
 #     print(result.get("error_description"))
+#--------------------------------------------
 
-#------------------List of future enhancements------------------
+#List of future enhancements
+# Verify export of rules from Outloook to YAML file (at exit) matches rules from import of YAML file
+# Switch to using YAML file as import instead of Outlook rules
 # Where is the best place to add updates to rules based on emails not deleted
 # Add updates to rules for emails not deleted
 #   for each email not deleted
@@ -137,7 +136,7 @@ import win32com.client
 import IPython
 
 # Settings:
-DEBUG = True # True or False
+DEBUG = False #True
 INFO = False if DEBUG else True #If not debugging, then INFO level logging
 DEBUG_EMAILS_TO_PROCESS = 10000 #100 for testing
 EMAIL_ADDRESS = "kimmeyharold@aol.com"
@@ -152,8 +151,7 @@ OUTLOOK_RULES_FILE = OUTLOOK_RULES_PATH + "outlook_rules.csv"
 YAML_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
 YAML_RULES_FILE = YAML_RULES_PATH + "rules.yaml"
 OUTLOOK_RULES_SUBSET = "SpamAutoDelete"
-DAYS_BACK_DEFAULT = 365 # default number of days to go back in the calendar
-CRLF = "\n"             # Carriage return and line feed for formatting
+DAYS_BACK_DEFAULT = 365 #default number of days to go back in the calendar
 
 
 def simple_print(message):
@@ -320,30 +318,20 @@ class OutlookSecurityAgent:
         differences = self.compare_rules(outlook_rules, yaml_rules)
 
         # Print the differences
-        self.log_print(f"{CRLF}Differences between Outlook rules and YAML rules:")
         if differences['rules_only_in_1']:
-            self.log_print(f"\nRules only in outlook_rules:")
+            self.log_print("\nRules only in outlook_rules:")
             for rule in differences['rules_only_in_1']:
                 self.log_print(f"- {rule['name']}")
-        else:
-            self.log_print(f"{CRLF}No rules only in outlook_rules")
 
         if differences['rules_only_in_2']:
-            self.log_print(f"{CRLF}Rules only in yaml_Rules set:")
+            self.log_print("\nRules only in yaml_Rules set:")
             for rule in differences['rules_only_in_2']:
                 self.log_print(f"- {rule['name']}")
-        else:
-            self.log_print(f"{CRLF}No rules only in yaml_Rules set")
 
         if differences['modified_rules']:
-            self.log_print(f"{CRLF}Modified rules:")
+            self.log_print("\nModified rules:")
             for name, rules in differences['modified_rules'].items():
                 self.log_print(f"- {name} has differences")
-                # Print the differences between the two rules
-                self.log_print(f"  Outlook rule: {json.dumps(rules['rules1'], indent=2)}")
-                self.log_print(f"  YAML rule: {json.dumps(rules['rules2'], indent=2)}")
-        else:
-            self.log_print(f"{CRLF}No modified rules found")
 
         return
 
@@ -453,7 +441,7 @@ class OutlookSecurityAgent:
             if not isinstance(rules, list):
                 rules = [rules]
 
-            # Update timestamp for each rule but preserve original structure
+            # Update timestamp for each rule
             timestamp = datetime.now().isoformat()
             for rule in rules:
                 if isinstance(rule, dict):
@@ -461,8 +449,7 @@ class OutlookSecurityAgent:
 
             self.log_print(f"Successfully imported {len(rules)} rules from YAML file")
 
-            # Convert to JSON using json.dumps and json.loads to ensure consistent structure
-            # This ensures the structure is identical to what get_outlook_rules produces
+            # Convert to JSON-compatible structure
             rules_json = json.loads(json.dumps(rules, default=str))
             return rules_json
 
@@ -488,40 +475,12 @@ class OutlookSecurityAgent:
                 rules = json.loads(json.dumps(rules_json))
                 self.log_print(f"export_rules: Found rules_json is a dict and converted to JSON object")
             else:
-                # Ensure consistent structure by using json conversion
-                rules = json.loads(json.dumps(rules_json, default=str))
-                self.log_print(f"export_rules: Standardized rules JSON structure")
+                rules = rules_json
+                self.log_print(f"export_rules: Found rules_json is a JSON object, no action taken")
 
-            # Standardize field order for each rule to ensure consistency
-            standardized_rules = []
-            for rule in rules:
-                # Standardize the top-level structure
-                standardized_rule = {
-                    "name": rule.get("name", ""),
-                    "enabled": rule.get("enabled", False),
-                    "isLocal": rule.get("isLocal", False),
-                    "executionOrder": rule.get("executionOrder", 0),
-                    "conditions": rule.get("conditions", {}),
-                    "actions": rule.get("actions", {}),
-                    "exceptions": rule.get("exceptions", {}),
-                    "last_modified": rule.get("last_modified", datetime.now().isoformat())
-                }
-
-                # Standardize the conditions structure
-                for key in ["conditions", "exceptions"]:
-                    if key in standardized_rule:
-                        if "from" in standardized_rule[key]:
-                            # Ensure from addresses have consistent structure
-                            for i, addr in enumerate(standardized_rule[key]["from"]):
-                                if isinstance(addr, dict) and "address" in addr and "name" in addr:
-                                    standardized_rule[key]["from"][i] = {
-                                        "address": addr["address"],
-                                        "name": addr["name"]
-                                    }
-
-                standardized_rules.append(standardized_rule)
-
-            self.log_print(f"Processing {len(standardized_rules)} rules")
+            # Parse JSON string into Python object if it's a string
+            rules = json.loads(rules_json) if isinstance(rules_json, str) else rules_json
+            self.log_print(f"Processing {len(rules)} rules")
 
             # 03/31/2025 Harold Kimmey Write json_rules to YAML file
             # Ensure directory exists
@@ -529,9 +488,9 @@ class OutlookSecurityAgent:
 
             # Convert JSON object to YAML and write to file
             with open(rules_file, 'w', encoding='utf-8') as yaml_file:
-                yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False)
+                yaml.dump(rules, yaml_file, sort_keys=False, default_flow_style=False)
 
-            self.log_print(f"Successfully exported {len(standardized_rules)} rules to YAML file: {rules_file}")
+            self.log_print(f"Successfully exported {len(rules)} rules to YAML file: {rules_file}")
             return True
 
         except Exception as e:
@@ -560,8 +519,7 @@ class OutlookSecurityAgent:
 
 
         # debugging - for this run, set the rules to be from Outlook
-        #rules = outlook_rules
-        rules = YAML_rules
+        rules = outlook_rules
 
         #To be moved elsewhere
         # self.log_print(f"Export rules to yaml ({OUTLOOK_RULES_FILE}): {rules}")
