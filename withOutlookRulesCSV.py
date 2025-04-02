@@ -743,8 +743,6 @@ class OutlookSecurityAgent:
                     from_domain = self.header_from(email_header)
 
                     output_string = from_domain.ljust(20) + f"| Email {email_index+1:>3} | Matched no rules"
-# 03/29/2025 Harold Kimmey Add functionality to update JSON rules by adding a simple Y/N to add to the "@<domain>"
-# to the header rules in the JSON rules.
                     self.log_print(f"{output_string}", level="INFO")
                     simple_print(f"{output_string}")
 
@@ -1106,6 +1104,186 @@ class OutlookSecurityAgent:
             self.log_print(f"Error processing actions: {str(e)}")
 
         return actions
+
+    def prompt_update_rules(self, emails_to_process, emails_added_info, rules_json):
+        """
+        Prompt user to update rules based on unfiltered emails.
+
+        Args:
+            emails_to_process (list): List of emails processed.
+            emails_added_info (list): Additional info about processed emails.
+            rules_json (list): Current rules in JSON format that may be updated.
+
+        Returns:
+            list: Updated rules in JSON format.
+        """
+        self.log_print(f"{CRLF}Checking for emails that can be added to rules...")
+        unfiltered_emails = []
+
+        # Find unfiltered emails (those with match=False)
+        for i, email_info in enumerate(emails_added_info):
+            if email_info["match"] == False and i < len(emails_to_process):
+                unfiltered_emails.append((emails_to_process[i], email_info))
+
+        if not unfiltered_emails:
+            self.log_print("No unfiltered emails found to update rules.")
+            return rules_json
+
+        self.log_print(f"Found {len(unfiltered_emails)} unfiltered emails. Processing for possible rule updates...")
+        simple_print(f"\nBeginning interactive rule update for {len(unfiltered_emails)} unfiltered emails")
+
+        # Process each unfiltered email
+        # NOTE:  assumes user will only want to update 1 rule per email
+        count = 0
+
+        for email, email_info in unfiltered_emails:
+            try:
+                rule_updated = False
+                email_header = email_info["email_header"]
+                subject = self._sanitize_string(email.Subject)
+                from_email = self._sanitize_string(email.SenderEmailAddress)
+                from_domain = self.header_from(email_header)
+                unique_urls = self.get_unique_URL_stubs(email.Body) # Extract URLs
+
+                # For now assume user wants to process all non-deleted emails
+                #
+                # if count > 0:   # Ask if user wants to continue with next email (but not first email)
+                #     continue_response = input("\nContinue to next email? (y/n): ").lower()
+                #     if continue_response != 'y':
+                #         simple_print("Rule update process exited by user")
+                #         break
+
+                # Display email details
+                print(f"{CRLF}" + "=" * 60)
+                print(f"Subject: {subject}")
+                print(f"From: {from_email}")
+                print(f"Domain: {from_domain}")
+                print(f"Unique URLs: {unique_urls}")
+
+                # if unique_urls:
+                #     simple_print("\nUnique URLs in body:")
+                #     for url in unique_urls[:5]:  # Show just the first 5 to avoid overwhelming output
+                #         simple_print(f"  {url}")
+                #     if len(unique_urls) > 5:
+                #         simple_print(f"  ... and {len(unique_urls) - 5} more")
+
+                response = ""
+
+                # Step 1: Suggest header rule
+                if from_domain and from_domain != "@gmail.com":
+                    response = input(f"{CRLF}Add '{from_domain}' to SpamAutoDeleteHeader rule? (y/n): ").lower()
+
+                    if response == 'y':
+                        # Find the SpamAutoDeleteHeader rule
+                        rule_updated = True
+                        for rule in rules_json:
+                            if rule.get("name") == "SpamAutoDeleteHeader":
+                                if "header" not in rule["conditions"]:
+                                    rule["conditions"]["header"] = []
+
+                                # Add domain to header conditions if not already present
+                                if from_domain not in rule["conditions"]["header"]:
+                                    rule["conditions"]["header"].append(from_domain)
+                                    self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+                                    simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+                                else:
+                                    simple_print(f"'{from_domain}' already exists in SpamAutoDeleteHeader rule")
+
+                                if success:
+                                    simple_print("Changes saved to rules file")
+                                break
+
+                # Step 2: If user declined header rule, suggest body rule for URLs
+                if subject and rule_updated == False:
+                    response = input(f"{CRLF}Add subject pattern '{subject}' to SpamAutoDeleteSubject rule? (y/n): ").lower()
+
+                    if response == 'y':
+                        subject_pattern = input(f"{CRLF}Enter pattern:")
+                        # Find the SpamAutoDeleteSubject rule
+                        rule_updated = True
+                        for rule in rules_json:
+                            if rule.get("name") == "SpamAutoDeleteSubject":
+                                if "subject" not in rule["conditions"]:
+                                    rule["conditions"]["subject"] = []
+
+                                # Add subject to subject conditions if not already present
+                                if subject not in rule["conditions"]["subject"]:
+                                    rule["conditions"]["subject"].append(subject_pattern)
+                                    self.log_print(f"Added '{subject_pattern}' to SpamAutoDeleteSubject rule")
+                                    simple_print(f"Added '{subject_pattern}' to SpamAutoDeleteSubject rule")
+                                else:
+                                    simple_print(f"'{subsubject_pattern}' already exists in SpamAutoDeleteSubject rule")
+                                break
+
+                    # Step 3: Suggest subject rule if neither header nor body rules were added
+                if unique_urls and rule_updated == False: #process URL's
+                    simple_print("{CRLF}The following URL patterns can be added to SpamAutoDeleteBody rule:")
+                    for i, url in enumerate(unique_urls):
+                        simple_print(f"{i+1}. {url}")
+
+                    url_indices = input("Enter URL numbers to add (comma-separated, or 'all'), or press Enter to skip: ")
+
+                    if url_indices.lower() == 'all':
+                        selected_urls = unique_urls
+                    elif url_indices:
+                        try:
+                            indices = [int(idx.strip()) - 1 for idx in url_indices.split(',')]
+                            selected_urls = [unique_urls[i] for i in indices if 0 <= i < len(unique_urls)]
+                        except ValueError:
+                            simple_print("Invalid input. No URLs added.")
+                            selected_urls = []
+                    else:
+                        selected_urls = []
+
+                    if selected_urls:
+                        # Add selected URLs to SpamAutoDeleteBody rule
+                        rule_updated = True
+                        for rule in rules_json:
+                            if rule.get("name") == "SpamAutoDeleteBody":
+                                if "body" not in rule["conditions"]:
+                                    rule["conditions"]["body"] = []
+
+                                for url in selected_urls:
+                                    if url not in rule["conditions"]["body"]:
+                                        rule["conditions"]["body"].append(url)
+                                        self.log_print(f"Added '{url}' to SpamAutoDeleteBody rule")
+                                        simple_print(f"Added '{url}' to SpamAutoDeleteBody rule")
+
+                                # Commit changes to YAML file
+                                success = self.export_rules_to_yaml(rules_json)
+                                if success:
+                                    simple_print("Changes saved to rules file")
+                                break
+                if rule_updated == False:  # request body content add if no other adds
+                    print(f"{CRLF}Body Content:")
+                    for line in email.Body.splitlines():
+                        self.log_print(f"Body: {line}")
+                    response = input(f"{CRLF}Add body content to SpamAutoDeleteBody rule? (y/n): ").lower()
+                    if response == 'y':
+                        body_content = input(f"{CRLF}Enter body content:")
+                        # Find the SpamAutoDeleteBody rule
+                        rule_updated = True
+                        for rule in rules_json:
+                            if rule.get("name") == "SpamAutoDeleteBody":
+                                if "body" not in rule["conditions"]:
+                                    rule["conditions"]["body"] = []
+
+                                # Add body content to body conditions if not already present
+                                if body_content not in rule["conditions"]["body"]:
+                                    rule["conditions"]["body"].append(body_content)
+                                    self.log_print(f"Added '{body_content}' to SpamAutoDeleteBody rule")
+                                    simple_print(f"Added '{body_content}' to SpamAutoDeleteBody rule")
+                                else:
+                                    simple_print(f"'{body_content}' already exists in SpamAutoDeleteBody rule")
+                                break
+
+            except Exception as e:
+                self.log_print(f"Error processing email for rule updates: {str(e)}")
+                simple_print(f"Error processing email: {str(e)}")
+
+        self.log_print("Rule update process completed")
+        simple_print("\nRule update process completed")
+        return rules_json
 
     def check_phishing_indicators(self, email):
         """Check for phishing indicators in an email"""
@@ -1591,6 +1769,11 @@ class OutlookSecurityAgent:
             # Print a list for Phishing OR Match=false with From: "@<domain>.<>" so they can be easily added to the rules
             self.log_print(f"\nProcessing Report of From's from phishing or match = False")
             self.from_report(emails_to_process, emails_added_info, rules_json)
+
+            # After processing all emails, prompt for rule updates based on unfiltered emails
+            if processed_count > 0:
+                self.log_print(f"{CRLF}Prompting for rule updates based on unfiltered emails...")
+                rules_json = self.prompt_update_rules(emails_to_process, emails_added_info, rules_json)
 
             self.log_print(f"\nProcessing Summary:")
             self.log_print(f"Processed {processed_count} emails")

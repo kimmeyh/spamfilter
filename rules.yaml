@@ -1389,6 +1389,21 @@
     - '@arowki.'
     - '@tawarkan.'
     - '@mail.ironchefai.com'
+    - '@auditorship.com'
+    - '@schipacli.com'
+    - '@popmenu.com'
+    - '@mystagename.com'
+    - '@cortige.com'
+    - '@maxwellha.com'
+    - '@ekatraweaves.com'
+    - '@dramitac.com'
+    - '@almoosaorganic.com'
+    - '@ijens.org'
+    - '@tinertra.com'
+    - '@biefie.com'
+    - '@chennaiwap.com'
+    - '@shxinyifm.com'
+    - '@romatika.com'
     subject: []
   actions:
     assign_to_category:
@@ -1428,7 +1443,7 @@
     - .openai.com
     - '@lastpass.com'
     subject: []
-  last_modified: '2025-04-02T10:50:13.589168'
+  last_modified: '2025-04-02T11:54:15.882018'
 - name: SpamAutoDeleteBody
   enabled: true
   isLocal: true
@@ -2568,6 +2583,7 @@
     - McAfee LLC
     - /bestoffes.com
     - .bestoffes.com
+    - renewal for GeekSquad
     from: []
     header: []
     subject: []
@@ -2614,7 +2630,7 @@
       name: billing@lastpass.com
     header: []
     subject: []
-  last_modified: '2025-04-02T10:50:13.589168'
+  last_modified: '2025-04-02T11:54:15.882018'
 - name: SpamAutoDeleteFrom
   enabled: true
   isLocal: true
@@ -2684,7 +2700,7 @@
     - '@lastpass.com'
     - store+61395140851@t.shopifyemail.com
     subject: []
-  last_modified: '2025-04-02T10:50:13.589168'
+  last_modified: '2025-04-02T11:54:15.882018'
 - name: SpamAutoDeleteSubject
   enabled: true
   isLocal: true
@@ -2777,7 +2793,7 @@
     - '@ftc.com'
     - kaggle
     subject: []
-  last_modified: '2025-04-02T10:50:13.589168'
+  last_modified: '2025-04-02T11:54:15.882018'
 - name: SpamAutoDeleteBody-imgur.com
   enabled: true
   isLocal: true
@@ -2832,4 +2848,4 @@
     - kaggle
     - '@ftc.gov'
     subject: []
-  last_modified: '2025-04-02T10:50:13.589168'
+  last_modified: '2025-04-02T11:54:15.882018'
