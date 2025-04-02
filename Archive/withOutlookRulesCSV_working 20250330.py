@@ -1,16 +1,4 @@
 # HK 01/24/25 All working as expected
-# 02/10/2025 Harold Kimmey Completed move to www.github.com/kimmeyh/spamfilter.git repository
-# 02/17/2025 Harold Kimmey Updated _process_actions to accurately pull the assign_to_category value by searching it as an object
-# 03/28/2025 Harold Kimmey Exported rules to JSON so that they can be maintained in a separate YAML file (the can be transferred between machines and platforms (Windows, Mac, Linux, Android, iOS, etc.))
-#   Spam filter rules - done
-#   Safe Senders - done
-#   Safe recipients - done (was empty)
-#   Blocked Senders - very small and were added manually to Outlook Rules - spam body# 03/30/2025 Harold Kimmey Added export and import of YAML rules
-# 04/01/2025 Harold Kimmey Verified export of rules from Outlook to YAML file (at exit) matches rules from import of YAML file
-# 04/01/2025 Switch to using YAML file as import instead of Outlook rules
-# 04/01/2025 Committed changes, pushed, PR to Main branch of kimmeyh/spamfilter.git
-
-#------------------General Documentation------------------
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
 
 # 1. Account/Folder Targeting:
@@ -32,6 +20,7 @@
 # 1. Make sure Outlook is running and the AOL account is connected
 # 2. Run the script - it will automatically target the Bulk Mail folder
 # 3. Suspicious emails will be moved to a "Security Review" subfolder within Bulk Mail
+
 
 # credentials = ('your_client_id', 'your_client_secret')
 # account = Account(credentials)
@@ -62,18 +51,10 @@
 # else:
 #     print(result.get("error"))
 #     print(result.get("error_description"))
+#--------------------------------------------
 
-#------------------List of future enhancements------------------
-# Where is the best place to add updates to rules based on emails not deleted
-# Add updates to rules for emails not deleted
-#   for each email not deleted
-#      show details of the email:  subject, from in header, URL's in the body
-#       Suggest to add new domains (based on from in header) to the header rules
-#       If N to header rule, suggest body rules
-#       If no body rules added, suggest subject rules
-#       Full commit after each of the above changes
-
-
+#List of future enhancements
+# 02/10/2025 Harold Kimmey Completeed move to www.github.com/kimmeyh/spamfilter.git repository
 # Add "easy to add to Outlook Rules"
 #  - Track all the "No conditions or phishing indicators found" as you go by Outlook Rule:
 #     - so that you can write a summary at the end, keep a record for each of From:, Subject:, Body:, Header:
@@ -84,17 +65,26 @@
 #   Subject/From - one line with From: trimmed to "@<domain>.", Subject: <subject>
 # Add ability to do auto-updates to the Outlook Rules for SpamAutoDeleteBody to list of Conditions_obj.Body.Text: add both .<domain>. and /<domain>.
 # Add ability to do auto-updates to the Outlook Rule for SpamAutoDeleteHeader to list of Conditions_obj.MessageHeader.Text: from From: trimmed to "@<domain>."
-#
-# ----------------------------------------------------
+# Export rules so that they can be maintained in a seperate JSON file (the can be tranferred between machines and platforms (Windows, Mac, Linux, Android, iOS, etc.))
+#   Spam filter rules
+#   Safe Senders, Safe recipients, Blocked Senders, contacts
+#   implement: disable rules for spam and phishing rules before deleting
+#   Warning about supicious domain names and email addresses
+#   safe sender domains and email addresses (pull from header "From")
+#       use after @ and match domain exactly, but partials, ex. %.microsoft.com...
+#   import contacts and trust email from contacts
+#   implement flag for automatically add people I email to safe senders list
+#   implement "Blocked Senders" or incorporate into header rules
+#   implement international rules (block all but a few "organizations" "*.jp" to Bulk Mail)
 # (not in this order, probably later) Convert from using win32com to using o365
 #
-# Successfully export rules to a yaml file that logically matches the JSON object at the end of the run
-# Successfully import rules from the yaml file at the beginning of the run that matches the JSON object from get_outlook_rules
-# Start to use the yaml file as the primary source of rules
+# Successfully export rules to a CSV file that logically matches the JSON object at the end of the run
+# Successfully import rules from the CSV file at the beginning of the run that matches the JSON object from get_outlook_rules
+# Start to use the CSV file as the primary source of rules
 # Add logic to add items to the rules JSON object via user input at the end of the run
-#   - verify that the yaml file is updated with the new rules and can read them back in successfully
-# Move all the appropriate rules to a yaml file structure
-#   read from yaml and convert back to JSON object
+#   - verify that the CSV file is updated with the new rules and can read them back in successfully
+# Move all the appropriate rules to a CSV file structure
+#   read from CSV and convert back to JSON object
 #   add field to rules JSON for outlook "flag" to be applied
 #   add rules from outlook for Junk Email "Safe Senders", "Safe Recipients" and "Blocked Snders"
 # For Outlook only - may have to async the delete and try 10 times with 1 second delay - get around "can't delete because message has been changed error"
@@ -126,19 +116,16 @@ import logging
 import sys
 import json
 import os
-import yaml
-
+import csv
 
 #Imports for packages that need to be installed
 import win32com.client
 import IPython
 
 # Settings:
-DEBUG = True # True or False
+DEBUG = False #True
 INFO = False if DEBUG else True #If not debugging, then INFO level logging
 DEBUG_EMAILS_TO_PROCESS = 10000 #100 for testing
-
-CRLF = "\n"
 EMAIL_ADDRESS = "kimmeyharold@aol.com"
 EMAIL_FOLDER_NAME = "Bulk Mail"
 WIN32_CLIENT_DISPATCH = "Outlook.Application"
@@ -148,24 +135,9 @@ OUTLOOK_SECURITY_LOG = OUTLOOK_SECURITY_LOG_PATH + "OutlookRulesProcessingDEBUG_
 OUTLOOK_SIMPLE_LOG = OUTLOOK_SECURITY_LOG_PATH + "OutlookRulesProcessingSimple.log"
 OUTLOOK_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
 OUTLOOK_RULES_FILE = OUTLOOK_RULES_PATH + "outlook_rules.csv"
-YAML_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
-YAML_RULES_FILE = YAML_RULES_PATH + "rules.yaml"
-OUTLOOK_SAFE_SENDERS_FILE = OUTLOOK_RULES_PATH + "OutlookSafeSenders.csv"
 
-# not sure if these will be used
-YAML_RULES_BODY_FILE            = YAML_RULES_PATH + "rules_body.yaml"
-YAML_RULES_HEADER_FILE          = YAML_RULES_PATH + "rules_header.yaml"
-YAML_RULES_SUBJECT_FILE         = YAML_RULES_PATH + "rules_subject.yaml"
-YAML_RULES_SPAM_FILTER_FILE     = YAML_RULES_PATH + "rules_spam_filter.yaml"
-YAML_RULES_SAFE_SENDERS_FILE    = YAML_RULES_PATH + "rules_safe_senders.yaml"
-YAML_RULES_SAFE_RECIPIENTS_FILE = YAML_RULES_PATH + "rules_safe_recipients.yaml"
-YAML_RULES_BLOCKED_SENDERS_FILE = YAML_RULES_PATH + "rules_blocked_senders.yaml"
-YAML_RULES_CONTACTS_FILE        = YAML_RULES_PATH + "rules_contacts.yaml"           # periodically review email account contacts and update
-YAML_RULES_EMAIL_TO_FILE        = YAML_RULES_PATH + "rules_email_to.yaml"           # periodically review emails sent and add targeted recipients to secondary "Safe Senders" file (name?)
-YAML_INTERNATIONAL_RULES_FILE   = YAML_RULES_PATH + "rules_international.yaml"      # send all but a few "organizations" "*.<>" to Bulk Mail .jp, .cz...
 OUTLOOK_RULES_SUBSET = "SpamAutoDelete"
-DAYS_BACK_DEFAULT = 365 # default number of days to go back in the calendar
-CRLF = "\n"             # Carriage return and line feed for formatting
+DAYS_BACK_DEFAULT = 365 #default number of days to go back in the calendar
 
 
 def simple_print(message):
@@ -175,29 +147,6 @@ def simple_print(message):
             f.write(message + '\n')
     else: #write to the console
         print(message)
-
-def export_rules_yaml (rules_json, rules_yaml):  # try without executing
-    """Export rules to a YAML file"""
-    import yaml
-
-    try:
-        with open(rules_yaml, 'w') as yaml_file:
-            yaml.dump(rules_json, yaml_file, default_flow_style=False)
-        simple_print(f"Rules exported to {rules_yaml}")
-    except Exception as e:
-        simple_print(f"Error exporting rules to {rules_yaml}: {str(e)}")
-
-def import_rules_yaml(rules_yaml):
-    """Import rules from a YAML file"""
-    import yaml
-    try:
-        with open(rules_yaml, 'r') as yaml_file:
-            rules_json = yaml.safe_load(yaml_file)
-        print(f"Rules imported from {rules_yaml}")
-        return rules_json
-    except Exception as e:
-        print(f"Error importing rules from {rules_yaml}: {str(e)}")
-        return None
 
 class OutlookSecurityAgent:
     def __init__(self, email_address=EMAIL_ADDRESS, folder_name=EMAIL_FOLDER_NAME, debug_mode=DEBUG):
@@ -350,77 +299,35 @@ class OutlookSecurityAgent:
             'modified_rules': modified_rules
         }
 
-    def output_rules_differences(self, outlook_rules, yaml_rules):
-        """Output the differences between yaml_rules and outlook_rules"""
-        differences = self.compare_rules(outlook_rules, yaml_rules)
+    def output_rules_differences(self, outlook_rules, CSV_rules):
+        """Output the differences between CSV_rules and outlook_rules"""
+        differences = self.compare_rules(outlook_rules, CSV_rules)
 
         # Print the differences
-        self.log_print(f"{CRLF}Differences between Outlook rules and YAML rules:")
         if differences['rules_only_in_1']:
-            self.log_print(f"\nRules only in outlook_rules:")
+            self.log_print("\nRules only in outlook_rules:")
             for rule in differences['rules_only_in_1']:
                 self.log_print(f"- {rule['name']}")
-        else:
-            self.log_print(f"{CRLF}No rules only in outlook_rules")
 
         if differences['rules_only_in_2']:
-            self.log_print(f"{CRLF}Rules only in yaml_Rules set:")
+            self.log_print("\nRules only in CSV_Rules set:")
             for rule in differences['rules_only_in_2']:
                 self.log_print(f"- {rule['name']}")
-        else:
-            self.log_print(f"{CRLF}No rules only in yaml_Rules set")
 
         if differences['modified_rules']:
-            self.log_print(f"{CRLF}Modified rules:")
+            self.log_print("\nModified rules:")
             for name, rules in differences['modified_rules'].items():
                 self.log_print(f"- {name} has differences")
-                # Print the differences between the two rules
-                self.log_print(f"  Outlook rule: {json.dumps(rules['rules1'], indent=2)}")
-                self.log_print(f"  YAML rule: {json.dumps(rules['rules2'], indent=2)}")
-        else:
-            self.log_print(f"{CRLF}No modified rules found")
 
         return
 
-    # def get_outlook_junk_mail_options(self):
-    #     """
-    #     Retrieve the Outlook Junk Email Options settings (as shown in Outlook Classic > Home > Junk Email Options > Options)
-    #     and convert them to a dictionary for further processing or export.
-    #     """
-    #     timestamp = datetime.now().isoformat()
-    #     try:
-    #         # Access the JunkEmailOptions directly from the DefaultStore
-    #         options = self.outlook.Session.DefaultStore.JunkEmailOptions
-    #         # Build a dictionary with key properties.
-    #         # (Property names may vary between Outlook versions.)
-    #         options_dict = {
-    #             'last_modified' : timestamp,
-    #             'name'          : "JunkEmailOptions",
-    #             'filter_level'  : getattr(options, 'FilterLevel', None),  # e.g., 0=Off, 1=Low, 2=High (depending on your Outlook version)
-    #             'enabled'       : getattr(options, 'Enabled', True),  # Some versions may provide an Enabled property
-    #             # The safe and blocked lists are typically collections. Convert them to lists if available.
-    #             'safe_senders'  : list(options.SafeSenders) if getattr(options, 'SafeSenders', None) else [],
-    #             'blocked_senders': list(options.BlockedSenders) if getattr(options, 'BlockedSenders', None) else [],
-    #             # Optional: if your Outlook exposes domains lists:
-    #             'safe_domains'  : list(options.SafeDomains) if hasattr(options, 'SafeDomains') and options.SafeDomains else [],
-    #             'blocked_domains': list(options.BlockedDomains) if hasattr(options, 'BlockedDomains') and options.BlockedDomains else [],
-    #         }
-    #     except Exception as e:
-    #         self.log_print(f"Error processing Junk Email Options: {str(e)}")
-    #         return {}
-
-    #     if DEBUG:
-    #         self.log_print(f"Junk Email Options retrieved: {options_dict}")
-    #     return options_dict # will need to be converted and appended to the json rules object
-
-
-    # NOTE: tried to get the outlook junk email options and lists, but could not get it to work
 
     def get_outlook_rules(self):
         """
         Convert Outlook rules to JSON format with comprehensive error checking.
         Returns a list of rule dictionaries with all available properties.
         """
+        self.log_print("Converting Outlook rules to JSON format...")
         rules_json = []
         rules_dict = {}
         timestamp = datetime.now().isoformat()
@@ -433,12 +340,8 @@ class OutlookSecurityAgent:
             #   Also, the "AssignToCategory" is not returning the category name
 
             # Get all rules that start with the subset name
-            self.log_print("Importing Outlook rules and converting to JSON format...")
-            outlook_rules_raw = self.outlook.Session.DefaultStore.GetRules()
-            if outlook_rules_raw is None:
-                self.log_print("Error: No rules found in Outlook. Ensure rules are configured.")
-                return []
-            outlook_rules = [rule for rule in outlook_rules_raw if rule.Name.startswith(OUTLOOK_RULES_SUBSET)]
+            outlook_rules = [rule for rule in self.outlook.Session.DefaultStore.GetRules() if rule.Name.startswith(OUTLOOK_RULES_SUBSET)]
+
             self.log_print(f"Processing {len(outlook_rules)} rules...")
 
             for rule in outlook_rules:
@@ -465,6 +368,17 @@ class OutlookSecurityAgent:
                         actions = rule.Actions
                         rule_dict["actions"] = self._process_actions(actions)
 
+                        # Update assign_to_category action with rule_to_category if applicable
+                        if 'assign_to_category' in rule_dict["actions"]:
+                            category_name = self.rule_to_category.get(rule.Name, None)
+                            if category_name:
+                                rule_dict["actions"]['assign_to_category']['category_name'] = category_name
+
+                    # # Process Actions
+                    # if hasattr(rule, "Actions") and rule.Actions:
+                    #     actions = rule.Actions
+                    #     rule_dict["actions"] = self._process_actions(actions)
+
                     # Process Exceptions
                     if hasattr(rule, "Exceptions") and rule.Exceptions:
                         exceptions = rule.Exceptions
@@ -482,25 +396,6 @@ class OutlookSecurityAgent:
                         "processed": False
                     })
 
-#add test section
-            # Read additional rules from an OUTLOOK_SAFE_SENDERS CSV file
-            safe_senders = []
-            if os.path.exists(OUTLOOK_SAFE_SENDERS_FILE):
-                with open(OUTLOOK_SAFE_SENDERS_FILE, "r", encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if line:
-                            safe_senders.append(line)
-
-            for rule in rules_json:
-                if rule.get("name") == "SpamAutoDeleteBody":
-                    if "body" not in rule["conditions"]:
-                        rule["conditions"]["body"] = []
-                    for sender in safe_senders:
-                        rule["conditions"]["body"].append({"address": sender})
-
-# test re-adding section
-
             # print (json.dumps(rules_json, indent=2, default=str)) #can be used for extra debugging information
             return json.loads(json.dumps(rules_json, indent=2, default=str))
 
@@ -509,51 +404,89 @@ class OutlookSecurityAgent:
             return json.dumps({"error": str(e)})
 
 
-    def get_yaml_rules(self, rules_file):
-        """Import rules from yaml file and return as JSON object (not string)"""
-        self.log_print("Importing rules from YAML file...")
+    def import_rules(self, rules_file=OUTLOOK_RULES_FILE):
+        """Import rules from CSV file and return as JSON object (not string)"""
+        self.log_print("Converting CSV rules to JSON format...")
         try:
             if not os.path.exists(rules_file):
-                self.log_print(f"Rules YAML file not found: {rules_file}")
-                return []
+                self.log_print("Rules CSV file not found")
+                return None
 
-            # Read YAML file and convert to Python object
-            with open(rules_file, 'r', encoding='utf-8') as yaml_file:
-                rules = yaml.safe_load(yaml_file)
-
-            if not rules:
-                self.log_print("No rules found in YAML file")
-                return []
-
-            # Ensure rules is a list
-            if not isinstance(rules, list):
-                rules = [rules]
-
-            # Update timestamp for each rule but preserve original structure
+            rules_dict = {}
             timestamp = datetime.now().isoformat()
-            for rule in rules:
-                if isinstance(rule, dict):
-                    rule['last_modified'] = timestamp
 
-            self.log_print(f"Successfully imported {len(rules)} rules from YAML file")
+            with open(rules_file, 'r', encoding='utf-8', newline='') as f:
+                reader = csv.DictReader(f)
 
-            # Convert to JSON using json.dumps and json.loads to ensure consistent structure
-            # This ensures the structure is identical to what get_outlook_rules produces
-            rules_json = json.loads(json.dumps(rules, default=str))
-            return rules_json
+                for row in reader:
+                    rule_name = row['rule_name']
+
+                    # Initialize rule if we haven't seen it before
+                    if rule_name not in rules_dict:
+                        rules_dict[rule_name] = {
+                            'name': rule_name,
+                            'enabled': row['enabled'].lower() == 'true',
+                            'isLocal': True,
+                            'executionOrder': int(row['execution_order']),
+                            'conditions': {
+                                'from': [],
+                                'subject': [],
+                                'body': [],
+                                'header': []
+                            },
+                            'actions': {
+                                'move_to_folder': {'folder_path': None, 'folder_name': None},
+                                'copy_to_folder': {'folder_path': None, 'folder_name': None},
+                                'assign_to_category': {'category_name': None},
+                                'delete': row['action_delete'].lower() == 'true',
+                                'forward': [],
+                                'redirect': [],
+                                'play_sound': {'sound_file': None},
+                                'mark_as_task': {'task_due_date': None}
+                            },
+                            'exceptions': {
+                                'from': [],
+                                'subject': [],
+                                'body': [],
+                                'header': []
+                            },
+                            'last_modified': timestamp  # Add last_modified with default timestamp
+                        }
+
+                    # Get the value and unescape if needed
+                    value = row['condition_value']
+                    if row['needs_special_handling'].lower() == 'true':
+                        value = self._unescape_pattern(value)
+
+                    # Add to either conditions or exceptions
+                    if row['is_exception'].lower() == 'true':
+                        rules_dict[rule_name]['exceptions'][row['condition_type']].append(value)
+                    else:
+                        rules_dict[rule_name]['conditions'][row['condition_type']].append(value)
+
+            # Convert dictionary to list of rules
+            #rules = json.dumps(list(rules_dict.values()))
+
+            # Convert to JSON object of rules
+            rules = json.loads(json.dumps(rules_dict))
+            ###*** something wrong here, maybe all should export json dumps than JSON object...???
+
+            self.log_print(f"Successfully imported {len(rules)} rules from CSV")
+
+            return rules  # Return a JSON object of the rules
 
         except Exception as e:
-            self.log_print(f"Error importing rules from YAML: {str(e)}")
+            self.log_print(f"Error importing rules from CSV: {str(e)}")
             self.log_print(f"Error details: {str(e.__class__.__name__)}")
             import traceback
             self.log_print(f"Traceback: {traceback.format_exc()}")
-            return []
+            return None
 
-    def export_rules_to_yaml(self, rules_json=None, rules_file=YAML_RULES_FILE):
-        """Export Outlook rules to yaml file"""
+    def export_rules(self, rules_json=None, rules_file=OUTLOOK_RULES_FILE):
+        """Export Outlook rules to CSV file"""
         try:
             if rules_json is None:   #this should never happen
-                self.log_print("Rules JSON is Empty, do not overwrite rules_file yaml and exit with error")
+                self.log_print("Rules JSON is Empty, do not overwrite rules_file CSV and exit with error")
                 return None
 
             # Convert rules_json to JSON object if it's a string or dict
@@ -564,52 +497,77 @@ class OutlookSecurityAgent:
                 rules = json.loads(json.dumps(rules_json))
                 self.log_print(f"export_rules: Found rules_json is a dict and converted to JSON object")
             else:
-                # Ensure consistent structure by using json conversion
-                rules = json.loads(json.dumps(rules_json, default=str))
-                self.log_print(f"export_rules: Standardized rules JSON structure")
+                rules = rules_json
+                self.log_print(f"export_rules: Found rules_json is a JSON object, no action taken")
 
+            # Parse JSON string into Python object if it's a string
+            rules = json.loads(rules_json) if isinstance(rules_json, str) else rules_json
+            self.log_print(f"Processing {len(rules)} rules")
 
-            # Standardize field order for each rule to ensure consistency
-            standardized_rules = []
-            for rule in rules:
-                # Standardize the top-level structure
-                standardized_rule = {
-                    "name": rule.get("name", ""),
-                    "enabled": rule.get("enabled", False),
-                    "isLocal": rule.get("isLocal", False),
-                    "executionOrder": rule.get("executionOrder", 0),
-                    "conditions": rule.get("conditions", {}),
-                    "actions": rule.get("actions", {}),
-                    "exceptions": rule.get("exceptions", {}),
-                    "last_modified": rule.get("last_modified", datetime.now().isoformat())
-                }
+            with open(OUTLOOK_RULES_FILE, 'w', encoding='utf-8', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=[
+                    'last_modified',
+                    'rule_name',
+                    'enabled',
+                    'execution_order',
+                    'condition_type',
+                    'condition_value',
+                    'is_exception',
+                    'action_delete',
+                    'needs_special_handling'
+                ])
+                writer.writeheader()
 
-                # Standardize the conditions structure
-                for key in ["conditions", "exceptions"]:
-                    if key in standardized_rule:
-                        if "from" in standardized_rule[key]:
-                            # Ensure from addresses have consistent structure
-                            for i, addr in enumerate(standardized_rule[key]["from"]):
-                                if isinstance(addr, dict) and "address" in addr and "name" in addr:
-                                    standardized_rule[key]["from"][i] = {
-                                        "address": addr["address"],
-                                        "name": addr["name"]
-                                    }
+                timestamp = datetime.now().isoformat()
 
-                standardized_rules.append(standardized_rule)
+                # Process each rule
+                for rule in rules:
+                    rule_name = rule['name']
+                    enabled = rule['enabled']
+                    execution_order = rule['executionOrder']
+                    delete_action = rule['actions']['delete']
 
-            self.log_print(f"Processing {len(standardized_rules)} rules")
+                    # Process conditions
+                    for cond_type in ['from', 'subject', 'body', 'header']:
+                        values = rule['conditions'].get(cond_type, [])
+                        if values:  # Only process if there are values
+                            for value in values:
+                                if isinstance(value, dict) and 'address' in value:
+                                    value = value['address']
+                                escaped_value, needs_special = self._escape_pattern(str(value))
+                                writer.writerow({
+                                    'last_modified': timestamp,
+                                    'rule_name': rule_name,
+                                    'enabled': str(enabled).lower(),
+                                    'execution_order': execution_order,
+                                    'condition_type': cond_type,
+                                    'condition_value': escaped_value,
+                                    'is_exception': 'false',
+                                    'action_delete': str(delete_action).lower(),
+                                    'needs_special_handling': str(needs_special).lower()
+                                })
 
-            # 03/31/2025 Harold Kimmey Write json_rules to YAML file
-            # Ensure directory exists
-            os.makedirs(os.path.dirname(rules_file), exist_ok=True)
+                    # Process exceptions
+                    for exc_type in ['from', 'subject', 'body', 'header']:
+                        values = rule['exceptions'].get(exc_type, [])
+                        if values:  # Only process if there are values
+                            for value in values:
+                                if isinstance(value, dict) and 'address' in value:
+                                    value = value['address']
+                                escaped_value, needs_special = self._escape_pattern(str(value))
+                                writer.writerow({
+                                    'last_modified': timestamp,
+                                    'rule_name': rule_name,
+                                    'enabled': str(enabled).lower(),
+                                    'execution_order': execution_order,
+                                    'condition_type': exc_type,
+                                    'condition_value': escaped_value,
+                                    'is_exception': 'true',
+                                    'action_delete': str(delete_action).lower(),
+                                    'needs_special_handling': str(needs_special).lower()
+                                })
 
-            # Convert JSON object to YAML and write to file
-            with open(rules_file, 'w', encoding='utf-8') as yaml_file:
-                yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False)
-
-            self.log_print(f"Successfully exported {len(standardized_rules)} rules to YAML file: {rules_file}")
-
+            self.log_print(f"Rules successfully exported to {self.rules_file}")
             return True
 
         except Exception as e:
@@ -621,32 +579,27 @@ class OutlookSecurityAgent:
 
 
     def get_rules(self):
+        """Get rules from CSV if available, otherwise from Outlook"""
+        CSV_rules = []
+        CSV_rules = self.import_rules()
+        self.log_print(f"Import rules from CSV ({OUTLOOK_RULES_FILE})")
 
-        """Get rules from YAML file if available, otherwise from Outlook"""
-        # 03/31/2025 Harold Kimmey Changing import rules from CSV to YAML file (easy import/export via JSON/YAML)
-
-        YAML_rules = []
-        YAML_rules = self.get_yaml_rules(YAML_RULES_FILE)
-        self.log_print(f"Import rules from YAML ({YAML_RULES_FILE})")
-
-        # outlook_rules = []
-        self.log_print(f"Import rules from Outlook")
+        outlook_rules = []
         outlook_rules = self.get_outlook_rules()
+        self.log_print(f"Import rules from Outlook")
 
-        # debugging - compare YAML_rules to Outlook_rules and print the differences between them
-        #outlook rules are currently the primary source
-        self.output_rules_differences(outlook_rules, YAML_rules)
+        # debugging - compare CSV_rules to Outlook_rules and print the differences between them
+        self.output_rules_differences(outlook_rules, CSV_rules) #outlook rules are currently the primary source
 
         # debugging - for this run, set the rules to be from Outlook
-        #rules = outlook_rules
-        rules = YAML_rules  # no using YAML rules from YAML file as primary source of rules
+        rules = outlook_rules
 
         #To be moved elsewhere
-        # self.log_print(f"Export rules to yaml ({OUTLOOK_RULES_FILE}): {rules}")
+        # self.log_print(f"Export rules to CSV ({OUTLOOK_RULES_FILE}): {rules}")
         # self.export_rules(rules)
 
         # debugging to show the rules
-        # self.log_print(f"Rules loaded: {rules}")
+        self.log_print(f"Rules loaded: {rules}")
 
         # add a check to convert to a JSON object (if it a string or dict)
         if isinstance(rules, str) or isinstance(rules, dict):
@@ -655,7 +608,7 @@ class OutlookSecurityAgent:
         return rules
 
     def print_rules_summary(self, rules):   # rules should be a JSON object
-        """Print a summary of all rules in the yaml file"""
+        """Print a summary of all rules in the CSV file"""
         try:
             # add a check to convert to a JSON object (if it a string or dict)
             if isinstance(rules, str) or isinstance(rules, dict):
@@ -734,7 +687,7 @@ class OutlookSecurityAgent:
 
         return None
 
-    def from_report(self, emails_to_process, emails_added_info, rules_json):
+    def from_report(self, emails_to_process, emails_added_info):
         """
         Generate a report of emails with phishing indicators or no rule matches, including the From domain.
 
@@ -773,8 +726,6 @@ class OutlookSecurityAgent:
                     from_domain = self.header_from(email_header)
 
                     output_string = from_domain.ljust(20) + f"| Email {email_index+1:>3} | Matched no rules"
-# 03/29/2025 Harold Kimmey Add functionality to update JSON rules by adding a simple Y/N to add to the "@<domain>"
-# to the header rules in the JSON rules
                     self.log_print(f"{output_string}", level="INFO")
                     simple_print(f"{output_string}")
 
@@ -983,27 +934,13 @@ class OutlookSecurityAgent:
             # Assign to Category
             if hasattr(actions_obj, "AssignToCategory") and actions_obj.AssignToCategory:
                 try:
-                    # Outlook may store one or more category names in a collection property.
-                    # First, check if there is a Categories collection
-                    if hasattr(actions_obj.AssignToCategory, "Categories") and actions_obj.AssignToCategory.Categories:
-                        # Convert the collection into a list
-                        category_collection = actions_obj.AssignToCategory.Categories
-                        # Depending on the COM object, you might iterate over it
-                        category_names = [cat for cat in category_collection]
-                        # Join the names if more than one
-                        category_name = ", ".join(category_names)
-                    else:
-                        # Fall back to a simple property "Category" if available.
-                        category_name = getattr(actions_obj.AssignToCategory, "Category", None)
+                    category_name = actions_obj.AssignToCategory.Category if hasattr(actions_obj.AssignToCategory, "Category") else None
                     self.log_print(f"AssignToCategory action found, category_name: {category_name}")
                     actions["assign_to_category"] = {
                         "category_name": category_name
                     }
                 except Exception as e:
                     self.log_print(f"Error processing AssignToCategory action: {str(e)}")
-                    actions["assign_to_category"] = {
-                        "category_name": None
-                    }
 
             # Delete
             if hasattr(actions_obj, "Delete") and actions_obj.Delete:
@@ -1163,7 +1100,7 @@ class OutlookSecurityAgent:
                 for url in urls:
                     if 'http' in url.lower():
                         if url.lower() not in email.HTMLBody.lower():
-                            self.log_print(f"Phishing indicator: Found mismatched URL display text: {url}")
+                            self.log_print(f"Phishing indicator: Found mismatched URL diplay text: {url}")
                             indicators.append("Phishing indicator: Found Mismatched URL display text")
                             break
 
@@ -1289,13 +1226,6 @@ class OutlookSecurityAgent:
             restriction = "[ReceivedTime] >= '" + \
                 (datetime.now() - timedelta(days=days_back)).strftime('%m/%d/%Y') + "'"
             emails = self.target_folder.Items.Restrict(restriction)
-
-            if not emails:
-                self.log_print("No emails found to process.")
-
-            if isinstance(emails, str):
-                self.log_print("Error: 'emails' is a string, expected a collection of email objects.")
-
             emails.Sort("[ReceivedTime]", Descending=True)
             self.log_print(f"Total emails found: {emails.Count}")
 
@@ -1620,13 +1550,13 @@ class OutlookSecurityAgent:
 
             # Print a list for Phishing OR Match=false with From: "@<domain>.<>" so they can be easily added to the rules
             self.log_print(f"\nProcessing Report of From's from phishing or match = False")
-            self.from_report(emails_to_process, emails_added_info, rules_json)
+            self.from_report(emails_to_process, emails_added_info)
 
             self.log_print(f"\nProcessing Summary:")
             self.log_print(f"Processed {processed_count} emails")
             self.log_print(f"Flagged {flagged_count} emails as possible Phishing attempts")
             self.log_print(f"Deleted {deleted_total} emails")
-            self.log_print(f"END of Run =============================================================\n\n")
+            self.log_print(f"END of Run=============================================================\n\n")
 
             simple_print(f"\nProcessing Summary:")
             simple_print(f"Processed {processed_count} emails")
@@ -1637,47 +1567,32 @@ class OutlookSecurityAgent:
             self.log_print(f"Error in process_emails: {str(e)}")
             raise
 
-
-
 # Main program execution
 def main():
     """Main function to run the security agent"""
-
-    # Initialize agent with debug mode enabled
-    agent = OutlookSecurityAgent()  # call with defaults
-
     try:
         simple_print(f"\n=============================================================")
         simple_print(f"Starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")
         simple_print(f"This will make changes")
         simple_print(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")
-        agent.log_print(f"\n=============================================================")
-        agent.log_print(f"Starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")
-        agent.log_print(f"This will make changes")
-        agent.log_print(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")
-
 
 
         # Initialize agent with debug mode enabled
         agent = OutlookSecurityAgent()  # call with defaults
-        rules_json = agent.get_rules()  # updated for new yaml code - was get_outlook_rules()
-
+        rules_json = agent.get_rules()  # updated for new CSV code - was get_outlook_rules()
         rules_before = rules_json
-        #simple_print(f"JSON Rules\n{rules_json}") if DEBUG else None
+        simple_print(f"JSON Rules\n{rules_json}") if DEBUG else None
 
         # Process last N days of emails - see DAYS_BACK_DEFAULT
         agent.process_emails(rules_json)
 
         # Export rules if they've been updated
         if rules_before != rules_json:
-            agent.export_rules_to_yaml(rules_json)
-        if DEBUG:
-            agent.export_rules_to_yaml(rules_json)
+            agent.export_rules()
 
         simple_print(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}")
         simple_print(f"=============================================================\n")
-        agent.log_print(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}")
-        agent.log_print(f"============================================================={CRLF}{CRLF}")
+
 
     except Exception as e:
         simple_print(f"\nError: {str(e)}")
