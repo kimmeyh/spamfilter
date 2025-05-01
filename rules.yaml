@@ -1,8 +1,13 @@
+version: '1.0'
+settings:
+  default_execution_order_increment: 10
+rules:
 - name: SpamAutoDeleteHeader
   enabled: true
   isLocal: true
   executionOrder: 1
   conditions:
+    type: OR
     body: []
     from: []
     header:
@@ -1089,7 +1094,7 @@
     - '@gotkdo.'
     - '@goverritoric.'
     - '@govertists.'
-    - .ac.ir
+    - '@.*\.ac\.ir'
     - '@gupilya.'
     - '@holdenfg.org'
     - '@harmoted.'
@@ -1269,7 +1274,7 @@
     - '@arabindrange.'
     - '@cytelle.'
     - '@truepurdue.'
-    - '@%.jp.net'
+    - '@.*\.jp\.net'
     - '@moreonlineshopperdeals.'
     - '@heavennen.'
     - '@reteuomomondoforus.'
@@ -1404,14 +1409,36 @@
     - '@chennaiwap.com'
     - '@shxinyifm.com'
     - '@romatika.com'
+    - '@iffae.com'
+    - '@loveinccuy.org'
+    - '@capordu.com'
+    - '@knowlsafe.com'
+    - '@b4checkin.com'
+    - '@ezpaperwriting.com'
+    - '@dataposits.com'
+    - '@pachesu.com'
+    - '@nwonu.com'
+    - '@wfuv.mayantial.jp.bloom-blush.com'
+    - '@ipayt.com'
+    - '@bahmans.com'
+    - decimental.com
+    - ademlabs.com
+    - aut.ac.nz
+    - hydrosyzine.org
+    - vigapro.com
+    - helmhq.com
+    - appearhawk.com
+    - palmarcafe.com
+    - timeliotelsman.com
+    - '@docusign.net'
     subject: []
   actions:
     assign_to_category:
       category_name: SpamHeader
+    delete: true
     copy_to_folder:
       folder_name: null
       folder_path: null
-    delete: true
     forward: []
     mark_as_task:
       task_due_date: null
@@ -1422,33 +1449,23 @@
       sound_file: null
     redirect: []
   exceptions:
-    body:
-    - ClevelandWater.com
-    - NEORSD.org
-    - tcsjerky.com
-    - clover.com
-    - email.openai.com
-    - lastpass.com
-    - shopifyemail.com
-    from:
-    - address: store+61395140851@t.shopifyemail.com
-      name: store+61395140851@t.shopifyemail.com
-    - address: orders@tcsjerky.com
-      name: orders@tcsjerky.com
-    header:
-    - '@ClevelandWater.com'
-    - '@NEORSD.org'
-    - '@tcsjerky.com'
-    - '@clover.com'
-    - .openai.com
-    - '@lastpass.com'
+    body: []
+    from: []
+    header: []
     subject: []
-  last_modified: '2025-04-02T11:54:15.882018'
+  metadata:
+    last_modified: '2025-04-07T08:53:11.028965'
+    created_by: system
+    tags:
+    - spam
+    - auto-delete
+    - header
 - name: SpamAutoDeleteBody
   enabled: true
   isLocal: true
   executionOrder: 2
   conditions:
+    type: OR
     body:
     - Denton Bay Management
     - Deutsche Bank
@@ -2584,16 +2601,18 @@
     - /bestoffes.com
     - .bestoffes.com
     - renewal for GeekSquad
+    - /peacellwa.com
+    - .peacellwa.com
     from: []
     header: []
     subject: []
   actions:
     assign_to_category:
       category_name: SpamBody
+    delete: true
     copy_to_folder:
       folder_name: null
       folder_path: null
-    delete: true
     forward: []
     mark_as_task:
       task_due_date: null
@@ -2605,37 +2624,22 @@
     redirect: []
   exceptions:
     body: []
-    from:
-    - address: ebilling_noreply@ClevelandWater.com
-      name: ebilling_noreply@ClevelandWater.com
-    - address: eBilling@NEORSD.org
-      name: eBilling@NEORSD.org
-    - address: orders@tcsjerky.com
-      name: orders@tcsjerky.com
-    - address: app@clover.com
-      name: app@clover.com
-    - address: noreply@email.openai.com
-      name: noreply@email.openai.com
-    - address: do-not-reply-support@lastpass.com
-      name: do-not-reply-support@lastpass.com
-    - address: support@lastpass.com
-      name: LastPass
-    - address: store+61395140851@t.shopifyemail.com
-      name: store+61395140851@t.shopifyemail.com
-    - address: orders@tcsjerky.com
-      name: orders@tcsjerky.com
-    - address: TrackingUpdates@fedex.com
-      name: TrackingUpdates@fedex.com
-    - address: billing@lastpass.com
-      name: billing@lastpass.com
+    from: []
     header: []
     subject: []
-  last_modified: '2025-04-02T11:54:15.882018'
+  metadata:
+    last_modified: '2025-04-07T08:53:11.028965'
+    created_by: system
+    tags:
+    - spam
+    - auto-delete
+    - body-content
 - name: SpamAutoDeleteFrom
   enabled: true
   isLocal: true
   executionOrder: 3
   conditions:
+    type: OR
     body: []
     from:
     - address: Solaris@ofefrsdtops.net
@@ -2669,10 +2673,10 @@
   actions:
     assign_to_category:
       category_name: SpamHeader
+    delete: true
     copy_to_folder:
       folder_name: null
       folder_path: null
-    delete: true
     forward: []
     mark_as_task:
       task_due_date: null
@@ -2683,29 +2687,23 @@
       sound_file: null
     redirect: []
   exceptions:
-    body:
-    - ClevelandWater.com
-    - NEORSD.org
-    - tcsjerky.com
-    - clover.com
-    - openai.com
-    - lastpass.com
+    body: []
     from: []
-    header:
-    - '@ClevelandWater.com'
-    - '@tcsjerky.com'
-    - '@NEORSD.org'
-    - '@clover.com'
-    - '@email.openai.com'
-    - '@lastpass.com'
-    - store+61395140851@t.shopifyemail.com
+    header: []
     subject: []
-  last_modified: '2025-04-02T11:54:15.882018'
+  metadata:
+    last_modified: '2025-04-07T08:53:11.028965'
+    created_by: system
+    tags:
+    - spam
+    - auto-delete
+    - sender
 - name: SpamAutoDeleteSubject
   enabled: true
   isLocal: true
   executionOrder: 4
   conditions:
+    type: OR
     body: []
     from: []
     header: []
@@ -2750,10 +2748,10 @@
   actions:
     assign_to_category:
       category_name: SpamSubject
+    delete: true
     copy_to_folder:
       folder_name: null
       folder_path: null
-    delete: true
     forward: []
     mark_as_task:
       task_due_date: null
@@ -2764,41 +2762,23 @@
       sound_file: null
     redirect: []
   exceptions:
-    body:
-    - ClevelandWater.com
-    - NEORSD.org
-    - tcsjerky.com
-    - .clover.com
-    - /clover.com
-    - .openai.com
-    - /openai.com
-    - .lastpass.com
-    - /lastpass.com
-    - .aa.com
-    - /aa.com
-    - .ftc.com
-    - /ftc.com
-    - kaggle
-    - .shopifyemail.com
-    - /shopifyemail.com
+    body: []
     from: []
-    header:
-    - '@ClevelandWater.com'
-    - '@NEORSD.org'
-    - '@tcsjerky.com'
-    - '@clover.com'
-    - .openai.com
-    - '@lastpass.com'
-    - '@aa.com'
-    - '@ftc.com'
-    - kaggle
+    header: []
     subject: []
-  last_modified: '2025-04-02T11:54:15.882018'
+  metadata:
+    last_modified: '2025-04-07T08:53:11.028965'
+    created_by: system
+    tags:
+    - spam
+    - auto-delete
+    - subject
 - name: SpamAutoDeleteBody-imgur.com
   enabled: true
   isLocal: true
   executionOrder: 5
   conditions:
+    type: OR
     body:
     - .imgur.
     - /imgur.
@@ -2808,10 +2788,10 @@
   actions:
     assign_to_category:
       category_name: SpamImgur
+    delete: true
     copy_to_folder:
       folder_name: null
       folder_path: null
-    delete: true
     forward: []
     mark_as_task:
       task_due_date: null
@@ -2822,30 +2802,14 @@
       sound_file: null
     redirect: []
   exceptions:
-    body:
-    - ClevelandWater.com
-    - NEORSD.org
-    - tcsjerky.com
-    - clover.com
-    - .openai.com
-    - /openai.com
-    - lastpass.com
-    - /aa.com
-    - .aa.com
-    - .ftc.com
-    - /ftc.com
+    body: []
     from: []
-    header:
-    - scottkimmey1@gmail.com
-    - '@ClevelandWater.com'
-    - '@NEORSD.org'
-    - '@tcsjerky.com'
-    - '@clover.com'
-    - '@email.openai.com'
-    - '@lastpass.com'
-    - '@t.shopifyemail.com'
-    - '@aa.com'
-    - kaggle
-    - '@ftc.gov'
+    header: []
     subject: []
-  last_modified: '2025-04-02T11:54:15.882018'
+  metadata:
+    last_modified: '2025-04-07T08:53:11.028965'
+    created_by: system
+    tags:
+    - spam
+    - auto-delete
+    - imgur

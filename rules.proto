@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package outlook_rules;
+
+// Top-level message for the rules file
+message RulesFile {
+  string version = 1; // Schema version
+  Settings settings = 2; // Global settings
+  repeated Rule rules = 3; // List of rules
+}
+
+// Global settings
+message Settings {
+  int32 default_execution_order_increment = 1; // Default increment for execution order
+}
+
+// A single rule definition
+message Rule {
+  string name = 1; // Name of the rule
+  bool enabled = 2; // Whether the rule is enabled
+  bool isLocal = 3; // Whether the rule is local
+  int32 executionOrder = 4; // Execution order of the rule
+  Conditions conditions = 5; // Conditions for the rule
+  Actions actions = 6; // Actions to perform for the rule
+  Exceptions exceptions = 7; // Exceptions for the rule
+  Metadata metadata = 8; // Metadata for the rule
+}
+
+// Conditions for a rule
+message Conditions {
+  string type = 1; // Type of condition (e.g., "OR", "AND")
+  repeated string body = 2; // Patterns to match in the email body
+  repeated string from = 3; // Patterns to match in the email "from" field
+  repeated string header = 4; // Patterns to match in the email header
+  repeated string subject = 5; // Patterns to match in the email subject
+}
+
+// Actions to perform for a rule
+message Actions {
+  AssignToCategory assign_to_category = 1; // Assign to a category
+  bool delete = 2; // Whether to delete the email
+  CopyToFolder copy_to_folder = 3; // Copy to a folder
+  repeated string forward = 4; // Forward to these addresses
+  MarkAsTask mark_as_task = 5; // Mark as a task
+  MoveToFolder move_to_folder = 6; // Move to a folder
+  PlaySound play_sound = 7; // Play a sound
+  repeated string redirect = 8; // Redirect to these addresses
+}
+
+// Assign to category action
+message AssignToCategory {
+  string category_name = 1; // Name of the category
+}
+
+// Copy to folder action
+message CopyToFolder {
+  string folder_name = 1; // Name of the folder
+  string folder_path = 2; // Path to the folder
+}
+
+// Mark as task action
+message MarkAsTask {
+  string task_due_date = 1; // Due date for the task
+}
+
+// Move to folder action
+message MoveToFolder {
+  string folder_name = 1; // Name of the folder
+  string folder_path = 2; // Path to the folder
+}
+
+// Play sound action
+message PlaySound {
+  string sound_file = 1; // Path to the sound file
+}
+
+// Exceptions for a rule
+message Exceptions {
+  repeated string body = 1; // Patterns to exclude in the email body
+  repeated string from = 2; // Patterns to exclude in the email "from" field
+  repeated string header = 3; // Patterns to exclude in the email header
+  repeated string subject = 4; // Patterns to exclude in the email subject
+}
+
+// Metadata for a rule
+message Metadata {
+  string last_modified = 1; // Last modified timestamp
+  string created_by = 2; // Creator of the rule
+  repeated string tags = 3; // Tags for the rule
+}

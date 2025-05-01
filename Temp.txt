@@ -5,3 +5,8 @@ Then update get_yaml_rules, to read in from YAML_RULES_FILE so that it exactly m
 ONLY change code that HAS to be CHANGED to implement the recommendation.
 Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
+
+
+Can you update get_safe_senders_rules to read in the safe_senders file and make a seperate JSON varialbe for the
+
+Can you create a protubuf schema for rules_new.yaml

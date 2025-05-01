@@ -9,6 +9,19 @@
 # 04/01/2025 Harold Kimmey Verified export of rules from Outlook to YAML file (at exit) matches rules from import of YAML file
 # 04/01/2025 Switch to using YAML file as import instead of Outlook rules
 # 04/01/2025 Committed changes, pushed, PR to Main branch of kimmeyh/spamfilter.git
+# 04/21/2025 Harold Kimmey Current Status ***
+#   - All rules are being read from the YAML file
+#   - All rules are being written to the YAML file at the end of the run
+#   - Removed checks for updates to rules and safe_senders - instead will save copies to Archive for each run
+#   - safe_senders now being read from safe_senders.YAML file with file bing updated for regex strings and sorted
+#   - Need to add
+#       Can safe_senders.yaml be read using safe_senders.proto
+#       Can rules.yaml be read using rules.proto
+#       Output of safe_senders.yaml - ensure they are written as compatible wiht regex strings (double quoted), sorted, and unique
+#           using safe_senders.proto
+#           see code for sort, double quoted, unique in merge_safe_senders.py
+#       Update Output of rules.yaml - ensure they are written as compatible wiht regex strings  (double quoted), sorted, and unique
+#           using rules.proto
 
 #------------------General Documentation------------------
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
@@ -127,7 +140,8 @@ import sys
 import json
 import os
 import yaml
-
+import copy
+import traceback
 
 #Imports for packages that need to be installed
 import win32com.client
@@ -148,16 +162,17 @@ OUTLOOK_SECURITY_LOG = OUTLOOK_SECURITY_LOG_PATH + "OutlookRulesProcessingDEBUG_
 OUTLOOK_SIMPLE_LOG = OUTLOOK_SECURITY_LOG_PATH + "OutlookRulesProcessingSimple.log"
 OUTLOOK_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
 OUTLOOK_RULES_FILE = OUTLOOK_RULES_PATH + "outlook_rules.csv"
+OUTLOOK_SAFE_SENDERS_FILE = OUTLOOK_RULES_PATH + "OutlookSafeSenders.csv"
 YAML_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
 YAML_RULES_FILE = YAML_RULES_PATH + "rules.yaml"
-OUTLOOK_SAFE_SENDERS_FILE = OUTLOOK_RULES_PATH + "OutlookSafeSenders.csv"
+#YAML_RULES_FILE = YAML_RULES_PATH + "rules_new.yaml" # this was temporary and no longer needed
+YAML_RULES_SAFE_SENDERS_FILE    = YAML_RULES_PATH + "rules_safe_senders.yaml"
 
 # not sure if these will be used
 YAML_RULES_BODY_FILE            = YAML_RULES_PATH + "rules_body.yaml"
 YAML_RULES_HEADER_FILE          = YAML_RULES_PATH + "rules_header.yaml"
 YAML_RULES_SUBJECT_FILE         = YAML_RULES_PATH + "rules_subject.yaml"
 YAML_RULES_SPAM_FILTER_FILE     = YAML_RULES_PATH + "rules_spam_filter.yaml"
-YAML_RULES_SAFE_SENDERS_FILE    = YAML_RULES_PATH + "rules_safe_senders.yaml"
 YAML_RULES_SAFE_RECIPIENTS_FILE = YAML_RULES_PATH + "rules_safe_recipients.yaml"
 YAML_RULES_BLOCKED_SENDERS_FILE = YAML_RULES_PATH + "rules_blocked_senders.yaml"
 YAML_RULES_CONTACTS_FILE        = YAML_RULES_PATH + "rules_contacts.yaml"           # periodically review email account contacts and update
@@ -189,6 +204,9 @@ class OutlookSecurityAgent:
         self.debug_mode = debug_mode
         self.outlook = win32com.client.Dispatch(WIN32_CLIENT_DISPATCH)
         self.namespace = self.outlook.GetNamespace(OUTLOOK_GETNAMESPACE)
+        self.YAMO_RULES_PATH = YAML_RULES_PATH  # Set appropriate default path
+        self.YAML_RULES_FILE = YAML_RULES_FILE  # Set appropriate default file name
+        self.YAML_SAFE_SENDERS_FILE = YAML_RULES_SAFE_SENDERS_FILE  # Set appropriate default file name
 
         # Configure logging
         log_format = '%(asctime)s - %(levelname)s - %(message)s'
@@ -224,9 +242,13 @@ class OutlookSecurityAgent:
             sanitized_message = self._sanitize_string(message)
             logging.debug(sanitized_message) if level == "DEBUG" else None
             logging.info(sanitized_message) if level == "INFO" else None
+
         except UnicodeEncodeError:
             logging.debug(sanitized_message.encode('utf-8', 'replace').decode('utf-8')) if level == "DEBUG" else None
             logging.info(sanitized_message.encode('utf-8', 'replace').decode('utf-8'))  if level == "INFO" else None
+        except Exception as e:
+            self.log_print(f"Error: {str(e)}")
+        return
 
     def _sanitize_string(self, s):
         """Sanitize string to replace non-ASCII characters"""
@@ -284,28 +306,198 @@ class OutlookSecurityAgent:
             return value
         return value.replace('\\"', '"').replace('\\\\', '\\')
 
+    # def compare_rules(self, rules1, rules2):
+    #     """Compare two sets of rules and return the differences."""
+    #     # Convert single rules to lists if needed
+    #     rules1_list = [rules1] if isinstance(rules1, dict) else rules1
+    #     rules2_list = [rules2] if isinstance(rules2, dict) else rules2
+
+    #     # Create dictionaries keyed by rule name for easy comparison
+    #     rules1_dict = {}
+    #     rules2_dict = {}
+
+    #     # Safely create dictionaries with error handling
+    #     for rule in rules1_list:
+    #         if isinstance(rule, dict) and 'name' in rule:
+    #             rules1_dict[rule['name']] = rule
+    #         else:
+    #             self.log_print(f"Warning: Invalid rule format in first set: {rule}")
+
+    #     for rule in rules2_list:
+    #         if isinstance(rule, dict) and 'name' in rule:
+    #             rules2_dict[rule['name']] = rule
+    #         else:
+    #             self.log_print(f"Warning: Invalid rule format in second set: {rule}")
+
+    #     # Find rules unique to each set
+    #     rules_only_in_1 = set(rules1_dict.keys()) - set(rules2_dict.keys())
+    #     rules_only_in_2 = set(rules2_dict.keys()) - set(rules1_dict.keys())
+
+    #     # Find modified rules (present in both but different)
+    #     modified_rules = {}
+    #     common_rules = set(rules1_dict.keys()) & set(rules2_dict.keys())
+    #     for rule_name in common_rules:
+    #         if rules1_dict[rule_name] != rules2_dict[rule_name]:
+    #             modified_rules[rule_name] = {
+    #                 'rules1': rules1_dict[rule_name],
+    #                 'rules2': rules2_dict[rule_name]
+    #             }
+
+    #     return {
+    #         'rules_only_in_1': [rules1_dict[name] for name in rules_only_in_1],
+    #         'rules_only_in_2': [rules2_dict[name] for name in rules_only_in_2],
+    #         'modified_rules': modified_rules
+    #     }
+
+    def _deep_compare_dicts(self, dict1, dict2, path=""):
+        """Recursively compare dictionaries and return specific differences."""
+        differences = []
+
+        if not isinstance(dict1, dict) or not isinstance(dict2, dict):
+            if dict1 != dict2:
+                differences.append({
+                    'path': path,
+                    'value1': dict1,
+                    'value2': dict2
+                })
+            return differences
+
+        # Keys in dict1 but not in dict2
+        for key in dict1:
+            if key not in dict2:
+                differences.append({
+                    'path': f"{path}.{key}" if path else key,
+                    'value1': dict1[key],
+                    'value2': None
+                })
+                continue
+
+            # If both have the key, compare values
+            if isinstance(dict1[key], dict) and isinstance(dict2[key], dict):
+                # Recursive comparison for nested dictionaries
+                nested_diffs = self._deep_compare_dicts(
+                    dict1[key], dict2[key],
+                    f"{path}.{key}" if path else key
+                )
+                differences.extend(nested_diffs)
+            elif isinstance(dict1[key], list) and isinstance(dict2[key], list):
+                # Compare lists item by item
+                list_diffs = self._deep_compare_lists(
+                    dict1[key], dict2[key],
+                    f"{path}.{key}" if path else key
+                )
+                differences.extend(list_diffs)
+            elif dict1[key] != dict2[key]:
+                differences.append({
+                    'path': f"{path}.{key}" if path else key,
+                    'value1': dict1[key],
+                    'value2': dict2[key]
+                })
+
+        # Keys in dict2 but not in dict1
+        for key in dict2:
+            if key not in dict1:
+                differences.append({
+                    'path': f"{path}.{key}" if path else key,
+                    'value1': None,
+                    'value2': dict2[key]
+                })
+
+        return differences
+
+    def _deep_compare_lists(self, list1, list2, path=""):
+        """Compare two lists and return differences."""
+        differences = []
+
+        # Check for length differences
+        if len(list1) != len(list2):
+            differences.append({
+                'path': path,
+                'value1': f"List length: {len(list1)}",
+                'value2': f"List length: {len(list2)}"
+            })
+
+        # Compare elements
+        for i, (item1, item2) in enumerate(zip(list1, list2)):
+            if isinstance(item1, dict) and isinstance(item2, dict):
+                nested_diffs = self._deep_compare_dicts(
+                    item1, item2,
+                    f"{path}[{i}]"
+                )
+                differences.extend(nested_diffs)
+            elif isinstance(item1, list) and isinstance(item2, list):
+                nested_diffs = self._deep_compare_lists(
+                    item1, item2,
+                    f"{path}[{i}]"
+                )
+                differences.extend(nested_diffs)
+            elif item1 != item2:
+                differences.append({
+                    'path': f"{path}[{i}]",
+                    'value1': item1,
+                    'value2': item2
+                })
+
+        # Handle different length lists
+        for i in range(min(len(list1), len(list2)), max(len(list1), len(list2))):
+            if i < len(list1):
+                differences.append({
+                    'path': f"{path}[{i}]",
+                    'value1': list1[i],
+                    'value2': "Missing"
+                })
+            else:
+                differences.append({
+                    'path': f"{path}[{i}]",
+                    'value1': "Missing",
+                    'value2': list2[i]
+                })
+
+        return differences
+
     def compare_rules(self, rules1, rules2):
         """Compare two sets of rules and return the differences."""
-        # Convert single rules to lists if needed
-        rules1_list = [rules1] if isinstance(rules1, dict) else rules1
-        rules2_list = [rules2] if isinstance(rules2, dict) else rules2
+        # Extract rules arrays if wrapped in dictionaries
+        if isinstance(rules1, dict) and "rules" in rules1:
+            rules1_list = rules1["rules"]
+        else:
+            rules1_list = [rules1] if isinstance(rules1, dict) else rules1
+
+        if isinstance(rules2, dict) and "rules" in rules2:
+            rules2_list = rules2["rules"]
+        else:
+            rules2_list = [rules2] if isinstance(rules2, dict) else rules2
+
+        # Validate input data types
+        if not isinstance(rules1_list, list):
+            self.log_print(f"Error: First rule set is not a list or dict. Type: {type(rules1_list)}")
+            rules1_list = []
+        if not isinstance(rules2_list, list):
+            self.log_print(f"Error: Second rule set is not a list or dict. Type: {type(rules2_list)}")
+            rules2_list = []
 
         # Create dictionaries keyed by rule name for easy comparison
         rules1_dict = {}
         rules2_dict = {}
 
         # Safely create dictionaries with error handling
-        for rule in rules1_list:
+        for i, rule in enumerate(rules1_list):
             if isinstance(rule, dict) and 'name' in rule:
                 rules1_dict[rule['name']] = rule
             else:
-                self.log_print(f"Warning: Invalid rule format in first set: {rule}")
+                self.log_print(f"Warning: Invalid rule format in first set at index {i}: {type(rule)} - {rule}")
+                # Optionally add more detailed debugging
+                if isinstance(rule, dict):
+                    self.log_print(f"Dictionary keys: {list(rule.keys())}")
 
-        for rule in rules2_list:
+        for i, rule in enumerate(rules2_list):
             if isinstance(rule, dict) and 'name' in rule:
                 rules2_dict[rule['name']] = rule
             else:
-                self.log_print(f"Warning: Invalid rule format in second set: {rule}")
+                self.log_print(f"Warning: Invalid rule format in second set at index {i}: {type(rule)} - {rule}")
+                # Optionally add more detailed debugging
+                if isinstance(rule, dict):
+                    self.log_print(f"Dictionary keys: {list(rule.keys())}")
 
         # Find rules unique to each set
         rules_only_in_1 = set(rules1_dict.keys()) - set(rules2_dict.keys())
@@ -315,10 +507,13 @@ class OutlookSecurityAgent:
         modified_rules = {}
         common_rules = set(rules1_dict.keys()) & set(rules2_dict.keys())
         for rule_name in common_rules:
-            if rules1_dict[rule_name] != rules2_dict[rule_name]:
+            # Use deep comparison to identify specific differences
+            diffs = self._deep_compare_dicts(rules1_dict[rule_name], rules2_dict[rule_name])
+            if diffs:
                 modified_rules[rule_name] = {
                     'rules1': rules1_dict[rule_name],
-                    'rules2': rules2_dict[rule_name]
+                    'rules2': rules2_dict[rule_name],
+                    'differences': diffs
                 }
 
         return {
@@ -327,37 +522,38 @@ class OutlookSecurityAgent:
             'modified_rules': modified_rules
         }
 
-    def output_rules_differences(self, outlook_rules, yaml_rules):
-        """Output the differences between yaml_rules and outlook_rules"""
-        differences = self.compare_rules(outlook_rules, yaml_rules)
+
+    def output_rules_differences(self, rule_set_one, rule_set_one_name, rule_set_two, rule_set_two_name):
+        """Output the differences between 2 sets of JSON rules"""
+        differences = self.compare_rules(rule_set_one, rule_set_two)
 
         # Print the differences
         self.log_print(f"{CRLF}Differences between Outlook rules and YAML rules:")
         if differences['rules_only_in_1']:
-            self.log_print(f"\nRules only in outlook_rules:")
+            self.log_print(f"\nRules only in {rule_set_one_name}:")
             for rule in differences['rules_only_in_1']:
                 self.log_print(f"- {rule['name']}")
         else:
-            self.log_print(f"{CRLF}No rules only in outlook_rules")
+            self.log_print(f"{CRLF}No rules only in {rule_set_one_name}")
 
         if differences['rules_only_in_2']:
-            self.log_print(f"{CRLF}Rules only in yaml_Rules set:")
+            self.log_print(f"{CRLF}Rules only in {rule_set_two_name} set:")
             for rule in differences['rules_only_in_2']:
                 self.log_print(f"- {rule['name']}")
         else:
-            self.log_print(f"{CRLF}No rules only in yaml_Rules set")
+            self.log_print(f"{CRLF}No rules only in {rule_set_two_name} set")
 
         if differences['modified_rules']:
             self.log_print(f"{CRLF}Modified rules:")
             for name, rules in differences['modified_rules'].items():
                 self.log_print(f"- {name} has differences")
                 # Print the differences between the two rules
-                self.log_print(f"  Outlook rule: {json.dumps(rules['rules1'], indent=2)}")
-                self.log_print(f"  YAML rule: {json.dumps(rules['rules2'], indent=2)}")
+                self.log_print(f"  {rule_set_one_name} rule: {json.dumps(rules['rules1'], indent=2)}", DEBUG)
+                self.log_print(f"  {rule_set_two_name} rule: {json.dumps(rules['rules2'], indent=2)}", DEBUG)
+            return False
         else:
-            self.log_print(f"{CRLF}No modified rules found")
-
-        return
+            self.log_print(f"{CRLF}No modified rules found", DEBUG)
+            return True
 
     # NOTE: tried to get the outlook junk email options and lists, but could not get it to work
     # def get_outlook_junk_mail_options(self):
@@ -386,12 +582,11 @@ class OutlookSecurityAgent:
     #     except Exception as e:
     #         self.log_print(f"Error processing Junk Email Options: {str(e)}")
     #         return {}
-
     #     if DEBUG:
     #         self.log_print(f"Junk Email Options retrieved: {options_dict}")
     #     return options_dict # will need to be converted and appended to the json rules object
 
-    def get_outlook_rules(self):    # no longer in use unless YAML rules file cannot be read
+    def get_outlook_rules(self):    # no longer in use - YAML rules file is used
         """
         Convert Outlook rules to JSON format with comprehensive error checking.
         Returns a list of rule dictionaries with all available properties.
@@ -401,12 +596,6 @@ class OutlookSecurityAgent:
         timestamp = datetime.now().isoformat()
 
         try:
-            # NOTE: GetRules() is not returning several of the actions:
-            #   - Mark as Read
-            #   - Clear the Message Flag
-            #   - Stop Processing More Rules
-            #   Also, the "AssignToCategory" is not returning the category name
-
             # Get all rules that start with the subset name
             self.log_print("Importing Outlook rules and converting to JSON format...")
             outlook_rules_raw = self.outlook.Session.DefaultStore.GetRules()
@@ -457,35 +646,64 @@ class OutlookSecurityAgent:
                         "processed": False
                     })
 
-#add test section
-            # Read additional rules from an OUTLOOK_SAFE_SENDERS CSV file
-            safe_senders = []
-            if os.path.exists(OUTLOOK_SAFE_SENDERS_FILE):
-                with open(OUTLOOK_SAFE_SENDERS_FILE, "r", encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if line:
-                            safe_senders.append(line)
-
-            for rule in rules_json:
-                if rule.get("name") == "SpamAutoDeleteBody":
-                    if "body" not in rule["conditions"]:
-                        rule["conditions"]["body"] = []
-                    for sender in safe_senders:
-                        rule["conditions"]["body"].append({"address": sender})
-
-# test re-adding section
-
-            # print (json.dumps(rules_json, indent=2, default=str)) #can be used for extra debugging information
             return json.loads(json.dumps(rules_json, indent=2, default=str))
 
         except Exception as e:
             self.log_print(f"Error accessing Outlook rules: {str(e)}")
             return json.dumps({"error": str(e)})
 
+    def get_safe_senders_rules(self, rules_json=None):
+        """
+        Read safe senders from YAML file and return as JSON object.
+        The safe_senders YAML file contains a list of patterns that can be email addresses or domains.
+
+        Args:
+            rules_json: Not used, kept for backward compatibility
+
+        Returns:
+            list: List of safe sender patterns, or empty list if file not found/error
+        """
+
+        self.log_print("Importing safe senders from YAML file...")
+        safe_senders = []
+
+        try:
+            if not os.path.exists(YAML_RULES_SAFE_SENDERS_FILE):
+                self.log_print(f"Safe senders YAML file not found: {YAML_RULES_SAFE_SENDERS_FILE}")
+                return safe_senders
+
+            # Read YAML file and convert to Python object
+            with open(YAML_RULES_SAFE_SENDERS_FILE, 'r', encoding='utf-8') as yaml_file:
+                safe_senders = yaml.safe_load(yaml_file)
+
+            if not safe_senders:
+                self.log_print("No content found in YAML file")
+                return safe_senders
+
+            # Extract safe senders list from YAML structure
+            if isinstance(safe_senders, dict) and 'safe_senders' in safe_senders:
+                self.log_print(f"Successfully imported {len(safe_senders['safe_senders'])} safe senders from YAML file")
+            elif isinstance(safe_senders, list):
+                self.log_print(f"Successfully imported {len(safe_senders)} safe senders from YAML file")
+            else:
+                self.log_print("No 'safe_senders' key found in YAML file")
+
+            if self.debug_mode and safe_senders:
+                self.log_print("First few safe senders for verification:")
+                for sender in safe_senders[:5]:
+                    self.log_print(f"  {sender}")
+
+            return safe_senders
+
+        except Exception as e:
+            self.log_print(f"Error importing safe senders from YAML: {str(e)}")
+            self.log_print(f"Error details: {str(e.__class__.__name__)}")
+            self.log_print(f"Traceback: {traceback.format_exc()}")
+            return safe_senders
 
     def get_yaml_rules(self, rules_file):
         """Import rules from yaml file and return as JSON object (not string)"""
+        #*** UPdate to use .proto file
         self.log_print("Importing rules from YAML file...")
         try:
             if not os.path.exists(rules_file):
@@ -494,28 +712,28 @@ class OutlookSecurityAgent:
 
             # Read YAML file and convert to Python object
             with open(rules_file, 'r', encoding='utf-8') as yaml_file:
-                rules = yaml.safe_load(yaml_file)
+                yaml_content = yaml.safe_load(yaml_file)
 
-            if not rules:
+            if not yaml_content:
                 self.log_print("No rules found in YAML file")
                 return []
 
-            # Ensure rules is a list
-            if not isinstance(rules, list):
-                rules = [rules]
-
-            # Update timestamp for each rule but preserve original structure
-            timestamp = datetime.now().isoformat()
-            for rule in rules:
-                if isinstance(rule, dict):
-                    rule['last_modified'] = timestamp
+            # Handle new format with version and settings
+            if isinstance(yaml_content, dict) and "rules" in yaml_content:
+                # Extract the rules array from the new format
+                rules = yaml_content["rules"]
+                # Preserve other top-level elements like version and settings
+                result = yaml_content
+            else:
+                # Handle old format where rules were at the top level
+                rules = yaml_content if isinstance(yaml_content, list) else [yaml_content]
+                result = {"rules": rules}
 
             self.log_print(f"Successfully imported {len(rules)} rules from YAML file")
 
             # Convert to JSON using json.dumps and json.loads to ensure consistent structure
-            # This ensures the structure is identical to what get_outlook_rules produces
-            rules_json = json.loads(json.dumps(rules, default=str))
-            return rules_json
+            result_json = json.loads(json.dumps(result, default=str))
+            return result_json
 
         except Exception as e:
             self.log_print(f"Error importing rules from YAML: {str(e)}")
@@ -524,8 +742,138 @@ class OutlookSecurityAgent:
             self.log_print(f"Traceback: {traceback.format_exc()}")
             return []
 
+    #***1 - not working - not exporting or not importing full YAML safe_senders with header and "safe_senders" key
+    # see rules_safes_senders.yaml vs. rules_safe_senders_test.yaml
+
+    def export_safe_senders_to_yaml(self, rules_json=None, rules_file=YAML_RULES_SAFE_SENDERS_FILE):
+        """Export (updated) safe_senders JSON to yaml file"""
+        # Update timestamp for each rule - may not be used
+        timestamp_rule = datetime.now().isoformat()
+
+        try:
+            if rules_json is None:   #this should never happen
+                self.log_print("safe_senders JSON is Empty, do not overwrite safe_senders yaml and exit with error")
+                return None
+
+            # Convert rules_json to JSON object if it's a string or dict
+            if isinstance(rules_json, str):
+                rules = json.loads(rules_json)
+                self.log_print(f"export_safe_senders: Found rusafe_senders JSON is a string and converted to JSON object")
+            elif isinstance(rules_json, dict):
+                rules = json.loads(json.dumps(rules_json))
+                self.log_print(f"export_safe_senders: Found rsafe_senders JSON is a dict and converted to JSON object")
+            else:
+                # Ensure consistent structure by using json conversion
+                rules = json.loads(json.dumps(rules_json, default=str))
+                self.log_print(f"export_safe_senders: Standardized rules JSON structure")
+
+            #*** may need to remove this as it should be updated only when changes are made (done elsewhere)
+            for rule in rules:
+                if isinstance(rule, dict):
+                    # Update last_modified in metadata if present, else create metadata
+                    if "metadata" in rule and isinstance(rule["metadata"], dict):
+                        rule["metadata"]["last_modified"] = timestamp
+                    else:
+                        rule["metadata"] = {"last_modified": timestamp}
+
+            standardized_rules = rules #testing - temporary
+            self.log_print(f"Processing {len(standardized_rules)} safe_senders rules")
+            self.log_print(f"Show list of standardized_rules safe_senders: {standardized_rules}")
+
+            # 03/31/2025 Harold Kimmey Write json_rules to YAML file
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(rules_file), exist_ok=True)
+
+            # The below section does the following:
+            #   Ensure the JSON rules_json object is a valid JSON object before writing to YAML file
+            #   Make a backup of the current yaml_file using format "yaml_backup_yyyymmdd_hhmmss.yaml"
+            #   Write out the YAML file using YAML_RULES_FILE_temp.yaml
+            #   do a get_yaml_rules() to read the file back in and compare it to the original rules_json object to ensure it is a valid match
+            #       can use the compare_rules() function to do this
+            #   If the comparison is successful, write out the JSON object to YAML_RULES_FILE (use code below)
+            #       Convert JSON object to YAML and write to file
+            #   If no errors writing the YAML_RULES_FILE, delete the temp file
+
+            # Create a backup of the current YAML file if it exists
+            if os.path.exists(rules_file):
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_file = f"{os.path.splitext(rules_file)[0]}_backup_{timestamp}.yaml"
+                try:
+                    import shutil
+                    shutil.copy2(rules_file, backup_file)
+                    self.log_print(f"Created backup of existing safe_sneders YAML file: {backup_file}")
+                except Exception as e:
+                    self.log_print(f"Warning: Could not create backup safe_senders file: {str(e)}")
+
+            # Create temporary file path
+            temp_file = f"{os.path.splitext(rules_file)[0]}_temp.yaml"
+
+            # Write to temporary file first
+            try:
+                with open(temp_file, 'w', encoding='utf-8') as yaml_file:
+                    # Ensure correct structure with top-level keys
+                    if isinstance(standardized_rules, list):
+                        # Create or preserve the proper structure
+                        formatted_output = {
+                            "rules": standardized_rules,
+                        }
+                        # Write the structured data to the YAML file
+                        yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False)
+                        self.log_print(f"Successfully wrote safe_senders *list* to temporary file: {temp_file}")
+                    else:
+                        # If somehow not a list, write as-is (fallback)
+                        yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False)
+                        self.log_print(f"Successfully wrote safe_senders *JSON* to temporary file: {temp_file}")
+
+
+                # Read back the temporary file and compare
+                temp_rules = self.get_yaml_rules(temp_file)
+                if not temp_rules:
+                    self.log_print(f"Error: Failed to read back temporary safe_senders YAML file")
+                    return False
+                else:
+                    self.log_print(f"Successfully read back temporary safe_senders YAML file: {temp_file}")
+
+                # Compare original rules with the ones read from temp file
+                differences = self.compare_rules(standardized_rules, temp_rules)
+                if differences['rules_only_in_1'] or differences['rules_only_in_2'] or differences['modified_rules']:
+                    self.log_print(f"Rules only in original: {len(differences['rules_only_in_1'])}")
+                    self.log_print(f"Rules only in temp file: {len(differences['rules_only_in_2'])}")
+                    self.log_print(f"Modified rules: {len(differences['modified_rules'])}")
+                    self.log_print(f"Error: Verification failed for safe_sneders - differences found between original and written rules")
+                    return False
+
+                # If verification passed, write to the actual file
+                with open(rules_file, 'w', encoding='utf-8') as yaml_file:
+                    yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False)
+                self.log_print(f"Successfully exported {len(standardized_rules)} safe_senders to YAML file: {rules_file}")
+
+                # Clean up - delete temporary file
+                try:
+                    os.remove(temp_file)
+                    self.log_print(f"Deleted temporary safe_senders file: {temp_file}")
+                except Exception as e:
+                    self.log_print(f"Warning: Could not delete temporary safe_senders file: {str(e)}")
+
+                return True
+
+            except Exception as e:
+                self.log_print(f"Error writing to temporary safe_senders file: {str(e)}")
+                return False
+
+        except Exception as e:
+            self.log_print(f"Error exporting safe_senders: {str(e)}")
+            self.log_print(f"Error details: {str(e.__class__.__name__)}")
+            import traceback
+            self.log_print(f"Traceback: {traceback.format_exc()}")
+            return False
+
+
     def export_rules_to_yaml(self, rules_json=None, rules_file=YAML_RULES_FILE):
-        """Export Outlook rules to yaml file"""
+        """Export JSON/YAML rules to yaml file"""
+        # Update timestamp for each rule
+        timestamp = datetime.now().isoformat()
+
         try:
             if rules_json is None:   #this should never happen
                 self.log_print("Rules JSON is Empty, do not overwrite rules_file yaml and exit with error")
@@ -544,48 +892,105 @@ class OutlookSecurityAgent:
                 self.log_print(f"export_rules: Standardized rules JSON structure")
 
 
-            # Standardize field order for each rule to ensure consistency
-            standardized_rules = []
             for rule in rules:
-                # Standardize the top-level structure
-                standardized_rule = {
-                    "name": rule.get("name", ""),
-                    "enabled": rule.get("enabled", False),
-                    "isLocal": rule.get("isLocal", False),
-                    "executionOrder": rule.get("executionOrder", 0),
-                    "conditions": rule.get("conditions", {}),
-                    "actions": rule.get("actions", {}),
-                    "exceptions": rule.get("exceptions", {}),
-                    "last_modified": rule.get("last_modified", datetime.now().isoformat())
-                }
+                if isinstance(rule, dict):
+                    # Update last_modified in metadata if present, else create metadata
+                    if "metadata" in rule and isinstance(rule["metadata"], dict):
+                        rule["metadata"]["last_modified"] = timestamp
+                    else:
+                        rule["metadata"] = {"last_modified": timestamp}
 
-                # Standardize the conditions structure
-                for key in ["conditions", "exceptions"]:
-                    if key in standardized_rule:
-                        if "from" in standardized_rule[key]:
-                            # Ensure from addresses have consistent structure
-                            for i, addr in enumerate(standardized_rule[key]["from"]):
-                                if isinstance(addr, dict) and "address" in addr and "name" in addr:
-                                    standardized_rule[key]["from"][i] = {
-                                        "address": addr["address"],
-                                        "name": addr["name"]
-                                    }
-
-                standardized_rules.append(standardized_rule)
-
+            standardized_rules = rules #testing - temporary
             self.log_print(f"Processing {len(standardized_rules)} rules")
+            self.log_print(f"Show list of standardized_rules: {standardized_rules}")
 
             # 03/31/2025 Harold Kimmey Write json_rules to YAML file
             # Ensure directory exists
             os.makedirs(os.path.dirname(rules_file), exist_ok=True)
 
-            # Convert JSON object to YAML and write to file
-            with open(rules_file, 'w', encoding='utf-8') as yaml_file:
-                yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False)
+            # The below section does the following:
+            #   Ensure the JSON rules_json object is a valid JSON object before writing to YAML file
+            #   Make a backup of the current yaml_file using format "yaml_backup_yyyymmdd_hhmmss.yaml"
+            #   Write out the YAML file using YAML_RULES_FILE_temp.yaml
+            #   do a get_yaml_rules() to read the file back in and compare it to the original rules_json object to ensure it is a valid match
+            #       can use the compare_rules() function to do this
+            #   If the comparison is successful, write out the JSON object to YAML_RULES_FILE (use code below)
+            #       Convert JSON object to YAML and write to file
+            #   If no errors writing the YAML_RULES_FILE, delete the temp file
 
-            self.log_print(f"Successfully exported {len(standardized_rules)} rules to YAML file: {rules_file}")
+            # Create a backup of the current YAML file if it exists
+            if os.path.exists(rules_file):
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_file = f"{os.path.splitext(rules_file)[0]}_backup_{timestamp}.yaml"
+                try:
+                    import shutil
+                    shutil.copy2(rules_file, backup_file)
+                    self.log_print(f"Created backup of existing YAML file: {backup_file}")
+                except Exception as e:
+                    self.log_print(f"Warning: Could not create backup file: {str(e)}")
 
-            return True
+            # Create temporary file path
+            temp_file = f"{os.path.splitext(rules_file)[0]}_temp.yaml"
+
+            # Write to temporary file first
+            try:
+                with open(temp_file, 'w', encoding='utf-8') as yaml_file:
+                    # Ensure correct structure with top-level keys
+                    if isinstance(standardized_rules, list):
+                        # Create or preserve the proper structure
+                        formatted_output = {
+                            "rules": standardized_rules,
+                        }
+                        # Write the structured data to the YAML file
+                        yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False)
+                        self.log_print(f"Successfully wrote rules *list* to temporary file: {temp_file}")
+                    else:
+                        # If somehow not a list, write as-is (fallback)
+                        yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False)
+                        self.log_print(f"Successfully wrote rules *JSON* to temporary file: {temp_file}")
+
+
+                # Read back the temporary file and compare
+                temp_rules = self.get_yaml_rules(temp_file)
+                if not temp_rules:
+                    self.log_print(f"Error: Failed to read back temporary YAML file")
+                    return False
+                else:
+                    self.log_print(f"Successfully read back temporary YAML file: {temp_file}")
+
+                # Compare original rules with the ones read from temp file
+                differences = self.compare_rules(standardized_rules, temp_rules)
+                if differences['rules_only_in_1'] or differences['rules_only_in_2'] or differences['modified_rules']:
+                    self.log_print(f"Rules only in original: {len(differences['rules_only_in_1'])}")
+                    self.log_print(f"Rules only in temp file: {len(differences['rules_only_in_2'])}")
+                    self.log_print(f"Modified rules: {len(differences['modified_rules'])}")
+                    self.log_print(f"Error: Verification failed - differences found between original and written rules")
+                    return False
+
+                # If verification passed, write to the actual file
+                with open(rules_file, 'w', encoding='utf-8') as yaml_file:
+                    yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False)
+                self.log_print(f"Successfully exported {len(standardized_rules)} rules to YAML file: {rules_file}")
+
+                # Clean up - delete temporary file
+                try:
+                    os.remove(temp_file)
+                    self.log_print(f"Deleted temporary file: {temp_file}")
+                except Exception as e:
+                    self.log_print(f"Warning: Could not delete temporary file: {str(e)}")
+
+                return True
+
+            except Exception as e:
+                self.log_print(f"Error writing to temporary file: {str(e)}")
+                return False
+
+            # with open(rules_file, 'w', encoding='utf-8') as yaml_file:
+            #     yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False)
+
+            # self.log_print(f"Successfully exported {len(standardized_rules)} rules to YAML file: {rules_file}")
+
+            # return True
 
         except Exception as e:
             self.log_print(f"Error exporting rules: {str(e)}")
@@ -604,25 +1009,28 @@ class OutlookSecurityAgent:
         YAML_rules = self.get_yaml_rules(YAML_RULES_FILE)
         self.log_print(f"Import rules from YAML ({YAML_RULES_FILE})")
 
+        #Stop getting Outlook Rules
         # outlook_rules = []
-        self.log_print(f"Import rules from Outlook")
-        outlook_rules = self.get_outlook_rules()
+        # self.log_print(f"Import rules from Outlook")
+        # outlook_rules = self.get_outlook_rules()
 
         # debugging - compare YAML_rules to Outlook_rules and print the differences between them
-        self.output_rules_differences(outlook_rules, YAML_rules)
+        # self.output_rules_differences(outlook_rules, "Outlook", YAML_rules, "YAML")
 
-        # debugging - for this run, set the rules to be from Outlook
+        # debugging - for future runs, no longer use Outlook rules
         #rules = outlook_rules
-        rules = YAML_rules  # now using YAML rules from YAML file as primary source of rules
 
-        # debugging to show the rules
-        # self.log_print(f"Rules loaded: {rules}")
+        # Add safe senders to the rules
+        safe_senders = self.get_safe_senders_rules(YAML_rules)
 
-        # add a check to convert to a JSON object (if it a string or dict)
-        if isinstance(rules, str) or isinstance(rules, dict):
-            rules = json.loads(json.dumps(rules))
+        # **NOT needed - after verifying, these lines can be removed
+        # # Extract rules array from dictionary if needed
+        # if isinstance(rules, dict) and "rules" in rules:
+        #     self.log_print(f"Extracted rules array from dictionary wrapper")
+        #     return rules["rules"]
 
-        return rules
+        # Otherwise, return the rules directly
+        return YAML_rules, safe_senders
 
     def print_rules_summary(self, rules):   # rules should be a JSON object
         """Print a summary of all rules in the yaml file"""
@@ -1105,7 +1513,7 @@ class OutlookSecurityAgent:
 
         return actions
 
-    def prompt_update_rules(self, emails_to_process, emails_added_info, rules_json):
+    def prompt_update_rules(self, emails_to_process, emails_added_info, rules_json, safe_senders):
         """
         Prompt user to update rules based on unfiltered emails.
 
@@ -1127,10 +1535,12 @@ class OutlookSecurityAgent:
 
         if not unfiltered_emails:
             self.log_print("No unfiltered emails found to update rules.")
-            return rules_json
+            return rules_json, safe_senders
 
         self.log_print(f"Found {len(unfiltered_emails)} unfiltered emails. Processing for possible rule updates...")
         simple_print(f"\nBeginning interactive rule update for {len(unfiltered_emails)} unfiltered emails")
+
+        #*** What is the best way to ONLY ask once for each unique from_domain in unfiltered_emails
 
         # Process each unfiltered email
         # NOTE:  assumes user will only want to update 1 rule per email
@@ -1170,10 +1580,11 @@ class OutlookSecurityAgent:
                 response = ""
 
                 # Step 1: Suggest header rule
-                if from_domain and from_domain != "@gmail.com":
-                    response = input(f"{CRLF}Add '{from_domain}' to SpamAutoDeleteHeader rule? (y/n): ").lower()
 
-                    if response == 'y':
+                if from_domain:
+                    response = input(f"{CRLF}Add '{from_domain}' to SpamAutoDeleteHeader rule or safe_senders? (d/s): ").lower()
+
+                    if response == 'd':
                         # Find the SpamAutoDeleteHeader rule
                         rule_updated = True
                         for rule in rules_json:
@@ -1188,10 +1599,11 @@ class OutlookSecurityAgent:
                                     simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
                                 else:
                                     simple_print(f"'{from_domain}' already exists in SpamAutoDeleteHeader rule")
-
-                                if success:
-                                    simple_print("Changes saved to rules file")
                                 break
+                    elif response == 's':
+                        # ***Add from_domain to safe_senders list
+                        rule_updated = True
+                        break
 
                 # Step 2: If user declined header rule, suggest body rule for URLs
                 if subject and rule_updated == False:
@@ -1212,10 +1624,10 @@ class OutlookSecurityAgent:
                                     self.log_print(f"Added '{subject_pattern}' to SpamAutoDeleteSubject rule")
                                     simple_print(f"Added '{subject_pattern}' to SpamAutoDeleteSubject rule")
                                 else:
-                                    simple_print(f"'{subsubject_pattern}' already exists in SpamAutoDeleteSubject rule")
+                                    simple_print(f"'{subject_pattern}' already exists in SpamAutoDeleteSubject rule")
                                 break
 
-                    # Step 3: Suggest subject rule if neither header nor body rules were added
+                # Step 3: Suggest subject rule if neither header nor body rules using URL's found
                 if unique_urls and rule_updated == False: #process URL's
                     simple_print("{CRLF}The following URL patterns can be added to SpamAutoDeleteBody rule:")
                     for i, url in enumerate(unique_urls):
@@ -1249,11 +1661,6 @@ class OutlookSecurityAgent:
                                         self.log_print(f"Added '{url}' to SpamAutoDeleteBody rule")
                                         simple_print(f"Added '{url}' to SpamAutoDeleteBody rule")
 
-                                # Commit changes to YAML file
-                                success = self.export_rules_to_yaml(rules_json)
-                                if success:
-                                    simple_print("Changes saved to rules file")
-                                break
                 if rule_updated == False:  # request body content add if no other adds
                     print(f"{CRLF}Body Content:")
                     for line in email.Body.splitlines():
@@ -1283,7 +1690,7 @@ class OutlookSecurityAgent:
 
         self.log_print("Rule update process completed")
         simple_print("\nRule update process completed")
-        return rules_json
+        return rules_json, safe_senders
 
     def check_phishing_indicators(self, email):
         """Check for phishing indicators in an email"""
@@ -1421,17 +1828,26 @@ class OutlookSecurityAgent:
                     raise
         return
 
-    def process_emails(self, rules_json, days_back=DAYS_BACK_DEFAULT):
+    def process_emails(self, rules_json, safe_senders, days_back=DAYS_BACK_DEFAULT):
         """Process emails based on the rules in the rules_json object"""
         self.log_print(f"\n\nStarting email processing")
         self.log_print(f"Target folder: {self.target_folder.Name}", "DEBUG")
         self.log_print(f"Processing emails from last {days_back} days")
 
+
         try:
-            # Parse the rules from the JSON object
-            rules = json.loads(rules_json) if isinstance(rules_json, str) else rules_json
-            # Ensure rules is a list of rule objects
-            rules = [rules_json] if isinstance(rules_json, dict) else rules_json
+            # Extract rules array if rules_json is a dictionary with a 'rules' key
+            if isinstance(rules_json, dict) and "rules" in rules_json:
+                rules = rules_json["rules"]
+                safe_senders = rules_json.get("safe_senders", [])
+                self.log_print(f"Processing with {len(rules)} rules and {len(safe_senders)} safe senders")
+            else:
+                # Handle direct rules array
+                rules = rules_json if isinstance(rules_json, list) else [rules_json]
+                safe_senders = []
+
+            # Convert safe_senders to a simple list of addresses for easier checking
+            safe_sender_addresses = [sender.lower() for sender in safe_senders]
 
             # Get recent emails from the target folder
             restriction = "[ReceivedTime] >= '" + \
@@ -1457,7 +1873,7 @@ class OutlookSecurityAgent:
 
             # Create a list of emails to process (done because if deleting emails in "email in emails") it will skip emails
             emails_to_process = [email for email in emails]
-            self.log_print(f"before adding fields to emails_added_info")
+            self.log_print(f"before adding fields to emails_added_info", DEBUG)
             emails_added_info = [{
                 "match": False,
                 "rule": "",
@@ -1465,7 +1881,7 @@ class OutlookSecurityAgent:
                 "indicators": [],
                 "email_header": ""
             } for email in emails_to_process]
-            self.log_print(f"after adding fields to emails_added_info")
+            self.log_print(f"after adding fields to emails_added_info", DEBUG)
 
             for email in emails_to_process:
                 try:
@@ -1606,14 +2022,7 @@ class OutlookSecurityAgent:
                             # Perform actions based on the rule
                             actions = rule['actions']
                             self.log_print(f"Performing actions: {actions}")
-                            # # removed the following if block as it now should be in rule JSON object
-                            # if 'assign_to_category' in actions and actions['assign_to_category']['category_name']:
-                            #     rule_name = rule['name']
 
-                            #     category_name = self.rule_to_category.get(rule_name, actions['assign_to_category']['category_name'])
-                            #     email.Categories = category_name
-                            #     email.Save()
-                            # self.log_print(f"Email assigned to category '{category_name}'")
                             if 'assign_to_category' in actions and actions['assign_to_category']['category_name']:
                                 try: # to assign category based on rule name
                                     category_name = actions['assign_to_category']['category_name']
@@ -1621,12 +2030,6 @@ class OutlookSecurityAgent:
                                     self.log_print(f"Email assigned to category '{category_name}'", "DEBUG")
                                 except Exception as e:
                                     self.log_print(f"Error assigning category to email: {str(e)}")
-                                # # ***category name is now being added to the rules JSON object during get_outlook_rules
-                                # email.Categories = actions['assign_to_category']['category_name']
-                                # email.Save()
-                                # self.log_print(f"Email assigned to category '{actions['assign_to_category']['category_name']}'")
-                            if 'mark_as_read' in actions and actions['mark_as_read']:
-                                # this flag is not being passed by outlook, so will never be set.  Keeping in case fixed in the future
                                 if email.UnRead:
                                     self.mark_email_read_with_retry(email)
                                     self.log_print("Email marked as read")
@@ -1773,7 +2176,7 @@ class OutlookSecurityAgent:
             # After processing all emails, prompt for rule updates based on unfiltered emails
             if processed_count > 0:
                 self.log_print(f"{CRLF}Prompting for rule updates based on unfiltered emails...")
-                rules_json = self.prompt_update_rules(emails_to_process, emails_added_info, rules_json)
+                #*** temporarily don't run - rules_json, safe_senders = self.prompt_update_rules(emails_to_process, emails_added_info, rules_json, safe_senders)
 
             self.log_print(f"\nProcessing Summary:")
             self.log_print(f"Processed {processed_count} emails")
@@ -1797,7 +2200,7 @@ def main():
     """Main function to run the security agent"""
 
     # Initialize agent with debug mode enabled
-    agent = OutlookSecurityAgent()  # call with defaults
+    agent = OutlookSecurityAgent()  # setup for calling functions in class OutlookSecurityAgent
 
     try:
         simple_print(f"\n=============================================================")
@@ -1809,23 +2212,19 @@ def main():
         agent.log_print(f"This will make changes")
         agent.log_print(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")
 
-
-
-        # Initialize agent with debug mode enabled
-        agent = OutlookSecurityAgent()  # call with defaults
-        rules_json = agent.get_rules()  # updated for new yaml code - was get_outlook_rules()
-
-        rules_before = rules_json
-        #simple_print(f"JSON Rules\n{rules_json}") if DEBUG else None
+        rules_json, safe_senders = agent.get_rules()
 
         # Process last N days of emails - see DAYS_BACK_DEFAULT
-        agent.process_emails(rules_json)
+        agent.process_emails(rules_json, safe_senders)
 
-        # Export rules if they've been updated
-        if rules_before != rules_json:
-            agent.export_rules_to_yaml(rules_json)
-        if DEBUG:
-            agent.export_rules_to_yaml(rules_json)
+        # Export rules every time (saving copies to backups to Archive directory)
+        #***agent.export_rules_to_yaml(rules_json)
+
+        #*** run export_safe_senders_to_yaml function to export safe_senders to YAML
+        #***   ensure they are written in the format they of the current file - see merge_safe_senders.py
+        #***   create backup copies, like rules_json
+        #***   after running verify they can be read
+        #***agent.export_safe_senders_to_yaml(safe_senders)
 
         simple_print(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}")
         simple_print(f"=============================================================\n")
