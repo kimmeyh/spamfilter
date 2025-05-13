@@ -6,7 +6,7 @@ import sys
 # Add the directory containing withOutlookRulesCSV.py to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from withOutlookRulesYAML import export_rules_yaml, import_rules_yaml, OutlookSecurityAgent
+from withOutlookRulesYAML import export_rules_to_yaml, import_rules_yaml, OutlookSecurityAgent
 
 class TestOutlookRulesCSV(unittest.TestCase):
 
