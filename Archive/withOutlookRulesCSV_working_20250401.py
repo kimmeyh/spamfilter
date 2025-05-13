@@ -744,7 +744,7 @@ class OutlookSecurityAgent:
 
                     output_string = from_domain.ljust(20) + f"| Email {email_index+1:>3} | Matched no rules"
 # 03/29/2025 Harold Kimmey Add functionality to update JSON rules by adding a simple Y/N to add to the "@<domain>"
-# to the header rules in the JSON rules
+# to the header rules in the JSON rules.
                     self.log_print(f"{output_string}", level="INFO")
                     simple_print(f"{output_string}")
 

@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package outlook.safesenders;
+
+// Root message containing all safe senders configuration
+message SafeSendersConfig {
+    // Schema version for compatibility
+    string version = 1;
+
+    // Global settings
+    Settings settings = 2;
+
+    // Safe senders list and metadata
+    SafeSenders safe_senders = 3;
+}
+
+// Global settings for the configuration
+message Settings {
+    // Default execution order increment for rules
+    int32 default_execution_order_increment = 1;
+
+    // Last modified timestamp (with full date and time-stamp) in ISO format, including timezone
+    // This timestamp should be updated whenever the configuration is modified
+    string last_modified = 2;
+}
+
+// Container for safe senders patterns and metadata
+message SafeSenders {
+    // List of regex patterns that match either:
+    // 1. Full email addresses (e.g., "user@example.com")
+    // 2. Domain patterns (e.g., "@example.com" or ".example.com")
+    // Each pattern is a regular expression that can be used to match
+    // incoming email addresses or domains for spam filtering
+    // As they are email address patterns, they are case-insensitive, so are kept in all lowercase
+    //   Comparing these regex against header "from" addresses should be converted to lowercase
+    //   or case-insensitive to ensure proper matching
+    repeated string patterns = 1;
+
+    // Metadata about the safe senders list
+    Metadata metadata = 2;
+}
+
+// Metadata for the safe senders list
+message Metadata {
+    // Last modified timestamp in ISO format
+    string last_modified = 1;
+
+    // Who or what created/modified the list
+    string created_by = 2;
+
+    // Description of the safe senders list
+    string description = 3;
+}
