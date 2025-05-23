@@ -18,13 +18,11 @@
 #   - Update Output of rules.yaml - ensure they are written as compatible with regex strings  (double quoted, sorted, no duplicates)
 #   - Output of safe_senders.yaml - ensure they are written as compatible with regex strings (double quoted), sorted, and unique
 #   - Updated Output of rules.yaml - ensure each rule is sorted, and unique
-
+# 05/19/2025 Harold Kimmey - Updates for feature/userinputheader
 # - Need to add Next ****
 #       Move backup files to a "backup directory"
 #       Update mail processing to use safe_senders list for all header exceptions
-#       Update processing review of emails not deleted
-#         reduce header domain list to unique items in sorted order by domain.??
-#         once an email was processed in some way, don't ask about it again
+
 
 #------------------List of future enhancements------------------
 # Where is the best place to add updates to rules based on emails not deleted
