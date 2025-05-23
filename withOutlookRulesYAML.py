@@ -1,4 +1,4 @@
-# HK 01/24/25 All working as expected
+# 01/24/2025 Harold Kimmey All working as expected
 # 02/10/2025 Harold Kimmey Completed move to www.github.com/kimmeyh/spamfilter.git repository
 # 02/17/2025 Harold Kimmey Updated _process_actions to accurately pull the assign_to_category value by searching it as an object
 # 03/28/2025 Harold Kimmey Exported rules to JSON so that they can be maintained in a separate YAML file (the can be transferred between machines and platforms (Windows, Mac, Linux, Android, iOS, etc.))
@@ -7,72 +7,22 @@
 #   Safe recipients - done (was empty)
 #   Blocked Senders - very small and were added manually to Outlook Rules - spam body# 03/30/2025 Harold Kimmey Added export and import of YAML rules
 # 04/01/2025 Harold Kimmey Verified export of rules from Outlook to YAML file (at exit) matches rules from import of YAML file
-# 04/01/2025 Switch to using YAML file as import instead of Outlook rules
-# 04/01/2025 Committed changes, pushed, PR to Main branch of kimmeyh/spamfilter.git
-# 04/21/2025 Harold Kimmey Current Status ***
+# 04/01/2025 Harold Kimmey Switch to using YAML file as import instead of Outlook rules
+# 04/01/2025 Harold Kimmey Committed changes, pushed, PR to Main branch of kimmeyh/spamfilter.git
+# 05/13/2025 Harold Kimmey Current Status
 #   - All rules are being read from the YAML file
 #   - All rules are being written to the YAML file at the end of the run successfully
 #   - All safe_sender rules are being read from the YAML file
 #   - All safe_sender rules are being written to the YAML file (updated)
 #   - Removed checks for updates to rules and safe_senders - instead will save copies to Archive for each run
-#   - Update Output of rules.yaml - ensure they are written as compatible wiht regex strings  (double quoted, sorted, no duplicates)
-#   - Output of safe_senders.yaml - ensure they are written as compatible wiht regex strings (double quoted), sorted, and unique
+#   - Update Output of rules.yaml - ensure they are written as compatible with regex strings  (double quoted, sorted, no duplicates)
+#   - Output of safe_senders.yaml - ensure they are written as compatible with regex strings (double quoted), sorted, and unique
 #   - Updated Output of rules.yaml - ensure each rule is sorted, and unique
-# #   - Need to add
+# 05/19/2025 Harold Kimmey - Updates for feature/userinputheader
+# - Need to add Next ****
 #       Move backup files to a "backup directory"
+#       Update mail processing to use safe_senders list for all header exceptions
 
-#------------------General Documentation------------------
-# I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
-
-# 1. Account/Folder Targeting:
-#    - Added account-specific folder lookup
-#    - Recursive folder search capability (in case "Bulk Mail" is nested)
-#    - Validation of account and folder existence
-
-# 2. Improved Structure:
-#    - Creates "Security Review" folder within the Bulk Mail folder
-#    - Only processes emails from the specified folder
-#    - Maintains all security checks and rule processing
-
-# 3. Better Error Handling:
-#    - Validates account and folder access
-#    - Detailed logging of folder navigation
-#    - Graceful handling of missing folders
-
-# To use this version:
-# 1. Make sure Outlook is running and the AOL account is connected
-# 2. Run the script - it will automatically target the Bulk Mail folder
-# 3. Suspicious emails will be moved to a "Security Review" subfolder within Bulk Mail
-
-# credentials = ('your_client_id', 'your_client_secret')
-# account = Account(credentials)
-# if account.authenticate(scopes=['basic', 'message_all']):
-#     mailbox = account.mailbox()
-#     m = mailbox.new_message()
-#     m.to.add('[email protected]')
-#     m.subject = 'Subject'
-#     m.body = 'Body'
-#     m.send()
-#   see https://developer.microsoft.com/en-us/graph/graph-explorer
-#   see authentication script below
-# from msal import PublicClientApplication
-
-# CLIENT_ID = "your_client_id"  # From your app registration in the new tenant or an existing one you have access to
-# SCOPES = ["User.Read"]  # Start with basic permissions, then add more as needed
-
-# app = PublicClientApplication(
-#     client_id=CLIENT_ID,
-#     authority="https://login.microsoftonline.com/common"  # Use 'common' for personal accounts
-# )
-
-# # Interactive authentication - this will open a browser for login
-# result = app.acquire_token_interactive(scopes=SCOPES)
-
-# if "access_token" in result:
-#     print(result["access_token"])
-# else:
-#     print(result.get("error"))
-#     print(result.get("error_description"))
 
 #------------------List of future enhancements------------------
 # Where is the best place to add updates to rules based on emails not deleted
@@ -130,6 +80,35 @@
 # Add email volume reporting?
 # Create a summary report of processed emails?
 
+#------------------General Documentation------------------
+# I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
+
+# 1. Account/Folder Targeting:
+#    - Added account-specific folder lookup
+#    - Recursive folder search capability (in case "Bulk Mail" is nested)
+#    - Validation of account and folder existence
+
+# 2. Improved Structure:
+#    - Creates "Security Review" folder within the Bulk Mail folder
+#    - Only processes emails from the specified folder
+#    - Maintains all security checks and rule processing
+
+# 3. Better Error Handling:
+#    - Validates account and folder access
+#    - Detailed logging of folder navigation
+#    - Graceful handling of missing folders
+
+# To use this version:
+# 1. Make sure Outlook is running and the AOL account is connected
+# 2. Run the script - it will automatically target the Bulk Mail folder
+
+# Key Notes:
+# - The YAML_RULES_FILE and YAML_RULES_SAFE_SENDERS_FILE
+#   - all strings are maintained during export as trim(lowercase(str)))
+#   - all lists of strings are sorted and unique (no duplicates)
+
+
+
 #Imports for python base packages
 import re
 from datetime import datetime, timedelta
@@ -148,7 +127,7 @@ import IPython
 # Settings:
 DEBUG = True # True or False
 INFO = False if DEBUG else True #If not debugging, then INFO level logging
-DEBUG_EMAILS_TO_PROCESS = 1 #100 for testing
+DEBUG_EMAILS_TO_PROCESS = 100 #100 for testing
 
 CRLF = "\n"
 EMAIL_ADDRESS = "kimmeyharold@aol.com"
@@ -729,7 +708,7 @@ class OutlookSecurityAgent:
             standardized_rules["safe_senders"] = sorted(standardized_rules["safe_senders"])
 
             self.log_print(f"Processing {len(standardized_rules["safe_senders"])} safe_senders rules")
-            self.log_print(f"Show list of standardized_rules safe_senders: {standardized_rules}")
+            #self.log_print(f"Show list of standardized_rules safe_senders: {standardized_rules}")
 
             # 03/31/2025 Harold Kimmey Write json_rules to YAML file
             # Ensure directory exists
@@ -757,48 +736,10 @@ class OutlookSecurityAgent:
                 except Exception as e:
                     self.log_print(f"Warning: Could not create backup safe_senders file: {str(e)}")
 
-            #HK 05/13/25 - Removed use of temporary file and comparison before writing to file
-            # Create temporary file path
-            # temp_file = f"{os.path.splitext(rules_file)[0]}_temp.yaml"
-
-            # The temporary file and updated rules_safe_senders.yaml YAML should take the safe_senders JSON file
-            # should follow teh rules_safe_senders.proto definition. Noting that the "safe_senders"
-            # key (safe_senders[safe_senders] is a list of strings that hold regex pattern strings
             try:
-                # with open(temp_file, 'w', encoding='utf-8') as yaml_file:
-                #     # Ensure correct structure with top-level keys
-                #     if isinstance(standardized_rules, list):
-                #         # Create or preserve the proper structure
-
-                #         # Write the structured data to the YAML file
-                #         yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False, default_style='"')
-                #         self.log_print(f"Successfully wrote safe_senders *list* to temporary file: {temp_file}")
-                #     else:
-                #         # If somehow not a list, write as-is (fallback)
-                #         yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False, default_style='"')
-                #         self.log_print(f"Successfully wrote safe_senders *JSON* to temporary file: {temp_file}")
-
-                # # Read back the temporary file and compare
-                # temp_rules = self.get_safe_senders_rules(temp_file)
-                # if not temp_rules:
-                #     self.log_print(f"Error: Failed to read back temporary safe_senders YAML file")
-                #     return False
-                # else:
-                #     self.log_print(f"Successfully read back temporary safe_senders YAML file: {temp_file}")
-
-                # # Compare original rules with the ones read from temp file
-                # differences = self.compare_rules(standardized_rules, temp_rules)
-                # if differences['rules_only_in_1'] or differences['rules_only_in_2'] or differences['modified_rules']:
-                #     self.log_print(f"Rules only in original: {len(differences['rules_only_in_1'])}")
-                #     self.log_print(f"Rules only in temp file: {len(differences['rules_only_in_2'])}")
-                #     self.log_print(f"Modified rules: {len(differences['modified_rules'])}")
-                #     self.log_print(f"Error: Verification failed for safe_sneders - differences found between original and written rules")
-                #     return False
-
-                # If verification passed, write to the actual file
                 with open(rules_file, 'w', encoding='utf-8') as yaml_file:
                     yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False, default_style='"')
-                self.log_print(f"Successfully exported {len(standardized_rules)} safe_senders to YAML file: {rules_file}")
+                self.log_print(f"Successfully exported {len(standardized_rules["safe_senders"])} safe_senders to YAML file: {rules_file}")
 
                 # # Clean up - delete temporary file
                 # try:
@@ -888,11 +829,11 @@ class OutlookSecurityAgent:
 
             formatted_output = standardized_rules
             self.log_print(f"Number of rules: {len(rules["rules"])}")
-            self.log_print(f"Show list of rules: {rules["rules"]}")
+            # self.log_print(f"Show list of rules: {rules["rules"]}")
             self.log_print(f"Number of standardized rules: {len(standardized_rules["rules"])}")
-            self.log_print(f"Show list of standardized_rules: {standardized_rules["rules"]}")
+            #self.log_print(f"Show list of standardized_rules: {standardized_rules["rules"]}")
             self.log_print(f"Number of formatted_output: {len(formatted_output["rules"])}")
-            self.log_print(f"Show list of formatted_output: {formatted_output["rules"]}")
+            #self.log_print(f"Show list of formatted_output: {formatted_output["rules"]}")
 
             # 03/31/2025 Harold Kimmey Write json_rules to YAML file
             # Ensure directory exists
@@ -924,49 +865,15 @@ class OutlookSecurityAgent:
             # temp_file = f"{os.path.splitext(rules_file)[0]}_temp.yaml"
 
 
-            # Write to temporary file first
+            # Write to file
             try:
-                # with open(temp_file, 'w', encoding='utf-8') as yaml_file:
-                #     # Ensure correct structure with top-level keys
-                #     if isinstance(standardized_rules, list):
-                #         # Create or preserve the proper structure
-                #         # Write the structured data to the YAML file
-                #         #*** try new below to have all strings written with double quotes
-                #         # temporarily remove #yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False)
-                #         yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False, default_style='"', width=4096)
-                #         self.log_print(f"Successfully wrote rules *list* to temporary file: {temp_file}")
-                #     else:
-                #         # If somehow not a list, write as-is (fallback)
-                #         #*** try new below to have all strings written with double quotes
-                #         # temporarily remove #yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False)
-                #         yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False, default_style='"', width=4096)
-                #         self.log_print(f"Successfully wrote rules *JSON* to temporary file: {temp_file}")
 
-
-                # # Read back the temporary file and compare
-                # temp_rules = self.get_yaml_rules(temp_file)
-                # if not temp_rules:
-                #     self.log_print(f"Error: Failed to read back temporary YAML file")
-                #     return False
-                # else:
-                #     self.log_print(f"Successfully read back temporary YAML file: {temp_file}")
-
-                # # Compare original rules with the ones read from temp file
-                # differences = self.compare_rules(standardized_rules, temp_rules)
-                # if differences['rules_only_in_1'] or differences['rules_only_in_2'] or differences['modified_rules']:
-                #     self.log_print(f"Rules only in original: {len(differences['rules_only_in_1'])}")
-                #     self.log_print(f"Rules only in temp file: {len(differences['rules_only_in_2'])}")
-                #     self.log_print(f"Modified rules: {len(differences['modified_rules'])}")
-                #     self.log_print(f"Error: Verification failed - differences found between original and written rules")
-                #     return False
-
-                # If verification passed, write to the actual file
                 with open(rules_file, 'w', encoding='utf-8') as yaml_file:
                     # If somehow not a list, write as-is (fallback)
                     #*** try new below to have all strings written with double quotes
                     # temporarily remove #yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False)
                     yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False, default_style='"', width=4096)
-                    self.log_print(f"Successfully exported {len(standardized_rules)} rules to YAML file: {rules_file}")
+                    self.log_print(f"Successfully exported {len(standardized_rules["rules"])} rules to YAML file: {rules_file}")
 
                 # Clean up - delete temporary file
                 # try:
@@ -1017,9 +924,9 @@ class OutlookSecurityAgent:
         #     self.log_print(f"Extracted rules array from dictionary wrapper")
         #     return rules["rules"]
         self.log_print(f"Number of rules: {len(YAML_rules["rules"])}")
-        self.log_print(f"Show list of rules: {YAML_rules["rules"]}")
+        #self.log_print(f"Show list of rules: {YAML_rules["rules"]}")
         self.log_print(f"Number of safe_senders rules: {len(safe_senders["safe_senders"])}")
-        self.log_print(f"Show list of safe_senders rules: {safe_senders["safe_senders"]}")
+        #self.log_print(f"Show list of safe_senders rules: {safe_senders["safe_senders"]}")
 
         # Otherwise, return the rules directly
         return YAML_rules, safe_senders
@@ -1088,21 +995,29 @@ class OutlookSecurityAgent:
         Returns:
             str: The domain extracted from the "from:" line, padded to 20 characters, or None if not found.
         """
-        line_with_from = None
+        line_with_from = ""  # Initialize with an empty string
+        blank = ""
+
+        # Handle case where email_header could be a list
+        if isinstance(email_header, list):
+            email_header = "\n".join(email_header)
 
         # Iterate over each element in email_header
         for line in email_header.splitlines():
-            if "from:" in line.lower():
+            if line.lower().startswith("from:"):
                 line_with_from = line
-                break
+                break  # find the first line that starts with "from:" then exit loop
+
+        #   print(f"line_with_from: {line_with_from}")  # Debugging output
 
         if line_with_from:
             from_domain = re.search(r'@[\w.-]+', line_with_from)
             if from_domain:
                 from_domain_str = from_domain.group(0)
+                #   print(f"from_domain_str: {from_domain_str}")  # Debugging output
                 return from_domain_str
 
-        return None
+        return blank
 
     def from_report(self, emails_to_process, emails_added_info, rules_json):
         """
@@ -1112,16 +1027,19 @@ class OutlookSecurityAgent:
             emails_to_process (list): List of emails to process.
             emails_added_info (list): List of dictionaries containing additional information about each email.
         """
+
+        processed_count = 0
+
         # Print a list for Phishing OR Match=false with From: "@<domain>.<>" so they can be easily added to the rules
 
         for email in emails_to_process:
+            processed_count += 1
             email_index = emails_to_process.index(email)
             try:
                 if ("phishing_indicators" in emails_added_info[email_index] and
                     emails_added_info[email_index]["phishing_indicators"] is not None):
                     # Create a string from email.header for the From: line with format: "@<domain>.<> (20 characters or less,
                     # padded to 20) Email <n> (with 2 leading blanks)"
-
 
                     email_header = emails_added_info[email_index]["email_header"]
                     from_domain = self.header_from(email_header)
@@ -1148,6 +1066,10 @@ class OutlookSecurityAgent:
 
             except Exception as e:
                 self.log_print(f"Error processing match = false email: {str(e)}")
+
+            if (DEBUG) and (processed_count >= DEBUG_EMAILS_TO_PROCESS):
+                break  # Stop processing more emails in debug mode, then write the report and prompt for rule updates
+
 
     def get_unique_URL_stubs(self, email_body):
         unique_stubs = []
@@ -1177,10 +1099,14 @@ class OutlookSecurityAgent:
             emails_to_process (list): List of emails to process.
             emails_added_info (list): List of dictionaries containing additional information about each email.
         """
+
+        processed_count = 0
+
         # Print a list for Phishing OR Match=false, report body unique URL stubs "/<domain>.<>" and ".<domain>.<>" so they can be easily added to the rules
         #     collect them all first, then determine uniqueness, then print one per line
 
         for email in emails_to_process:
+            processed_count += 1
             email_index = emails_to_process.index(email)
             try:
                 if ("phishing_indicators" in emails_added_info[email_index] and
@@ -1215,6 +1141,9 @@ class OutlookSecurityAgent:
 
             except Exception as e:
                 self.log_print(f"Error processing match = false email: {str(e)}")
+
+            if (DEBUG) and (processed_count >= DEBUG_EMAILS_TO_PROCESS):
+                break  # Stop processing more emails in debug mode, then write the report and prompt for rule updates
 
     def _process_conditions(self, conditions_obj, is_exception):
         """Helper method to process rule conditions or exceptions"""
@@ -1520,19 +1449,24 @@ class OutlookSecurityAgent:
         self.log_print(f"{CRLF}Checking for emails that can be added to rules...")
         unfiltered_emails = []
 
+        self.log_print(f"Number of emails to process: {len(emails_to_process)}")
+
         # Find unfiltered emails (those with match=False)
         for i, email_info in enumerate(emails_added_info):
-            if email_info["match"] == False and i < len(emails_to_process):
+            if email_info["processed"] and email_info["match"] == False and i < len(emails_to_process):
                 unfiltered_emails.append((emails_to_process[i], email_info))
 
         if not unfiltered_emails:
             self.log_print("No unfiltered emails found to update rules.")
             return rules_json, safe_senders
+        else:
+            self.log_print(f"Found {len(unfiltered_emails)} unfiltered emails to process for rule updates.")
 
         self.log_print(f"Found {len(unfiltered_emails)} unfiltered emails. Processing for possible rule updates...")
         simple_print(f"\nBeginning interactive rule update for {len(unfiltered_emails)} unfiltered emails")
 
         #*** What is the best way to ONLY ask once for each unique from_domain in unfiltered_emails
+        # create a list of those added and skip others
 
         # Process each unfiltered email
         # NOTE:  assumes user will only want to update 1 rule per email
@@ -1541,11 +1475,31 @@ class OutlookSecurityAgent:
         for email, email_info in unfiltered_emails:
             try:
                 rule_updated = False
+                count += 1
+                #   self.log_print(f"before assigning email_header")
                 email_header = email_info["email_header"]
+                #   self.log_print(f"for loop email_header: {email_header}")  # Debugging output
                 subject = self._sanitize_string(email.Subject)
+                self.log_print(f"Subject: {subject}")
                 from_email = self._sanitize_string(email.SenderEmailAddress)
+                self.log_print(f"From: {from_email}")
                 from_domain = self.header_from(email_header)
+                self.log_print(f"Domain: {from_domain}")
                 unique_urls = self.get_unique_URL_stubs(email.Body) # Extract URLs
+                self.log_print(f"Unique URLs: {unique_urls}")
+
+                # if the from_email matches a the safe_senders list, skip this email
+                if from_domain in safe_senders["safe_senders"]: # or from_email in safe_senders["safe_senders"]:
+                    self.log_print(f"Skipping email from safe sender: {from_email}")
+                    continue
+
+                # if the from_email matches a rule in rules_json header condition, then print a message and skip this email
+                if any(from_domain in rule.get("conditions", {}).get("header", []) for rule in rules_json["rules"]):
+                    count += 1
+                    self.log_print(f"Skipping email from domain as '{from_domain}' already exists in rules.")
+                    simple_print(f"Skipping email from domain as '{from_domain}' already exists in rules.")
+                    continue
+
 
                 # For now assume user wants to process all non-deleted emails
                 #
@@ -1572,112 +1526,125 @@ class OutlookSecurityAgent:
                 response = ""
 
                 # Step 1: Suggest header rule
+                #*** need to update to highly secure vetting of input from user
+                #*** for the following domains that host individual email addresses, only suggest adding full email address to header rules:
+                #   gmail.com, yahoo.com, hotmail.com, outlook.com, aol.com, protonmail.com,
+                domains_with_individual_emails = from_domain in [
+                    "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com", "protonmail.com",
+                ]
+
 
                 if from_domain:
-                    response = input(f"{CRLF}Add '{from_domain}' to SpamAutoDeleteHeader rule or safe_senders? (d/s): ").lower()
+                    if domains_with_individual_emails:
+                        # For individual email domains, suggest adding full email address
+                        response = input(f"{CRLF}Add '{from_email}' Email address SpamAutoDeleteHeader rule or safe_senders? (e/s): ").lower()
+                        from_domain = from_email  # Use full email address for individual domains
+                    else:
+                        response = input(f"{CRLF}Add '{from_domain}' or email domain to SpamAutoDeleteHeader rule or safe_senders? (d/s): ").lower()
 
                     if response == 'd':
-                        # Find the SpamAutoDeleteHeader rule
-                        rule_updated = True
-                        for rule in rules_json:
-                            if rule.get("name") == "SpamAutoDeleteHeader":
+                        # Find the SpamAutoDeleteHeader rule in the rules list and append to its header conditions
+                        for rule in rules_json["rules"]:
+                            if rule["name"] == "SpamAutoDeleteHeader":
                                 if "header" not in rule["conditions"]:
                                     rule["conditions"]["header"] = []
-
-                                # Add domain to header conditions if not already present
-                                if from_domain not in rule["conditions"]["header"]:
-                                    rule["conditions"]["header"].append(from_domain)
-                                    self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
-                                    simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
-                                else:
-                                    simple_print(f"'{from_domain}' already exists in SpamAutoDeleteHeader rule")
-                                break
+                                rule["conditions"]["header"].append(from_domain)
+                                rule_updated = True
+                                self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+                                simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+                    elif response == 'e':
+                        # Add from_email to safe_senders list
+                        safe_senders["safe_senders"].append(from_email)
                     elif response == 's':
-                        # ***Add from_domain to safe_senders list
+                        # Add from_domain to safe_senders list
+                        safe_senders["safe_senders"].append(from_domain)  # working HK 05/18/25
+                        self.log_print(f"Added '{from_domain}' to safe_senders list")
+                        simple_print(f"Added '{from_domain}' to safe_senders list")
                         rule_updated = True
-                        break
 
-                # Step 2: If user declined header rule, suggest body rule for URLs
-                if subject and rule_updated == False:
-                    response = input(f"{CRLF}Add subject pattern '{subject}' to SpamAutoDeleteSubject rule? (y/n): ").lower()
+#**** Confirmed working up to this point 05/19/25 HK
+#fix these one at a time and add them back in - for now, skip the other options so we can test out the header rule
+                # # Step 2: If user declined header rule, suggest body rule for URLs
+                # if subject and rule_updated == False:
+                #     response = input(f"{CRLF}Add subject pattern '{subject}' to SpamAutoDeleteSubject rule? (y/n): ").lower()
 
-                    if response == 'y':
-                        subject_pattern = input(f"{CRLF}Enter pattern:")
-                        # Find the SpamAutoDeleteSubject rule
-                        rule_updated = True
-                        for rule in rules_json:
-                            if rule.get("name") == "SpamAutoDeleteSubject":
-                                if "subject" not in rule["conditions"]:
-                                    rule["conditions"]["subject"] = []
+                #     if response == 'y':
+                #         subject_pattern = input(f"{CRLF}Enter pattern:")
+                #         # Find the SpamAutoDeleteSubject rule
+                #         rule_updated = True
+                #         for rule in rules_json:
+                #             if rule.get("name") == "SpamAutoDeleteSubject":
+                #                 if "subject" not in rule["conditions"]:
+                #                     rule["conditions"]["subject"] = []
 
-                                # Add subject to subject conditions if not already present
-                                if subject not in rule["conditions"]["subject"]:
-                                    rule["conditions"]["subject"].append(subject_pattern)
-                                    self.log_print(f"Added '{subject_pattern}' to SpamAutoDeleteSubject rule")
-                                    simple_print(f"Added '{subject_pattern}' to SpamAutoDeleteSubject rule")
-                                else:
-                                    simple_print(f"'{subject_pattern}' already exists in SpamAutoDeleteSubject rule")
-                                break
+                #                 # Add subject to subject conditions if not already present
+                #                 if subject not in rule["conditions"]["subject"]:
+                #                     rule["conditions"]["subject"].append(subject_pattern)
+                #                     self.log_print(f"Added '{subject_pattern}' to SpamAutoDeleteSubject rule")
+                #                     simple_print(f"Added '{subject_pattern}' to SpamAutoDeleteSubject rule")
+                #                 else:
+                #                     simple_print(f"'{subject_pattern}' already exists in SpamAutoDeleteSubject rule")
+                #                 break
 
-                # Step 3: Suggest subject rule if neither header nor body rules using URL's found
-                if unique_urls and rule_updated == False: #process URL's
-                    simple_print("{CRLF}The following URL patterns can be added to SpamAutoDeleteBody rule:")
-                    for i, url in enumerate(unique_urls):
-                        simple_print(f"{i+1}. {url}")
+                # # Step 3: Suggest subject rule if neither header nor body rules using URL's found
+                # if unique_urls and rule_updated == False: #process URL's
+                #     simple_print("{CRLF}The following URL patterns can be added to SpamAutoDeleteBody rule:")
+                #     for i, url in enumerate(unique_urls):
+                #         simple_print(f"{i+1}. {url}")
 
-                    url_indices = input("Enter URL numbers to add (comma-separated, or 'all'), or press Enter to skip: ")
+                #     url_indices = input("Enter URL numbers to add (comma-separated, or 'all'), or press Enter to skip: ")
 
-                    if url_indices.lower() == 'all':
-                        selected_urls = unique_urls
-                    elif url_indices:
-                        try:
-                            indices = [int(idx.strip()) - 1 for idx in url_indices.split(',')]
-                            selected_urls = [unique_urls[i] for i in indices if 0 <= i < len(unique_urls)]
-                        except ValueError:
-                            simple_print("Invalid input. No URLs added.")
-                            selected_urls = []
-                    else:
-                        selected_urls = []
+                #     if url_indices.lower() == 'all':
+                #         selected_urls = unique_urls
+                #     elif url_indices:
+                #         try:
+                #             indices = [int(idx.strip()) - 1 for idx in url_indices.split(',')]
+                #             selected_urls = [unique_urls[i] for i in indices if 0 <= i < len(unique_urls)]
+                #         except ValueError:
+                #             simple_print("Invalid input. No URLs added.")
+                #             selected_urls = []
+                #     else:
+                #         selected_urls = []
 
-                    if selected_urls:
-                        # Add selected URLs to SpamAutoDeleteBody rule
-                        rule_updated = True
-                        for rule in rules_json:
-                            if rule.get("name") == "SpamAutoDeleteBody":
-                                if "body" not in rule["conditions"]:
-                                    rule["conditions"]["body"] = []
+                #     if selected_urls:
+                #         # Add selected URLs to SpamAutoDeleteBody rule
+                #         rule_updated = True
+                #         for rule in rules_json:
+                #             if rule.get("name") == "SpamAutoDeleteBody":
+                #                 if "body" not in rule["conditions"]:
+                #                     rule["conditions"]["body"] = []
 
-                                for url in selected_urls:
-                                    if url not in rule["conditions"]["body"]:
-                                        rule["conditions"]["body"].append(url)
-                                        self.log_print(f"Added '{url}' to SpamAutoDeleteBody rule")
-                                        simple_print(f"Added '{url}' to SpamAutoDeleteBody rule")
+                #                 for url in selected_urls:
+                #                     if url not in rule["conditions"]["body"]:
+                #                         rule["conditions"]["body"].append(url)
+                #                         self.log_print(f"Added '{url}' to SpamAutoDeleteBody rule")
+                #                         simple_print(f"Added '{url}' to SpamAutoDeleteBody rule")
 
-                if rule_updated == False:  # request body content add if no other adds
-                    print(f"{CRLF}Body Content:")
-                    for line in email.Body.splitlines():
-                        self.log_print(f"Body: {line}")
-                    response = input(f"{CRLF}Add body content to SpamAutoDeleteBody rule? (y/n): ").lower()
-                    if response == 'y':
-                        body_content = input(f"{CRLF}Enter body content:")
-                        # Find the SpamAutoDeleteBody rule
-                        rule_updated = True
-                        for rule in rules_json:
-                            if rule.get("name") == "SpamAutoDeleteBody":
-                                if "body" not in rule["conditions"]:
-                                    rule["conditions"]["body"] = []
+                # if rule_updated == False:  # request body content add if no other adds
+                #     print(f"{CRLF}Body Content:")
+                #     for line in email.Body.splitlines():
+                #         self.log_print(f"Body: {line}")
+                #     response = input(f"{CRLF}Add body content to SpamAutoDeleteBody rule? (y/n): ").lower()
+                #     if response == 'y':
+                #         body_content = input(f"{CRLF}Enter body content:")
+                #         # Find the SpamAutoDeleteBody rule
+                #         rule_updated = True
+                #         for rule in rules_json:
+                #             if rule.get("name") == "SpamAutoDeleteBody":
+                #                 if "body" not in rule["conditions"]:
+                #                     rule["conditions"]["body"] = []
 
-                                # Add body content to body conditions if not already present
-                                if body_content not in rule["conditions"]["body"]:
-                                    rule["conditions"]["body"].append(body_content)
-                                    self.log_print(f"Added '{body_content}' to SpamAutoDeleteBody rule")
-                                    simple_print(f"Added '{body_content}' to SpamAutoDeleteBody rule")
-                                else:
-                                    simple_print(f"'{body_content}' already exists in SpamAutoDeleteBody rule")
-                                break
+                #                 # Add body content to body conditions if not already present
+                #                 if body_content not in rule["conditions"]["body"]:
+                #                     rule["conditions"]["body"].append(body_content)
+                #                     self.log_print(f"Added '{body_content}' to SpamAutoDeleteBody rule")
+                #                     simple_print(f"Added '{body_content}' to SpamAutoDeleteBody rule")
+                #                 else:
+                #                     simple_print(f"'{body_content}' already exists in SpamAutoDeleteBody rule")
+                #                 break
 
             except Exception as e:
-                self.log_print(f"Error processing email for rule updates: {str(e)}")
+                self.log_print(f"Error processing email for rule updates: {str(e)} {email_header}")
                 simple_print(f"Error processing email: {str(e)}")
 
         self.log_print("Rule update process completed")
@@ -1837,9 +1804,6 @@ class OutlookSecurityAgent:
                 rules = rules_json if isinstance(rules_json, list) else [rules_json]
                 safe_senders = []
 
-            # Convert safe_senders to a simple list of addresses for easier checking
-            safe_sender_addresses = [sender.lower() for sender in safe_senders]
-
             # Get recent emails from the target folder
             restriction = "[ReceivedTime] >= '" + \
                 (datetime.now() - timedelta(days=days_back)).strftime('%m/%d/%Y') + "'"
@@ -1870,7 +1834,8 @@ class OutlookSecurityAgent:
                 "rule": "",
                 "matched_keyword": "",
                 "indicators": [],
-                "email_header": ""
+                "email_header": "",
+                "processed": False,
             } for email in emails_to_process]
             self.log_print(f"after adding fields to emails_added_info", DEBUG)
 
@@ -1879,9 +1844,6 @@ class OutlookSecurityAgent:
                     processed_count += 1
                     email_index = emails_to_process.index(email)
                     email_deleted = False
-                    if (DEBUG) and (processed_count > DEBUG_EMAILS_TO_PROCESS):
-                        self.log_print(f"Debug mode: Stopping after {DEBUG_EMAILS_TO_PROCESS} emails")
-                        return
                     email_header = self.combine_email_header_lines(email.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x007D001E"))
                     self.log_print(f"\n\nEmail {processed_count}:")
                     self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
@@ -1911,7 +1873,7 @@ class OutlookSecurityAgent:
                                 self.log_print(f"Matched keyword in from address: {matched_keyword}")
                                 self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress)}")
 
-                        # Check subject keywords
+                        # Check 'subject' keywords
                         if 'subject' in conditions:
                             if any(keyword.lower() in email.Subject.lower() for keyword in conditions['subject']):
                                 match = True
@@ -1919,7 +1881,7 @@ class OutlookSecurityAgent:
                                 self.log_print(f"Matched keyword in subject: {matched_keyword}")
                                 self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
 
-                        # Check body keywords
+                        # Check 'body' keywords
                         if 'body' in conditions:
                             if any(keyword.lower() in email.Body.lower() for keyword in conditions['body']):
                                 match = True
@@ -1933,7 +1895,7 @@ class OutlookSecurityAgent:
                                     for line in email.Body.splitlines():
                                         if any(keyword.lower() in line.lower() for keyword in conditions['body']):
                                             self.log_print(f"Body: {line}", "DEBUG")
-                        # Check header keywords
+                        # Check 'header' keywords
                         if 'header' in conditions:
                             if any(keyword.lower() in email_header for keyword in conditions['header']):
                                 match = True
@@ -1954,8 +1916,16 @@ class OutlookSecurityAgent:
                         #     if bool(email.Attachments.Count > 0) != conditions['has_attachments']:
                         #         match = True
 
-                    # Check exceptions
-                        if 'from' in exceptions:
+                        # Check exceptions
+
+                        if match and safe_senders and "safe_senders" in safe_senders:
+                            if any(sender.lower() in email_header.lower() for sender in safe_senders["safe_senders"]):
+                                match = False
+                                matched_sender = next((sender for sender in safe_senders["safe_senders"] if sender.lower() in email_header.lower()), None)
+                                self.log_print(f"Safe sender matched in header: {matched_sender}")
+                                self.log_print(f"Email not processed due to safe sender match")
+
+                        if match and 'from' in exceptions:
                             from_addresses = [addr['address'].lower() for addr in exceptions['from']]
                             if any(addr in email.SenderEmailAddress.lower() for addr in from_addresses):
                                 match = False
@@ -1964,7 +1934,7 @@ class OutlookSecurityAgent:
                                 self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress)}")
 
                         # Check subject keywords in exceptions
-                        if 'subject' in exceptions:
+                        if match and 'subject' in exceptions:
                             if any(keyword.lower() in email.Subject.lower() for keyword in exceptions['subject']):
                                 match = False
                                 matched_keyword = next((keyword for keyword in exceptions['subject'] if keyword.lower() in email.Subject.lower()), None)
@@ -1972,7 +1942,7 @@ class OutlookSecurityAgent:
                                 self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
 
                         # Check body keywords in exceptions
-                        if 'body' in exceptions:
+                        if match and 'body' in exceptions:
                             if any(keyword.lower() in email.Body.lower() for keyword in exceptions['body']):
                                 match = False
                                 matched_keyword = next((keyword for keyword in exceptions['body'] if keyword.lower() in email.Body.lower()), None)
@@ -1980,7 +1950,7 @@ class OutlookSecurityAgent:
                                 self.log_print(f"Body: {self._sanitize_string(email.Body)}")
 
                         # Check header keywords in exceptions
-                        if 'header' in exceptions:
+                        if match and 'header' in exceptions:
                             if any(keyword.lower() in email_header for keyword in exceptions['header']):
                                 match = False
                                 matched_keyword = next((keyword for keyword in exceptions['header'] if keyword.lower() in email_header.lower()), None)
@@ -2002,11 +1972,13 @@ class OutlookSecurityAgent:
                             emails_added_info[email_index]["rule"] = rule
                             emails_added_info[email_index]["matched_keyword"] = matched_keyword
                             emails_added_info[email_index]["email_header"] = email_header
+                            emails_added_info[email_index]["processed"] = True
                         else:
                             emails_added_info[email_index]["match"] = match
                             emails_added_info[email_index]["rule"] = None
                             emails_added_info[email_index]["matched_keyword"] = ""
                             emails_added_info[email_index]["email_header"] = email_header
+                            emails_added_info[email_index]["processed"] = True
 
                         if match:
                             self.log_print(f"Email matches rule: {rule['name']}")
@@ -2104,19 +2076,7 @@ class OutlookSecurityAgent:
                                 except:
                                     self.log_print(f"Error clearing flag", "DEBUG")
 
-                                # Now always done in category assignment above and no longer needed here.
-                                # try: # to assign category based on rule name
-                                #     rule_name = rule['name']
-                                #     category_name = self.rule_to_category.get(rule_name, actions['assign_to_category']['category_name'])
-                                #     self.assign_category_to_email_with_retry(email, category_name)
-                                #     # email.Categories = category_name
-                                #     # email.Save()
-                                #     self.log_print(f"Email assigned to category '{category_name}'", "DEBUG")
-                                # except Exception as e:
-                                #     self.log_print(f"Error assigning category to email: {str(e)}")
-
-                                try:
-                                    # delete email
+                                try: # to delete email
                                     self.delete_email_with_retry(email)
                                     email_deleted = True
                                     deleted_total += 1
@@ -2145,15 +2105,13 @@ class OutlookSecurityAgent:
                         for header in email_header.splitlines():
                             self.log_print(f"Header: {header}")
 
+                    if (DEBUG) and (processed_count >= DEBUG_EMAILS_TO_PROCESS):
+                        self.log_print(f"Debug mode: Stopping after {DEBUG_EMAILS_TO_PROCESS} emails")
+                        break  # Stop processing more emails in debug mode, then write the report and prompt for rule updates
+
                 except Exception as e:
                     self.log_print(f"Error processing email: {str(e)}")
 
-            #****
-            # Process a list of deleted emails with a one line summary of each via simple_print
-            #     create a function deleted_report(emails_to_process, emails_added_info) to process the list
-
-            # for Match=false, report header "<subject>  " so they can be easily added to the rules
-            #     create a function header_report(emails_to_process, emails_added_info) to process the list
 
             # Print a list for Phishing OR Match=false, report body unique URL stubs "/<domain>.<>" and ".<domain>.<>" so they can be easily added to the rules
             #     collect them all first, then determine uniqueness, then print one per line
@@ -2167,7 +2125,7 @@ class OutlookSecurityAgent:
             # After processing all emails, prompt for rule updates based on unfiltered emails
             if processed_count > 0:
                 self.log_print(f"{CRLF}Prompting for rule updates based on unfiltered emails...")
-                #*** temporarily don't run - rules_json, safe_senders = self.prompt_update_rules(emails_to_process, emails_added_info, rules_json, safe_senders)
+                rules_json, safe_senders = self.prompt_update_rules(emails_to_process, emails_added_info, rules_json, safe_senders)
 
             self.log_print(f"\nProcessing Summary:")
             self.log_print(f"Processed {processed_count} emails")
@@ -2207,7 +2165,9 @@ def main():
 
         # Process last N days of emails - see DAYS_BACK_DEFAULT
         agent.log_print(f"{CRLF}Begin email analysis{CRLF}")
+
         agent.process_emails(rules_json, safe_senders)
+
         agent.log_print(f"{CRLF}End email analysis{CRLF}")
 
         # Export rules every time (saving copies to backups to Archive directory)
