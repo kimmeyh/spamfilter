@@ -1901,7 +1901,7 @@ class OutlookSecurityAgent:
             matched_emails = []
             non_matched_emails = []
 
-            self.log_print("Beginning email analysis:")
+            self.log_print(f"{CRLF}Beginning email analysis:")
 
             # Create a list of emails to process (done because if deleting emails in "email in emails") it will skip emails
             emails_to_process = [email for email in emails]
@@ -1924,7 +1924,7 @@ class OutlookSecurityAgent:
                     email_header = self.combine_email_header_lines(email.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x007D001E"))
                     self.log_print(f"\n\nEmail {processed_count}:")
                     self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
-                    self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress)}")
+                    self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress).lower()}")
                     self.log_print(f"Received: {email.ReceivedTime}")
 
                     # Sort rules to ensure delete actions are processed last
