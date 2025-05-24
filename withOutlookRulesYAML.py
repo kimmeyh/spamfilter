@@ -1434,6 +1434,64 @@ class OutlookSecurityAgent:
 
         return actions
 
+    def get_safe_input(self, prompt_text, valid_responses=None, isregex=False):
+        """
+        Get user input with security validation.
+
+        Args:
+            prompt_text (str): The text to display to the user
+            valid_responses (list, optional): List of valid responses. If None, any non-empty input is valid.
+            isregex (bool, optional): Whether to allow regex patterns in the input. Defaults to False.
+
+        Returns:
+            str: The validated user input
+        """
+        while True:
+            # Get user input
+            user_input = input(prompt_text).strip().lower()
+
+            # Define dangerous patterns based on whether regex is allowed
+            if isregex:
+                # For regex input, we need to be more permissive but still prevent command injection
+                dangerous_patterns = [
+                    ';', '--', '/*', '*/', 'union', 'select', 'insert', 'update', 'delete',
+                    'drop', 'exec', 'execute', '<script', 'javascript:', 'onerror', 'onload',
+                    '$(', '${', '`', '&&', '||', '|'  # Allow < and > for regex character classes
+                ]
+
+                # Check if the regex pattern is valid by trying to compile it
+                try:
+                    import re
+                    re.compile(user_input)
+                except re.error:
+                    print("Invalid regex pattern. Please try again.")
+                    continue
+
+            else: #*** if not regex, check for valid responses
+                # Standard dangerous patterns for non-regex input
+                dangerous_patterns = [
+                    ';', '--', '/*', '*/', 'union', 'select', 'insert', 'update', 'delete',
+                    'drop', 'exec', 'execute', '<script', 'javascript:', 'onerror', 'onload',
+                    '$(', '${', '`', '&&', '||', '|', '>', '<', '&lt;', '&gt;'
+                ]
+
+                has_dangerous_pattern = any(pattern in user_input.lower() for pattern in dangerous_patterns)
+
+                if has_dangerous_pattern:
+                    print("Invalid input. Please try again.")
+                    continue
+
+                # Check if response is valid (only for non-regex input)
+                if valid_responses and not isregex and user_input not in valid_responses:
+                    print(f"Please enter one of: {', '.join(valid_responses)}")
+                    continue
+
+            # For regex mode and valid_responses, we could check if the pattern matches any of the valid responses
+            # but typically regex mode would be used without valid_responses constraints
+
+            return user_input
+
+
     def prompt_update_rules(self, emails_to_process, emails_added_info, rules_json, safe_senders):
         """
         Prompt user to update rules based on unfiltered emails.
@@ -1481,7 +1539,7 @@ class OutlookSecurityAgent:
                 #   self.log_print(f"for loop email_header: {email_header}")  # Debugging output
                 subject = self._sanitize_string(email.Subject)
                 self.log_print(f"Subject: {subject}")
-                from_email = self._sanitize_string(email.SenderEmailAddress)
+                from_email = self._sanitize_string(email.SenderEmailAddress).lower()
                 self.log_print(f"From: {from_email}")
                 from_domain = self.header_from(email_header)
                 self.log_print(f"Domain: {from_domain}")
@@ -1490,16 +1548,24 @@ class OutlookSecurityAgent:
 
                 # if the from_email matches a the safe_senders list, skip this email
                 if from_domain in safe_senders["safe_senders"]: # or from_email in safe_senders["safe_senders"]:
+                    count += 1
                     self.log_print(f"Skipping email from safe sender: {from_email}")
+                    simple_print(f"Skipping email from safe sender: {from_email}")
                     continue
 
-                # if the from_email matches a rule in rules_json header condition, then print a message and skip this email
+                # if the from_domain matches a rule in rules_json header condition, then print a message and skip this email
                 if any(from_domain in rule.get("conditions", {}).get("header", []) for rule in rules_json["rules"]):
                     count += 1
                     self.log_print(f"Skipping email from domain as '{from_domain}' already exists in rules.")
                     simple_print(f"Skipping email from domain as '{from_domain}' already exists in rules.")
                     continue
 
+                # if the from_email matches a rule in rules_json header condition, then print a message and skip this email
+                if any(from_email in rule.get("conditions", {}).get("header", []) for rule in rules_json["rules"]):
+                    count += 1
+                    self.log_print(f"Skipping email from email as '{from_email}' already exists in rules.")
+                    simple_print(f"Skipping email from email as '{from_email}' already exists in rules.")
+                    continue
 
                 # For now assume user wants to process all non-deleted emails
                 #
@@ -1530,17 +1596,21 @@ class OutlookSecurityAgent:
                 #*** for the following domains that host individual email addresses, only suggest adding full email address to header rules:
                 #   gmail.com, yahoo.com, hotmail.com, outlook.com, aol.com, protonmail.com,
                 domains_with_individual_emails = from_domain in [
-                    "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com", "protonmail.com",
+                    "@gmail.com", "@yahoo.com", "@hotmail.com", "@outlook.com", "@aol.com", "@protonmail.com",
                 ]
 
 
                 if from_domain:
                     if domains_with_individual_emails:
                         # For individual email domains, suggest adding full email address
-                        response = input(f"{CRLF}Add '{from_email}' Email address SpamAutoDeleteHeader rule or safe_senders? (e/s): ").lower()
+                        expected_responses = ['e', 's']
+                        prompt = f"{CRLF}Add '{from_email}' to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
+                        response = self.get_safe_input(prompt, expected_responses)
                         from_domain = from_email  # Use full email address for individual domains
                     else:
-                        response = input(f"{CRLF}Add '{from_domain}' or email domain to SpamAutoDeleteHeader rule or safe_senders? (d/s): ").lower()
+                        expected_responses = ['d', 's']
+                        prompt = f"{CRLF}Add '{from_domain}' or email domain to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
+                        response = self.get_safe_input(prompt, expected_responses)
 
                     if response == 'd':
                         # Find the SpamAutoDeleteHeader rule in the rules list and append to its header conditions
@@ -1554,7 +1624,14 @@ class OutlookSecurityAgent:
                                 simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
                     elif response == 'e':
                         # Add from_email to safe_senders list
-                        safe_senders["safe_senders"].append(from_email)
+                        for rule in rules_json["rules"]:
+                            if rule["name"] == "SpamAutoDeleteHeader":
+                                if "header" not in rule["conditions"]:
+                                    rule["conditions"]["header"] = []
+                                rule["conditions"]["header"].append(from_domain)
+                                rule_updated = True
+                                self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+                                simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
                     elif response == 's':
                         # Add from_domain to safe_senders list
                         safe_senders["safe_senders"].append(from_domain)  # working HK 05/18/25
