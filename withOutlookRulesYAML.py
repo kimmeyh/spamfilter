@@ -22,6 +22,7 @@
 # - Need to add Next ****
 #       Move backup files to a "backup directory"
 #       Update mail processing to use safe_senders list for all header exceptions
+#       Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
 
 
 #------------------List of future enhancements------------------
@@ -131,7 +132,8 @@ DEBUG_EMAILS_TO_PROCESS = 100 #100 for testing
 
 CRLF = "\n"
 EMAIL_ADDRESS = "kimmeyharold@aol.com"
-EMAIL_FOLDER_NAME = "Bulk Mail"
+EMAIL_BULK_FOLDER_NAME = "Bulk Mail"
+EMAIL_INBOX_FOLDER_NAME = "Inbox"
 WIN32_CLIENT_DISPATCH = "Outlook.Application"
 OUTLOOK_GETNAMESPACE = "MAPI"
 OUTLOOK_SECURITY_LOG_PATH = f"D:/data/harold/OutlookRulesProcessing/"
@@ -155,7 +157,7 @@ YAML_RULES_BLOCKED_SENDERS_FILE = YAML_RULES_PATH + "rules_blocked_senders.yaml"
 YAML_RULES_CONTACTS_FILE        = YAML_RULES_PATH + "rules_contacts.yaml"           # periodically review email account contacts and update
 YAML_RULES_EMAIL_TO_FILE        = YAML_RULES_PATH + "rules_email_to.yaml"           # periodically review emails sent and add targeted recipients to secondary "Safe Senders" file (name?)
 YAML_INTERNATIONAL_RULES_FILE   = YAML_RULES_PATH + "rules_international.yaml"      # send all but a few "organizations" "*.<>" to Bulk Mail .jp, .cz...
-OUTLOOK_RULES_SUBSET = "SpamAutoDelete"
+OUTLOOK_RULES_SUBSET            = "SpamAutoDelete"
 DAYS_BACK_DEFAULT = 365 # default number of days to go back in the calendar
 CRLF = "\n"             # Carriage return and line feed for formatting
 
@@ -169,7 +171,7 @@ def simple_print(message):
         print(message)
 
 class OutlookSecurityAgent:
-    def __init__(self, email_address=EMAIL_ADDRESS, folder_name=EMAIL_FOLDER_NAME, debug_mode=DEBUG):
+    def __init__(self, email_address=EMAIL_ADDRESS, folder_name=EMAIL_BULK_FOLDER_NAME, debug_mode=DEBUG):
         """
         Initialize the Outlook Security Agent with specific account and folder
 
@@ -204,6 +206,7 @@ class OutlookSecurityAgent:
         if not self.target_folder:
             self.log_print(f"Could not find folder '{folder_name}' in account '{email_address}'")
             raise ValueError(f"Could not find folder '{folder_name}' in account '{email_address}'")
+        self.inbox_folder = self._get_account_folder(email_address, EMAIL_INBOX_FOLDER_NAME)
 
         self.rules = []
         self.rule_to_category = {
@@ -1434,6 +1437,64 @@ class OutlookSecurityAgent:
 
         return actions
 
+    def get_safe_input(self, prompt_text, valid_responses=None, isregex=False):
+        """
+        Get user input with security validation.
+
+        Args:
+            prompt_text (str): The text to display to the user
+            valid_responses (list, optional): List of valid responses. If None, any non-empty input is valid.
+            isregex (bool, optional): Whether to allow regex patterns in the input. Defaults to False.
+
+        Returns:
+            str: The validated user input
+        """
+        while True:
+            # Get user input
+            user_input = input(prompt_text).strip().lower()
+
+            # Define dangerous patterns based on whether regex is allowed
+            if isregex:
+                # For regex input, we need to be more permissive but still prevent command injection
+                dangerous_patterns = [
+                    ';', '--', '/*', '*/', 'union', 'select', 'insert', 'update', 'delete',
+                    'drop', 'exec', 'execute', '<script', 'javascript:', 'onerror', 'onload',
+                    '$(', '${', '`', '&&', '||', '|'  # Allow < and > for regex character classes
+                ]
+
+                # Check if the regex pattern is valid by trying to compile it
+                try:
+                    import re
+                    re.compile(user_input)
+                except re.error:
+                    print("Invalid regex pattern. Please try again.")
+                    continue
+
+            else: #*** if not regex, check for valid responses
+                # Standard dangerous patterns for non-regex input
+                dangerous_patterns = [
+                    ';', '--', '/*', '*/', 'union', 'select', 'insert', 'update', 'delete',
+                    'drop', 'exec', 'execute', '<script', 'javascript:', 'onerror', 'onload',
+                    '$(', '${', '`', '&&', '||', '|', '>', '<', '&lt;', '&gt;'
+                ]
+
+                has_dangerous_pattern = any(pattern in user_input.lower() for pattern in dangerous_patterns)
+
+                if has_dangerous_pattern:
+                    print("Invalid input. Please try again.")
+                    continue
+
+                # Check if response is valid (only for non-regex input)
+                if valid_responses and not isregex and user_input not in valid_responses:
+                    print(f"Please enter one of: {', '.join(valid_responses)}")
+                    continue
+
+            # For regex mode and valid_responses, we could check if the pattern matches any of the valid responses
+            # but typically regex mode would be used without valid_responses constraints
+
+            return user_input
+
+
     def prompt_update_rules(self, emails_to_process, emails_added_info, rules_json, safe_senders):
         """
         Prompt user to update rules based on unfiltered emails.
@@ -1481,7 +1542,7 @@ class OutlookSecurityAgent:
                 #   self.log_print(f"for loop email_header: {email_header}")  # Debugging output
                 subject = self._sanitize_string(email.Subject)
                 self.log_print(f"Subject: {subject}")
-                from_email = self._sanitize_string(email.SenderEmailAddress)
+                from_email = self._sanitize_string(email.SenderEmailAddress).lower()
                 self.log_print(f"From: {from_email}")
                 from_domain = self.header_from(email_header)
                 self.log_print(f"Domain: {from_domain}")
@@ -1490,16 +1551,24 @@ class OutlookSecurityAgent:
 
                 # if the from_email matches a the safe_senders list, skip this email
                 if from_domain in safe_senders["safe_senders"]: # or from_email in safe_senders["safe_senders"]:
+                    count += 1
                     self.log_print(f"Skipping email from safe sender: {from_email}")
+                    simple_print(f"Skipping email from safe sender: {from_email}")
                     continue
 
-                # if the from_email matches a rule in rules_json header condition, then print a message and skip this email
+                # if the from_domain matches a rule in rules_json header condition, then print a message and skip this email
                 if any(from_domain in rule.get("conditions", {}).get("header", []) for rule in rules_json["rules"]):
                     count += 1
                     self.log_print(f"Skipping email from domain as '{from_domain}' already exists in rules.")
                     simple_print(f"Skipping email from domain as '{from_domain}' already exists in rules.")
                     continue
 
+                # if the from_email matches a rule in rules_json header condition, then print a message and skip this email
+                if any(from_email in rule.get("conditions", {}).get("header", []) for rule in rules_json["rules"]):
+                    count += 1
+                    self.log_print(f"Skipping email from email as '{from_email}' already exists in rules.")
+                    simple_print(f"Skipping email from email as '{from_email}' already exists in rules.")
+                    continue
 
                 # For now assume user wants to process all non-deleted emails
                 #
@@ -1530,17 +1599,21 @@ class OutlookSecurityAgent:
                 #*** for the following domains that host individual email addresses, only suggest adding full email address to header rules:
                 #   gmail.com, yahoo.com, hotmail.com, outlook.com, aol.com, protonmail.com,
                 domains_with_individual_emails = from_domain in [
-                    "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com", "protonmail.com",
+                    "@gmail.com", "@yahoo.com", "@hotmail.com", "@outlook.com", "@aol.com", "@protonmail.com",
                 ]
 
 
                 if from_domain:
                     if domains_with_individual_emails:
                         # For individual email domains, suggest adding full email address
-                        response = input(f"{CRLF}Add '{from_email}' Email address SpamAutoDeleteHeader rule or safe_senders? (e/s): ").lower()
+                        expected_responses = ['e', 's']
+                        prompt = f"{CRLF}Add '{from_email}' to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
+                        response = self.get_safe_input(prompt, expected_responses)
                         from_domain = from_email  # Use full email address for individual domains
                     else:
-                        response = input(f"{CRLF}Add '{from_domain}' or email domain to SpamAutoDeleteHeader rule or safe_senders? (d/s): ").lower()
+                        expected_responses = ['d', 's']
+                        prompt = f"{CRLF}Add '{from_domain}' or email domain to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
+                        response = self.get_safe_input(prompt, expected_responses)
 
                     if response == 'd':
                         # Find the SpamAutoDeleteHeader rule in the rules list and append to its header conditions
@@ -1554,7 +1627,14 @@ class OutlookSecurityAgent:
                                 simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
                     elif response == 'e':
                         # Add from_email to safe_senders list
-                        safe_senders["safe_senders"].append(from_email)
+                        for rule in rules_json["rules"]:
+                            if rule["name"] == "SpamAutoDeleteHeader":
+                                if "header" not in rule["conditions"]:
+                                    rule["conditions"]["header"] = []
+                                rule["conditions"]["header"].append(from_domain)
+                                rule_updated = True
+                                self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+                                simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
                     elif response == 's':
                         # Add from_domain to safe_senders list
                         safe_senders["safe_senders"].append(from_domain)  # working HK 05/18/25
@@ -1717,6 +1797,32 @@ class OutlookSecurityAgent:
                     raise
         return
 
+    def move_email_with_retry(self, email, target_folder, max_retries=10, delay=1):
+        """
+        Attempt to move an email to a target folder with retries.
+        First it makes a copy of the email, then it moves it to the inbox
+        Args:
+            email: The email object to move.
+            target_folder: The target folder to move the email to.
+            max_retries: Maximum number of retries.
+            delay: Delay between retries in seconds.
+        """
+
+        import time
+        for attempt in range(max_retries):
+            try:
+                copied_email = email.Copy()
+                copied_email.Move(target_folder)
+                self.log_print(f"Email moved successfully to {target_folder.Name} on attempt {attempt + 1}")
+                return
+            except Exception as e:
+                self.log_print(f"Error copying email on attempt {attempt + 1}: {str(e)}")
+                if attempt < max_retries - 1:
+                    time.sleep(delay)
+                else:
+                    raise
+        return
+
     def mark_email_read_with_retry(self, email, max_retries=10, delay=1):
         """
         Attempt to mark an email as unread with retries.
@@ -1824,7 +1930,7 @@ class OutlookSecurityAgent:
             matched_emails = []
             non_matched_emails = []
 
-            self.log_print("Beginning email analysis:")
+            self.log_print(f"{CRLF}Beginning email analysis:")
 
             # Create a list of emails to process (done because if deleting emails in "email in emails") it will skip emails
             emails_to_process = [email for email in emails]
@@ -1847,8 +1953,28 @@ class OutlookSecurityAgent:
                     email_header = self.combine_email_header_lines(email.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x007D001E"))
                     self.log_print(f"\n\nEmail {processed_count}:")
                     self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
-                    self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress)}")
+                    self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress).lower()}")
                     self.log_print(f"Received: {email.ReceivedTime}")
+
+                    # Check each safe_senders before rules
+                    self.log_print(f"DEBUG: Checking safe senders for email from: {email.SenderEmailAddress}")
+                    # safe_senders only needs to be checked once
+                    for sender in safe_senders["safe_senders"]:
+                        sender_lower = sender.lower()
+                        header_lower = email_header.lower()
+                        if sender_lower in header_lower:
+                            match = False
+                            matched_sender = sender
+                            self.log_print(f"Safe sender matched in header: {matched_sender}")
+                            # move email back to inbox if found in safe_senders
+                            self.move_email_with_retry(email, self.inbox_folder)  # Moves email to inbox
+                            # copied_email = email.Copy()  # Creates copy in same folder as original
+                            # copied_email.Move(self.inbox_folder)
+                            self.delete_email_with_retry(email)
+                            email_deleted = True
+                            self.log_print(f"Email moved to inbox")
+                            break
+                               # no processing of rules needed if found in safe_senders
 
                     # Sort rules to ensure delete actions are processed last
                     rules.sort(key=lambda rule: rule['actions'].get('delete', False))
@@ -1917,13 +2043,6 @@ class OutlookSecurityAgent:
                         #         match = True
 
                         # Check exceptions
-
-                        if match and safe_senders and "safe_senders" in safe_senders:
-                            if any(sender.lower() in email_header.lower() for sender in safe_senders["safe_senders"]):
-                                match = False
-                                matched_sender = next((sender for sender in safe_senders["safe_senders"] if sender.lower() in email_header.lower()), None)
-                                self.log_print(f"Safe sender matched in header: {matched_sender}")
-                                self.log_print(f"Email not processed due to safe sender match")
 
                         if match and 'from' in exceptions:
                             from_addresses = [addr['address'].lower() for addr in exceptions['from']]
@@ -2148,7 +2267,7 @@ class OutlookSecurityAgent:
 def main():
     """Main function to run the security agent"""
 
-    # Initialize agent with debug mode enabled
+    # Initialize agent
     agent = OutlookSecurityAgent()  # setup for calling functions in class OutlookSecurityAgent
 
     try:
@@ -2173,10 +2292,6 @@ def main():
         # Export rules every time (saving copies to backups to Archive directory)
         agent.export_rules_to_yaml(rules_json)
 
-        #*** run export_safe_senders_to_yaml function to export safe_senders to YAML
-        #***   ensure they are written in the format they of the current file - see merge_safe_senders.py
-        #***   create backup copies, like rules_json
-        #***   after running verify they can be read
         agent.export_safe_senders_to_yaml(safe_senders)
 
         simple_print(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}")

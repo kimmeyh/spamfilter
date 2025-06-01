@@ -1,3 +1,7 @@
+Current:
+
+
+OLD:
 please write an algorithm to export the current json_rules (see rest of program for reference
 to what the JSON looks like and example file @rules.yaml).
 The rules.yaml needs to be accurate in output and format.
@@ -7,6 +11,6 @@ Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
 
 
-Can you update get_safe_senders_rules to read in the safe_senders file and make a seperate JSON varialbe for the
+Can you update get_safe_senders_rules to read in the safe_senders file and make a separate JSON variable for the
 
-Can you create a protubuf schema for rules_new.yaml
+Can you create a protobuf schema for rules_new.yaml
