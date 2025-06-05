@@ -1128,22 +1128,6 @@ class OutlookSecurityAgent:
             except Exception as e:
                 self.log_print(f"Error processing phishing indicators for email: {str(e)}")
 
-            try:
-                if (emails_added_info[email_index]["match"] == False):
-                    # Create a string from email.header for the From: line with format: "@<domain>.<> (20 characters or less,
-                    # padded to 20) Email <n> (with 2 leading blanks)"
-
-                    unique_URL_stubs = self.get_unique_URL_stubs(email.Body)
-
-                    for stub in unique_URL_stubs:
-                        output_string = (stub.ljust(30) +
-                                    f"| Email {email_index+1:>3} | " +
-                                    f"From: {self._sanitize_string(email.SenderEmailAddress)}")
-                        self.log_print(f"{output_string}",level="INFO")
-                        simple_print(f"{output_string}")
-
-            except Exception as e:
-                self.log_print(f"Error processing match = false email: {str(e)}")
 
             if (DEBUG) and (processed_count >= DEBUG_EMAILS_TO_PROCESS):
                 break  # Stop processing more emails in debug mode, then write the report and prompt for rule updates
@@ -1784,6 +1768,24 @@ class OutlookSecurityAgent:
         """
 
         import time
+
+        # Prepare email for deletion - mark as read and clear flags
+        try: #to mark email as read if unread
+            if email.UnRead:
+                self.mark_email_read_with_retry(email)
+                # email.UnRead = False  # Delete implies marking the item as read
+                self.log_print(f"Email marked as read", "DEBUG")
+        except:
+            self.log_print(f"Error marking email as read", "DEBUG")
+
+        try: #to clear the flag on email
+            if hasattr(email, 'Flag'):
+                self.clear_email_flag_with_retry(email)
+                # email.Flag.Clear()      # Delete implies clearing the flag
+                self.log_print(f"Email flag was cleared", "DEBUG")
+        except:
+            self.log_print(f"Error clearing flag", "DEBUG")
+
         for attempt in range(max_retries):
             try:
                 email.Delete()
@@ -1968,11 +1970,12 @@ class OutlookSecurityAgent:
                             self.log_print(f"Safe sender matched in header: {matched_sender}")
                             # move email back to inbox if found in safe_senders
                             self.move_email_with_retry(email, self.inbox_folder)  # Moves email to inbox
-                            # copied_email = email.Copy()  # Creates copy in same folder as original
-                            # copied_email.Move(self.inbox_folder)
                             self.delete_email_with_retry(email)
                             email_deleted = True
+                            if email in emails_to_process:
+                                emails_to_process.remove(email)
                             self.log_print(f"Email moved to inbox")
+
                             break
                                # no processing of rules needed if found in safe_senders
 
@@ -2179,22 +2182,6 @@ class OutlookSecurityAgent:
                                 self.log_print("Stopping processing more rules")
                                 # this flag is not being passed by outlook, so will never be set.  Keeping in case fixed in the future
                             if 'delete' in actions and actions['delete']:
-                                try: #to mark email as read if unread
-                                    if email.UnRead:
-                                        self.mark_email_read_with_retry(email)
-                                        # email.UnRead = False  # Delete implies marking the item as read
-                                        self.log_print(f"Email marked as read", "DEBUG")
-                                except:
-                                    self.log_print(f"Error marking email as read", "DEBUG")
-
-                                try: #to clear the flag on email
-                                    if hasattr(email, 'Flag'):
-                                        self.clear_email_flag_with_retry(email)
-                                        # email.Flag.Clear()      # Delete implies clearing the flag
-                                        self.log_print(f"Email flag was cleared", "DEBUG")
-                                except:
-                                    self.log_print(f"Error clearing flag", "DEBUG")
-
                                 try: # to delete email
                                     self.delete_email_with_retry(email)
                                     email_deleted = True
