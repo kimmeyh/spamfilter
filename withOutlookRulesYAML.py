@@ -126,7 +126,7 @@ import win32com.client
 import IPython
 
 # Settings:
-DEBUG = True # True or False
+DEBUG = False # True or False
 INFO = False if DEBUG else True #If not debugging, then INFO level logging
 DEBUG_EMAILS_TO_PROCESS = 100 #100 for testing
 
