@@ -4,7 +4,7 @@
 #------------------List of future enhancements------------------
 # - Need to add Next ****
 #       ✓ COMPLETED - Change folder to process to be a list of folders, add "bulk", change process to process a list of folders
-#       Reprocess all emails in the EMAIL_BULK_FOLDER_NAMES folder list a second time, in case any of the remaining emails can no be moved or deleted.
+#       ✓ COMPLETED - Reprocess all emails in the EMAIL_BULK_FOLDER_NAMES folder list a second time, in case any of the remaining emails can no be moved or deleted.
 
 #       Move backup files to a "backup directory"
 #       Update mail processing to use safe_senders list for all header exceptions
@@ -90,6 +90,7 @@
 # 05/19/2025 Harold Kimmey - Updates for feature/userinputheader
 # 07/03/2025 Harold Kimmey - Add memory-bank to repository to enhance Github Copilot suggestions
 # 07/04/2025 Harold Kimmey - Updated EMAIL_BULK_FOLDER_NAME to EMAIL_BULK_FOLDER_NAMES list, added "bulk" folder, updated processing to handle multiple folders
+# 07/05/2025 Harold Kimmey - Added second-pass email reprocessing after rule updates for enhanced cleanup
 
 #------------------General Documentation------------------
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
@@ -132,8 +133,20 @@ import copy
 import traceback
 
 #Imports for packages that need to be installed
-import win32com.client
-import IPython
+# Handle win32com.client import gracefully for testing environments
+try:
+    import win32com.client
+    WIN32COM_AVAILABLE = True
+except ImportError:
+    # This allows tests to run in environments without win32com (e.g., Linux, macOS, CI/CD)
+    # while maintaining full functionality when win32com is available (Windows with Outlook)
+    WIN32COM_AVAILABLE = False
+    win32com = None
+
+try:
+    import IPython
+except ImportError:
+    IPython = None
 
 # Settings:
 DEBUG = False # True or False
@@ -192,8 +205,17 @@ class OutlookSecurityAgent:
             debug_mode: If True, run in simulation mode with verbose output
         """
         self.debug_mode = debug_mode
-        self.outlook = win32com.client.Dispatch(WIN32_CLIENT_DISPATCH)
-        self.namespace = self.outlook.GetNamespace(OUTLOOK_GETNAMESPACE)
+        
+        # Check if win32com is available before trying to use it
+        if not WIN32COM_AVAILABLE:
+            # Allow class instantiation for testing purposes without Outlook functionality
+            self.outlook = None
+            self.namespace = None
+            print("Warning: win32com.client not available. Outlook functionality disabled.")
+        else:
+            self.outlook = win32com.client.Dispatch(WIN32_CLIENT_DISPATCH)
+            self.namespace = self.outlook.GetNamespace(OUTLOOK_GETNAMESPACE)
+            
         self.YAMO_RULES_PATH = YAML_RULES_PATH  # Set appropriate default path
         self.YAML_RULES_FILE = YAML_RULES_FILE  # Set appropriate default file name
         self.YAML_SAFE_SENDERS_FILE = YAML_RULES_SAFE_SENDERS_FILE  # Set appropriate default file name
@@ -211,6 +233,9 @@ class OutlookSecurityAgent:
         self.log_print(f"\n=============================================================\nStarting new run")
         self.log_print(f"Initializing agent for {email_address}, folders: {folder_names}")
         self.log_print(f"Debug mode: {debug_mode}")
+
+        # Store email address for later use
+        self.email_address = email_address
 
         # Get the specific account's folders - now handling multiple folders
         self.target_folders = []
@@ -1625,122 +1650,49 @@ class OutlookSecurityAgent:
                 if from_domain:
                     if domains_with_individual_emails:
                         # For individual email domains, suggest adding full email address
-                        expected_responses = ['d', 's']
+                        expected_responses = ['d', 'e', 's']   # Treat 'd' and 'e' as 'e' for adding to header rule
                         prompt = f"{CRLF}Add '{from_email}' to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
                         response = self.get_safe_input(prompt, expected_responses)
-                        from_domain = from_email  # Use full email address for individual domains
+                        if response in ['e', 'd']:  # Treat 'd' and 'e' as 'e' for adding to header rule
+                            # Add from_email to safe_senders list
+                            for rule in rules_json["rules"]:
+                                if rule["name"] == "SpamAutoDeleteHeader":
+                                    if "header" not in rule["conditions"]:
+                                        rule["conditions"]["header"] = []
+                                    rule["conditions"]["header"].append(from_email)
+                                    rule_updated = True
+                                    self.log_print(f"Added '{from_email}' to SpamAutoDeleteHeader rule")
+                                    simple_print(f"Added '{from_email}' to SpamAutoDeleteHeader rule")
+                        elif response == 's':
+                            # Add from_domain to safe_senders list
+                            safe_senders["safe_senders"].append(from_email)  # working HK 05/18/25
+                            self.log_print(f"Added '{from_email}' to safe_senders list")
+                            simple_print(f"Added '{from_email}' to safe_senders list")
+                            rule_updated = True
+                        # else:
+                        #     expected_responses = ['d', 'e','s']
+                        #     prompt = f"{CRLF}Add '{from_domain}' or email domain to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
+                        #     response = self.get_safe_input(prompt, expected_responses)
                     else:
-                        expected_responses = ['d', 's']
-                        prompt = f"{CRLF}Add '{from_domain}' or email domain to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
+                        expected_responses = ['d', 'e', 's']   # Treat 'd' and 'e' as 'e' for adding to header rule
+                        prompt = f"{CRLF}Add '{from_email}' to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
                         response = self.get_safe_input(prompt, expected_responses)
-
-                    if response == 'd':
-                        # Find the SpamAutoDeleteHeader rule in the rules list and append to its header conditions
-                        for rule in rules_json["rules"]:
-                            if rule["name"] == "SpamAutoDeleteHeader":
-                                if "header" not in rule["conditions"]:
-                                    rule["conditions"]["header"] = []
-                                rule["conditions"]["header"].append(from_domain)
-                                rule_updated = True
-                                self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
-                                simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
-                    elif response == 'e':
-                        # Add from_email to safe_senders list
-                        for rule in rules_json["rules"]:
-                            if rule["name"] == "SpamAutoDeleteHeader":
-                                if "header" not in rule["conditions"]:
-                                    rule["conditions"]["header"] = []
-                                rule["conditions"]["header"].append(from_domain)
-                                rule_updated = True
-                                self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
-                                simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
-                    elif response == 's':
-                        # Add from_domain to safe_senders list
-                        safe_senders["safe_senders"].append(from_domain)  # working HK 05/18/25
-                        self.log_print(f"Added '{from_domain}' to safe_senders list")
-                        simple_print(f"Added '{from_domain}' to safe_senders list")
-                        rule_updated = True
-
-#**** Confirmed working up to this point 05/19/25 HK
-#fix these one at a time and add them back in - for now, skip the other options so we can test out the header rule
-                # # Step 2: If user declined header rule, suggest body rule for URLs
-                # if subject and rule_updated == False:
-                #     response = input(f"{CRLF}Add subject pattern '{subject}' to SpamAutoDeleteSubject rule? (y/n): ").lower()
-
-                #     if response == 'y':
-                #         subject_pattern = input(f"{CRLF}Enter pattern:")
-                #         # Find the SpamAutoDeleteSubject rule
-                #         rule_updated = True
-                #         for rule in rules_json:
-                #             if rule.get("name") == "SpamAutoDeleteSubject":
-                #                 if "subject" not in rule["conditions"]:
-                #                     rule["conditions"]["subject"] = []
-
-                #                 # Add subject to subject conditions if not already present
-                #                 if subject not in rule["conditions"]["subject"]:
-                #                     rule["conditions"]["subject"].append(subject_pattern)
-                #                     self.log_print(f"Added '{subject_pattern}' to SpamAutoDeleteSubject rule")
-                #                     simple_print(f"Added '{subject_pattern}' to SpamAutoDeleteSubject rule")
-                #                 else:
-                #                     simple_print(f"'{subject_pattern}' already exists in SpamAutoDeleteSubject rule")
-                #                 break
-
-                # # Step 3: Suggest subject rule if neither header nor body rules using URL's found
-                # if unique_urls and rule_updated == False: #process URL's
-                #     simple_print("{CRLF}The following URL patterns can be added to SpamAutoDeleteBody rule:")
-                #     for i, url in enumerate(unique_urls):
-                #         simple_print(f"{i+1}. {url}")
-
-                #     url_indices = input("Enter URL numbers to add (comma-separated, or 'all'), or press Enter to skip: ")
-
-                #     if url_indices.lower() == 'all':
-                #         selected_urls = unique_urls
-                #     elif url_indices:
-                #         try:
-                #             indices = [int(idx.strip()) - 1 for idx in url_indices.split(',')]
-                #             selected_urls = [unique_urls[i] for i in indices if 0 <= i < len(unique_urls)]
-                #         except ValueError:
-                #             simple_print("Invalid input. No URLs added.")
-                #             selected_urls = []
-                #     else:
-                #         selected_urls = []
-
-                #     if selected_urls:
-                #         # Add selected URLs to SpamAutoDeleteBody rule
-                #         rule_updated = True
-                #         for rule in rules_json:
-                #             if rule.get("name") == "SpamAutoDeleteBody":
-                #                 if "body" not in rule["conditions"]:
-                #                     rule["conditions"]["body"] = []
-
-                #                 for url in selected_urls:
-                #                     if url not in rule["conditions"]["body"]:
-                #                         rule["conditions"]["body"].append(url)
-                #                         self.log_print(f"Added '{url}' to SpamAutoDeleteBody rule")
-                #                         simple_print(f"Added '{url}' to SpamAutoDeleteBody rule")
-
-                # if rule_updated == False:  # request body content add if no other adds
-                #     print(f"{CRLF}Body Content:")
-                #     for line in email.Body.splitlines():
-                #         self.log_print(f"Body: {line}")
-                #     response = input(f"{CRLF}Add body content to SpamAutoDeleteBody rule? (y/n): ").lower()
-                #     if response == 'y':
-                #         body_content = input(f"{CRLF}Enter body content:")
-                #         # Find the SpamAutoDeleteBody rule
-                #         rule_updated = True
-                #         for rule in rules_json:
-                #             if rule.get("name") == "SpamAutoDeleteBody":
-                #                 if "body" not in rule["conditions"]:
-                #                     rule["conditions"]["body"] = []
-
-                #                 # Add body content to body conditions if not already present
-                #                 if body_content not in rule["conditions"]["body"]:
-                #                     rule["conditions"]["body"].append(body_content)
-                #                     self.log_print(f"Added '{body_content}' to SpamAutoDeleteBody rule")
-                #                     simple_print(f"Added '{body_content}' to SpamAutoDeleteBody rule")
-                #                 else:
-                #                     simple_print(f"'{body_content}' already exists in SpamAutoDeleteBody rule")
-                #                 break
+                        if response == 'd':
+                            # Find the SpamAutoDeleteHeader rule in the rules list and append to its header conditions
+                            for rule in rules_json["rules"]:
+                                if rule["name"] == "SpamAutoDeleteHeader":
+                                    if "header" not in rule["conditions"]:
+                                        rule["conditions"]["header"] = []
+                                    rule["conditions"]["header"].append(from_domain)
+                                    rule_updated = True
+                                    self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+                                    simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+                        elif response == 's':
+                            # Add from_domain to safe_senders list
+                            safe_senders["safe_senders"].append(from_domain)  # working HK 05/18/25
+                            self.log_print(f"Added '{from_domain}' to safe_senders list")
+                            simple_print(f"Added '{from_domain}' to safe_senders list")
+                            rule_updated = True
 
             except Exception as e:
                 self.log_print(f"Error processing email for rule updates: {str(e)} {email_header}")
@@ -1930,6 +1882,32 @@ class OutlookSecurityAgent:
                     raise
         return
 
+    def _get_emails_from_folder(self, folder, days_back):
+        """Helper method to get emails from a specific folder for reprocessing"""
+        try:
+            # Create date restriction for recent emails
+            restriction = "[ReceivedTime] >= '" + \
+                (datetime.now() - timedelta(days=days_back)).strftime('%m/%d/%Y') + "'"
+            emails = folder.Items.Restrict(restriction)
+            
+            if emails is None or emails.Count == 0:
+                self.log_print(f"No emails found in folder: {folder.Name}")
+                return []
+            
+            if isinstance(emails, str):
+                self.log_print(f"Error: 'emails' is a string, expected a collection in folder: {folder.Name}")
+                return []
+            
+            emails.Sort("[ReceivedTime]", Descending=True)
+            self.log_print(f"Found {emails.Count} emails in folder {folder.Name} for reprocessing")
+            
+            # Convert to list for processing
+            return [email for email in emails]
+            
+        except Exception as e:
+            self.log_print(f"Error getting emails from folder {folder.Name}: {str(e)}")
+            return []
+
     def process_emails(self, rules_json, safe_senders, days_back=DAYS_BACK_DEFAULT):
         """Process emails based on the rules in the rules_json object - now processes multiple folders"""
         self.log_print(f"\n\nStarting email processing")
@@ -1999,6 +1977,9 @@ class OutlookSecurityAgent:
             self.log_print(f"{CRLF}Beginning email analysis:")
             self.log_print(f"Total emails to process across all folders: {len(all_emails_to_process)}")
 
+            # Sort rules once per first-pass (optimization: moved outside email loop)
+            rules.sort(key=lambda rule: rule['actions'].get('delete', False))
+
             for email in all_emails_to_process:
                 try:
                     processed_count += 1
@@ -2031,9 +2012,6 @@ class OutlookSecurityAgent:
 
                             break
                                # no processing of rules needed if found in safe_senders
-
-                    # Sort rules to ensure delete actions are processed last
-                    rules.sort(key=lambda rule: rule['actions'].get('delete', False))
 
                     for rule in rules:
                         if not isinstance(rule, dict) or 'actions' not in rule:
@@ -2196,7 +2174,7 @@ class OutlookSecurityAgent:
                                 # Implement desktop alert display logic here
                             if 'copy_to_folder' in actions and actions['copy_to_folder']['folder_name']:
                                 folder_name = actions['copy_to_folder']['folder_name']
-                                target_folder = self.target_folder.Folders[folder_name]
+                                target_folder = self._get_account_folder(self.email_address, folder_name)
                                 email.Copy().Move(target_folder)
                                 self.log_print(f"Email copied to '{folder_name}' folder")
                             if 'forward' in actions and actions['forward']:
@@ -2228,7 +2206,7 @@ class OutlookSecurityAgent:
                                 self.log_print(f"Application started: {actions['start_application']['application_path']}")
                             if 'move_to_folder' in actions and actions['move_to_folder']['folder_name']:
                                 folder_name = actions['move_to_folder']['folder_name']
-                                target_folder = self.target_folder.Folders[folder_name]
+                                target_folder = self._get_account_folder(self.email_address, folder_name)
                                 email.Move(target_folder)
                                 self.log_print(f"Email moved to '{folder_name}' folder")
                             if 'stop_processing_more_rules' in actions and actions['stop_processing_more_rules']:
@@ -2286,10 +2264,213 @@ class OutlookSecurityAgent:
                 self.log_print(f"{CRLF}Prompting for rule updates based on unfiltered emails...")
                 rules_json, safe_senders = self.prompt_update_rules(all_emails_to_process, all_emails_added_info, rules_json, safe_senders)
 
-            self.log_print(f"\nProcessing Summary:")
-            self.log_print(f"Processed {processed_count} emails")
-            self.log_print(f"Flagged {flagged_count} emails as possible Phishing attempts")
-            self.log_print(f"Deleted {deleted_total} emails")
+            # Second-pass processing: Reprocess all emails in bulk folders after rule updates
+            self.log_print(f"{CRLF}Starting second-pass email processing after rule updates...")
+            simple_print(f"\nStarting second-pass email processing...")
+            
+            # Get fresh emails from all bulk folders for second-pass processing
+            second_pass_emails = []
+            second_pass_added_info = []
+            
+            for folder_name in EMAIL_BULK_FOLDER_NAMES:
+                bulk_folder = self._find_folder_recursive(self.target_folder, folder_name)
+                if bulk_folder:
+                    self.log_print(f"Second-pass: Processing folder '{folder_name}' (found: {bulk_folder.Name})")
+                    
+                    # Get emails from this folder for second-pass
+                    folder_emails = self._get_emails_from_folder(bulk_folder, days_back)
+                    
+                    for email in folder_emails:
+                        second_pass_emails.append(email)
+                        # Create basic info structure for second-pass emails
+                        email_info = {
+                            "match": False,
+                            "rule": None,
+                            "matched_keyword": "",
+                            "email_header": "",
+                            "processed": False,
+                            "phishing_indicators": [],
+                            "source_folder": bulk_folder.Name
+                        }
+                        second_pass_added_info.append(email_info)
+                else:
+                    self.log_print(f"Second-pass: Folder '{folder_name}' not found, skipping")
+            
+            self.log_print(f"Second-pass: Found {len(second_pass_emails)} emails to reprocess")
+            simple_print(f"Second-pass: Found {len(second_pass_emails)} emails to reprocess")
+            
+            # Process second-pass emails if any found
+            if second_pass_emails:
+                second_pass_processed = 0
+                second_pass_deleted = 0
+                second_pass_flagged = 0
+                
+                # Sort rules once per second-pass (optimization: moved outside email loop)
+                rules.sort(key=lambda rule: rule['actions'].get('delete', False))
+                
+                for email_index, email in enumerate(second_pass_emails):
+                    try:
+                        if email_index >= len(second_pass_added_info):
+                            continue  # Safety check
+                        
+                        email_deleted = False
+                        email_header = self._get_email_header(email)
+                        second_pass_added_info[email_index]["email_header"] = email_header
+                        
+                        self.log_print(f"Second-pass processing email {email_index + 1}/{len(second_pass_emails)}")
+                        self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
+                        self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress).lower()}")
+                        
+                        # Check safe senders first (same logic as first pass)
+                        for sender in safe_senders["safe_senders"]:
+                            sender_lower = sender.lower()
+                            header_lower = email_header.lower()
+                            if sender_lower in header_lower:
+                                self.log_print(f"Second-pass: Safe sender matched: {sender}")
+                                self.move_email_with_retry(email, self.inbox_folder)
+                                self.delete_email_with_retry(email)
+                                email_deleted = True
+                                # Email will be processed as deleted, no need to remove from list during iteration
+                                break
+                        
+                        if email_deleted:
+                            second_pass_processed += 1
+                            second_pass_deleted += 1
+                            continue
+                        
+                        # Process rules (same logic as first pass)
+                        for rule in rules:
+                            if not isinstance(rule, dict) or 'actions' not in rule:
+                                continue
+                            if email_deleted:
+                                continue
+                            
+                            conditions = rule['conditions']
+                            exceptions = rule['exceptions']
+                            
+                            match = False
+                            matched_keyword = ""
+                            
+                            # Check conditions (simplified version of first-pass logic)
+                            if 'from' in conditions:
+                                from_addresses = [addr['address'].lower() for addr in conditions['from']]
+                                if any(addr in email.SenderEmailAddress.lower() for addr in from_addresses):
+                                    match = True
+                                    matched_keyword = next((addr['address'] for addr in conditions['from'] if addr['address'].lower() in email.SenderEmailAddress.lower()), None)
+                            
+                            if 'subject' in conditions and not match:
+                                subject_keywords = [keyword.lower() for keyword in conditions['subject']]
+                                if any(keyword in email.Subject.lower() for keyword in subject_keywords):
+                                    match = True
+                                    matched_keyword = next((keyword for keyword in conditions['subject'] if keyword.lower() in email.Subject.lower()), None)
+                            
+                            if 'body' in conditions and not match:
+                                body_keywords = [keyword.lower() for keyword in conditions['body']]
+                                if any(keyword in email.Body.lower() for keyword in body_keywords):
+                                    match = True
+                                    matched_keyword = next((keyword for keyword in conditions['body'] if keyword.lower() in email.Body.lower()), None)
+                            
+                            if 'header' in conditions and not match:
+                                header_keywords = [keyword.lower() for keyword in conditions['header']]
+                                if any(keyword in email_header.lower() for keyword in header_keywords):
+                                    match = True
+                                    matched_keyword = next((keyword for keyword in conditions['header'] if keyword.lower() in email_header.lower()), None)
+                            
+                            # Check exceptions (simplified version)
+                            if match:
+                                if 'from' in exceptions:
+                                    if any(keyword.lower() in email.SenderEmailAddress.lower() for keyword in exceptions['from']):
+                                        match = False
+                                if 'subject' in exceptions and match:
+                                    if any(keyword.lower() in email.Subject.lower() for keyword in exceptions['subject']):
+                                        match = False
+                                if 'body' in exceptions and match:
+                                    if any(keyword.lower() in email.Body.lower() for keyword in exceptions['body']):
+                                        match = False
+                                if 'header' in exceptions and match:
+                                    if any(keyword.lower() in email_header.lower() for keyword in exceptions['header']):
+                                        match = False
+                            
+                            # Update email info
+                            if match:
+                                second_pass_added_info[email_index]["match"] = True
+                                second_pass_added_info[email_index]["rule"] = rule
+                                second_pass_added_info[email_index]["matched_keyword"] = matched_keyword
+                                second_pass_added_info[email_index]["processed"] = True
+                                
+                                self.log_print(f"Second-pass: Email matches rule: {rule['name']}")
+                                
+                                # Process actions (focus on delete action for second pass)
+                                actions = rule['actions']
+                                if 'delete' in actions and actions['delete']:
+                                    try:
+                                        self.delete_email_with_retry(email)
+                                        email_deleted = True
+                                        second_pass_deleted += 1
+                                        self.log_print(f"Second-pass: Email deleted by rule: {rule['name']}")
+                                        break
+                                    except Exception as e:
+                                        self.log_print(f"Second-pass: Error deleting email: {str(e)}")
+                            if match:
+                                second_pass_added_info[email_index]["match"] = True
+                                second_pass_added_info[email_index]["rule"] = rule
+                                second_pass_added_info[email_index]["matched_keyword"] = matched_keyword
+                                second_pass_added_info[email_index]["processed"] = True
+                                
+                                self.log_print(f"Second-pass: Email matches rule: {rule['name']}")
+                                
+                                # Process actions (focus on delete action for second pass)
+                                actions = rule['actions']
+                                if 'delete' in actions and actions['delete']:
+                                    try:
+                                        self.delete_email_with_retry(email)
+                                        email_deleted = True
+                                        second_pass_deleted += 1
+                                        self.log_print(f"Second-pass: Email deleted by rule: {rule['name']}")
+                                        break
+                                    except Exception as e:
+                                        self.log_print(f"Second-pass: Error deleting email: {str(e)}")
+                        
+                        # Check phishing indicators for unmatched emails
+                        if not email_deleted and not second_pass_added_info[email_index]["match"]:
+                            indicators = self.check_phishing_indicators(email)
+                            if indicators:
+                                second_pass_flagged += 1
+                                self.log_print(f"Second-pass: Phishing indicators found: {indicators}")
+                                second_pass_added_info[email_index]["phishing_indicators"] = indicators
+                        
+                        second_pass_processed += 1
+                        
+                        if (DEBUG) and (second_pass_processed >= DEBUG_EMAILS_TO_PROCESS):
+                            self.log_print(f"Second-pass debug mode: Stopping after {DEBUG_EMAILS_TO_PROCESS} emails")
+                            break
+                    
+                    except Exception as e:
+                        self.log_print(f"Second-pass: Error processing email: {str(e)}")
+                
+                # Log second-pass summary
+                self.log_print(f"\nSecond-pass Processing Summary:")
+                self.log_print(f"Second-pass processed {second_pass_processed} emails")
+                self.log_print(f"Second-pass flagged {second_pass_flagged} emails as possible Phishing attempts")
+                self.log_print(f"Second-pass deleted {second_pass_deleted} emails")
+                
+                simple_print(f"\nSecond-pass Processing Summary:")
+                simple_print(f"Second-pass processed {second_pass_processed} emails")
+                simple_print(f"Second-pass flagged {second_pass_flagged} emails as possible Phishing attempts")
+                simple_print(f"Second-pass deleted {second_pass_deleted} emails")
+                
+                # Update total counts to include second-pass results
+                processed_count += second_pass_processed
+                deleted_total += second_pass_deleted
+                flagged_count += second_pass_flagged
+            else:
+                self.log_print(f"Second-pass: No emails found for reprocessing")
+                simple_print(f"Second-pass: No emails found for reprocessing")
+
+            self.log_print(f"\nFinal Processing Summary (including second-pass):")
+            self.log_print(f"Total processed {processed_count} emails")
+            self.log_print(f"Total flagged {flagged_count} emails as possible Phishing attempts")
+            self.log_print(f"Total deleted {deleted_total} emails")
             self.log_print(f"END of Run =============================================================\n\n")
 
             simple_print(f"\nProcessing Summary:")

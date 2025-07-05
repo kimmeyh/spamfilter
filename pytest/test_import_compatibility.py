@@ -22,6 +22,9 @@ def test_import_without_win32com():
         mock_ipython = types.ModuleType('IPython')
         sys.modules['IPython'] = mock_ipython
         
+        # Add parent directory to path for import
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        
         # Try to import now
         from withOutlookRulesYAML import EMAIL_BULK_FOLDER_NAMES, OutlookSecurityAgent
         
@@ -34,30 +37,23 @@ def test_import_without_win32com():
         params = list(sig.parameters.keys())
         print(f"✓ OutlookSecurityAgent.__init__ parameters: {params}")
         
-        if 'folder_names' in params:
-            print("✓ 'folder_names' parameter found in __init__")
-        else:
-            print("✗ 'folder_names' parameter missing from __init__")
-            return False
-            
-        return True
+        assert 'folder_names' in params, "'folder_names' parameter missing from __init__"
+        print("✓ 'folder_names' parameter found in __init__")
         
     except Exception as e:
-        print(f"✗ Import test failed: {e}")
-        return False
+        assert False, f"Import test failed: {e}"
 
 def main():
     print("Testing import compatibility...")
     print("=" * 50)
     
-    success = test_import_without_win32com()
-    
-    if success:
+    try:
+        test_import_without_win32com()
         print("\n✅ Import compatibility test PASSED!")
-    else:
-        print("\n❌ Import compatibility test FAILED!")
-    
-    return success
+        return True
+    except AssertionError as e:
+        print(f"\n❌ Import compatibility test FAILED: {e}")
+        return False
 
 if __name__ == "__main__":
     success = main()

@@ -1,5 +1,13 @@
+Completed:
+✓ Reprocess all emails in the EMAIL_BULK_FOLDER_NAMES folder list a second time, in case any of the remaining emails can no be moved or deleted.
+
 Next:
-Reprocess all emails in the EMAIL_BULK_FOLDER_NAME folder list a second time, in case any of the remaining emails can no be moved or deleted.
+Move backup files to a "backup directory"
+Update mail processing to use safe_senders list for all header exceptions
+Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
+
+Previous Completed:
+✓ Change EMAIL_BULK_FOLDER_NAME from single folder name to list of folders, add "bulk", ONLY change code that HAS to be CHANGED
 
 @workspace 
 Help me update withOutlookRulesYAML.py to change variable EMAIL_BULK_FOLDER_NAME from a single folder name to a list of folders.  

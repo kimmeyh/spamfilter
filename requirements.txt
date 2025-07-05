@@ -6,6 +6,8 @@ o365            # also installed: urllib3, tzdata, soupsieve, PyJWT, pycparser, 
 requests        # Already installed via O365, but will use directly
 msal
 PyYAML          # Note:  allows the import of "yaml" - all other requirements are already installed
+pytest          # For unit tests
+pytest-cov      # For code coverage in unit tests
 
 # Below is a list of all the Python v3.12 Standard Library packages that can be imported, but do not need to be installed:
 #   Entries I use often:  copy, datetime, json, logging, math, os, pwd, re, sys, time, traceback, yaml,,
