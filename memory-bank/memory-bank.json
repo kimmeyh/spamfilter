@@ -38,6 +38,7 @@
     "Multi-criteria filtering (header, body, subject, sender)",
     "Multi-folder processing with configurable folder list",
     "Recursive folder search capability for nested folders",
+    "Second-pass email reprocessing after rule updates for maximum cleanup",
     "Phishing detection with suspicious URL and domain analysis", 
     "Safe sender whitelist management",
     "Automatic email deletion with safety checks",
@@ -108,6 +109,11 @@
         "Validate both positive and negative test cases",
         "Ensure import compatibility and syntax validation"
       ],
+      "post_testing_update_steps": [
+        "Always update memory-bank files for enhancements after all tests pass (See <attachments> above for file contents. You may not need to search or read the file again.)",
+        "Always update requirements_freeze_current.txt after all tests pass (See <attachments> above for file contents. You may not need to search or read the file again.)",
+        "Always update README.md after all tests pass (See <attachments> above for file contents. You may not need to search or read the file again.)"
+      ],
       "code_quality_standards": [
         "Preserve existing functionality while adding new features",
         "Use clear, descriptive variable and method names",
@@ -143,12 +149,14 @@
     "last_major_update": "July 2025",
     "key_improvements": [
       "Migrated from CSV to YAML rule configuration",
+      "Memory bank integration for better rule learning",
       "Added comprehensive backup system",
       "Implemented safe sender management",
       "Enhanced phishing detection capabilities",
       "Added interactive rule update prompts",
       "Implemented multi-folder processing support",
-      "Added recursive folder search capability"
+      "Added recursive folder search capability",
+      "Implemented second-pass email reprocessing after rule updates"
     ],
     "development_methodology": {
       "followed_standards": true,
@@ -160,13 +168,12 @@
     }
   },
   "future_enhancements": [
-    "Memory bank integration for better rule learning",
-    "Reprocess emails in multiple folders for additional cleanup passes",
-    "Regex pattern support for all rule types",
+    "Move backup files to dedicated backup directory",
+    "Update mail processing to use safe_senders list for all header exceptions",
+    "Update to consider all Header, Body, Subject, From, lists strings to be regex patterns",
     "Cross-platform email client support",
     "Machine learning-based spam detection",
     "Mobile app development for cloud email providers",
-    "Move backup files to dedicated backup directory",
     "Different processing rules for different folders",
     "Email volume reporting and summary statistics"
   ],
@@ -180,6 +187,8 @@
     "7. Takes configured actions (delete, move, flag)",
     "8. Logs all activities with folder-specific information",
     "9. Provides interactive prompts for unmatched emails",
-    "10. Creates backups of updated rules"
+    "10. Creates backups of updated rules",
+    "11. Performs second-pass reprocessing of all bulk folders after rule updates",
+    "12. Provides comprehensive summary including both passes"
   ]
 }

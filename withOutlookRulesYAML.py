@@ -4,7 +4,7 @@
 #------------------List of future enhancements------------------
 # - Need to add Next ****
 #       ✓ COMPLETED - Change folder to process to be a list of folders, add "bulk", change process to process a list of folders
-#       Reprocess all emails in the EMAIL_BULK_FOLDER_NAMES folder list a second time, in case any of the remaining emails can no be moved or deleted.
+#       ✓ COMPLETED - Reprocess all emails in the EMAIL_BULK_FOLDER_NAMES folder list a second time, in case any of the remaining emails can no be moved or deleted.
 
 #       Move backup files to a "backup directory"
 #       Update mail processing to use safe_senders list for all header exceptions
@@ -90,6 +90,7 @@
 # 05/19/2025 Harold Kimmey - Updates for feature/userinputheader
 # 07/03/2025 Harold Kimmey - Add memory-bank to repository to enhance Github Copilot suggestions
 # 07/04/2025 Harold Kimmey - Updated EMAIL_BULK_FOLDER_NAME to EMAIL_BULK_FOLDER_NAMES list, added "bulk" folder, updated processing to handle multiple folders
+# 01/25/2025 Harold Kimmey - Added second-pass email reprocessing after rule updates for enhanced cleanup
 
 #------------------General Documentation------------------
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
@@ -1930,6 +1931,32 @@ class OutlookSecurityAgent:
                     raise
         return
 
+    def _get_emails_from_folder(self, folder, days_back):
+        """Helper method to get emails from a specific folder for reprocessing"""
+        try:
+            # Create date restriction for recent emails
+            restriction = "[ReceivedTime] >= '" + \
+                (datetime.now() - timedelta(days=days_back)).strftime('%m/%d/%Y') + "'"
+            emails = folder.Items.Restrict(restriction)
+            
+            if not emails:
+                self.log_print(f"No emails found in folder: {folder.Name}")
+                return []
+            
+            if isinstance(emails, str):
+                self.log_print(f"Error: 'emails' is a string, expected a collection in folder: {folder.Name}")
+                return []
+            
+            emails.Sort("[ReceivedTime]", Descending=True)
+            self.log_print(f"Found {emails.Count} emails in folder {folder.Name} for reprocessing")
+            
+            # Convert to list for processing
+            return [email for email in emails]
+            
+        except Exception as e:
+            self.log_print(f"Error getting emails from folder {folder.Name}: {str(e)}")
+            return []
+
     def process_emails(self, rules_json, safe_senders, days_back=DAYS_BACK_DEFAULT):
         """Process emails based on the rules in the rules_json object - now processes multiple folders"""
         self.log_print(f"\n\nStarting email processing")
@@ -2286,10 +2313,199 @@ class OutlookSecurityAgent:
                 self.log_print(f"{CRLF}Prompting for rule updates based on unfiltered emails...")
                 rules_json, safe_senders = self.prompt_update_rules(all_emails_to_process, all_emails_added_info, rules_json, safe_senders)
 
-            self.log_print(f"\nProcessing Summary:")
-            self.log_print(f"Processed {processed_count} emails")
-            self.log_print(f"Flagged {flagged_count} emails as possible Phishing attempts")
-            self.log_print(f"Deleted {deleted_total} emails")
+            # Second-pass processing: Reprocess all emails in bulk folders after rule updates
+            self.log_print(f"{CRLF}Starting second-pass email processing after rule updates...")
+            simple_print(f"\nStarting second-pass email processing...")
+            
+            # Get fresh emails from all bulk folders for second-pass processing
+            second_pass_emails = []
+            second_pass_added_info = []
+            
+            for folder_name in EMAIL_BULK_FOLDER_NAMES:
+                bulk_folder = self._find_folder_recursive(self.target_folder, folder_name)
+                if bulk_folder:
+                    self.log_print(f"Second-pass: Processing folder '{folder_name}' (found: {bulk_folder.Name})")
+                    
+                    # Get emails from this folder for second-pass
+                    folder_emails = self._get_emails_from_folder(bulk_folder, days_back)
+                    
+                    for email in folder_emails:
+                        second_pass_emails.append(email)
+                        # Create basic info structure for second-pass emails
+                        email_info = {
+                            "match": False,
+                            "rule": None,
+                            "matched_keyword": "",
+                            "email_header": "",
+                            "processed": False,
+                            "phishing_indicators": [],
+                            "source_folder": bulk_folder.Name
+                        }
+                        second_pass_added_info.append(email_info)
+                else:
+                    self.log_print(f"Second-pass: Folder '{folder_name}' not found, skipping")
+            
+            self.log_print(f"Second-pass: Found {len(second_pass_emails)} emails to reprocess")
+            simple_print(f"Second-pass: Found {len(second_pass_emails)} emails to reprocess")
+            
+            # Process second-pass emails if any found
+            if second_pass_emails:
+                second_pass_processed = 0
+                second_pass_deleted = 0
+                second_pass_flagged = 0
+                
+                for email_index, email in enumerate(second_pass_emails):
+                    try:
+                        if email_index >= len(second_pass_added_info):
+                            continue  # Safety check
+                        
+                        email_deleted = False
+                        email_header = self._get_email_header(email)
+                        second_pass_added_info[email_index]["email_header"] = email_header
+                        
+                        self.log_print(f"Second-pass processing email {email_index + 1}/{len(second_pass_emails)}")
+                        self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
+                        self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress).lower()}")
+                        
+                        # Check safe senders first (same logic as first pass)
+                        for sender in safe_senders["safe_senders"]:
+                            sender_lower = sender.lower()
+                            header_lower = email_header.lower()
+                            if sender_lower in header_lower:
+                                self.log_print(f"Second-pass: Safe sender matched: {sender}")
+                                self.move_email_with_retry(email, self.inbox_folder)
+                                self.delete_email_with_retry(email)
+                                email_deleted = True
+                                if email in second_pass_emails:
+                                    second_pass_emails.remove(email)
+                                break
+                        
+                        if email_deleted:
+                            second_pass_processed += 1
+                            second_pass_deleted += 1
+                            continue
+                        
+                        # Process rules (same logic as first pass)
+                        rules.sort(key=lambda rule: rule['actions'].get('delete', False))
+                        
+                        for rule in rules:
+                            if not isinstance(rule, dict) or 'actions' not in rule:
+                                continue
+                            if email_deleted:
+                                continue
+                            
+                            conditions = rule['conditions']
+                            exceptions = rule['exceptions']
+                            
+                            match = False
+                            matched_keyword = ""
+                            
+                            # Check conditions (simplified version of first-pass logic)
+                            if 'from' in conditions:
+                                from_addresses = [addr['address'].lower() for addr in conditions['from']]
+                                if any(addr in email.SenderEmailAddress.lower() for addr in from_addresses):
+                                    match = True
+                                    matched_keyword = next((addr['address'] for addr in conditions['from'] if addr['address'].lower() in email.SenderEmailAddress.lower()), None)
+                            
+                            if 'subject' in conditions and not match:
+                                subject_keywords = [keyword.lower() for keyword in conditions['subject']]
+                                if any(keyword in email.Subject.lower() for keyword in subject_keywords):
+                                    match = True
+                                    matched_keyword = next((keyword for keyword in conditions['subject'] if keyword.lower() in email.Subject.lower()), None)
+                            
+                            if 'body' in conditions and not match:
+                                body_keywords = [keyword.lower() for keyword in conditions['body']]
+                                if any(keyword in email.Body.lower() for keyword in body_keywords):
+                                    match = True
+                                    matched_keyword = next((keyword for keyword in conditions['body'] if keyword.lower() in email.Body.lower()), None)
+                            
+                            if 'header' in conditions and not match:
+                                header_keywords = [keyword.lower() for keyword in conditions['header']]
+                                if any(keyword in email_header.lower() for keyword in header_keywords):
+                                    match = True
+                                    matched_keyword = next((keyword for keyword in conditions['header'] if keyword.lower() in email_header.lower()), None)
+                            
+                            # Check exceptions (simplified version)
+                            if match:
+                                if 'from' in exceptions:
+                                    if any(keyword.lower() in email.SenderEmailAddress.lower() for keyword in exceptions['from']):
+                                        match = False
+                                if 'subject' in exceptions and match:
+                                    if any(keyword.lower() in email.Subject.lower() for keyword in exceptions['subject']):
+                                        match = False
+                                if 'body' in exceptions and match:
+                                    if any(keyword.lower() in email.Body.lower() for keyword in exceptions['body']):
+                                        match = False
+                                if 'header' in exceptions and match:
+                                    if any(keyword.lower() in email_header.lower() for keyword in exceptions['header']):
+                                        match = False
+                            
+                            # Update email info
+                            if match:
+                                second_pass_added_info[email_index]["match"] = True
+                                second_pass_added_info[email_index]["rule"] = rule
+                                second_pass_added_info[email_index]["matched_keyword"] = matched_keyword
+                                second_pass_added_info[email_index]["processed"] = True
+                                
+                                self.log_print(f"Second-pass: Email matches rule: {rule['name']}")
+                                
+                                # Process actions (focus on delete action for second pass)
+                                actions = rule['actions']
+                                if 'delete' in actions and actions['delete']:
+                                    try:
+                                        self.delete_email_with_retry(email)
+                                        email_deleted = True
+                                        second_pass_deleted += 1
+                                        self.log_print(f"Second-pass: Email deleted by rule: {rule['name']}")
+                                        break
+                                    except Exception as e:
+                                        self.log_print(f"Second-pass: Error deleting email: {str(e)}")
+                            else:
+                                second_pass_added_info[email_index]["match"] = False
+                                second_pass_added_info[email_index]["rule"] = None
+                                second_pass_added_info[email_index]["matched_keyword"] = ""
+                                second_pass_added_info[email_index]["processed"] = True
+                        
+                        # Check phishing indicators for unmatched emails
+                        if not email_deleted and not second_pass_added_info[email_index]["match"]:
+                            indicators = self.check_phishing_indicators(email)
+                            if indicators:
+                                second_pass_flagged += 1
+                                self.log_print(f"Second-pass: Phishing indicators found: {indicators}")
+                                second_pass_added_info[email_index]["phishing_indicators"] = indicators
+                        
+                        second_pass_processed += 1
+                        
+                        if (DEBUG) and (second_pass_processed >= DEBUG_EMAILS_TO_PROCESS):
+                            self.log_print(f"Second-pass debug mode: Stopping after {DEBUG_EMAILS_TO_PROCESS} emails")
+                            break
+                    
+                    except Exception as e:
+                        self.log_print(f"Second-pass: Error processing email: {str(e)}")
+                
+                # Log second-pass summary
+                self.log_print(f"\nSecond-pass Processing Summary:")
+                self.log_print(f"Second-pass processed {second_pass_processed} emails")
+                self.log_print(f"Second-pass flagged {second_pass_flagged} emails as possible Phishing attempts")
+                self.log_print(f"Second-pass deleted {second_pass_deleted} emails")
+                
+                simple_print(f"\nSecond-pass Processing Summary:")
+                simple_print(f"Second-pass processed {second_pass_processed} emails")
+                simple_print(f"Second-pass flagged {second_pass_flagged} emails as possible Phishing attempts")
+                simple_print(f"Second-pass deleted {second_pass_deleted} emails")
+                
+                # Update total counts to include second-pass results
+                processed_count += second_pass_processed
+                deleted_total += second_pass_deleted
+                flagged_count += second_pass_flagged
+            else:
+                self.log_print(f"Second-pass: No emails found for reprocessing")
+                simple_print(f"Second-pass: No emails found for reprocessing")
+
+            self.log_print(f"\nFinal Processing Summary (including second-pass):")
+            self.log_print(f"Total processed {processed_count} emails")
+            self.log_print(f"Total flagged {flagged_count} emails as possible Phishing attempts")
+            self.log_print(f"Total deleted {deleted_total} emails")
             self.log_print(f"END of Run =============================================================\n\n")
 
             simple_print(f"\nProcessing Summary:")
