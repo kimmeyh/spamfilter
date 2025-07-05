@@ -2460,11 +2460,25 @@ class OutlookSecurityAgent:
                                         break
                                     except Exception as e:
                                         self.log_print(f"Second-pass: Error deleting email: {str(e)}")
-                            else:
-                                second_pass_added_info[email_index]["match"] = False
-                                second_pass_added_info[email_index]["rule"] = None
-                                second_pass_added_info[email_index]["matched_keyword"] = ""
+                            if match:
+                                second_pass_added_info[email_index]["match"] = True
+                                second_pass_added_info[email_index]["rule"] = rule
+                                second_pass_added_info[email_index]["matched_keyword"] = matched_keyword
                                 second_pass_added_info[email_index]["processed"] = True
+                                
+                                self.log_print(f"Second-pass: Email matches rule: {rule['name']}")
+                                
+                                # Process actions (focus on delete action for second pass)
+                                actions = rule['actions']
+                                if 'delete' in actions and actions['delete']:
+                                    try:
+                                        self.delete_email_with_retry(email)
+                                        email_deleted = True
+                                        second_pass_deleted += 1
+                                        self.log_print(f"Second-pass: Email deleted by rule: {rule['name']}")
+                                        break
+                                    except Exception as e:
+                                        self.log_print(f"Second-pass: Error deleting email: {str(e)}")
                         
                         # Check phishing indicators for unmatched emails
                         if not email_deleted and not second_pass_added_info[email_index]["match"]:
