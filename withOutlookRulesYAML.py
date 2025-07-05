@@ -167,6 +167,7 @@ OUTLOOK_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
 OUTLOOK_RULES_FILE = OUTLOOK_RULES_PATH + "outlook_rules.csv"
 OUTLOOK_SAFE_SENDERS_FILE = OUTLOOK_RULES_PATH + "OutlookSafeSenders.csv"
 YAML_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
+YAML_ARCHIVE_PATH = YAML_RULES_PATH + "archive/"
 YAML_RULES_FILE = YAML_RULES_PATH + "rules.yaml"
 #YAML_RULES_FILE = YAML_RULES_PATH + "rules_new.yaml" # this was temporary and no longer needed
 YAML_RULES_SAFE_SENDERS_FILE    = YAML_RULES_PATH + "rules_safe_senders.yaml"
@@ -787,15 +788,17 @@ class OutlookSecurityAgent:
             #       Convert JSON object to YAML and write to file
             #   If no errors writing the YAML_RULES_FILE, delete the temp file
 
-            # Create a backup of the current YAML file if it exists
-            #*** Change copy to a "backup" directory
+            # Create a backup of the current YAML file if it exists in archive directory
             if os.path.exists(rules_file):
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                backup_file = f"{os.path.splitext(rules_file)[0]}_backup_{timestamp}.yaml"
+                base_name = os.path.splitext(os.path.basename(rules_file))[0]
+                backup_file = f"{YAML_ARCHIVE_PATH}{base_name}_backup_{timestamp}.yaml"
                 try:
                     import shutil
+                    # Ensure archive directory exists
+                    os.makedirs(YAML_ARCHIVE_PATH, exist_ok=True)
                     shutil.copy2(rules_file, backup_file)
-                    self.log_print(f"Created backup of existing safe_sneders YAML file: {backup_file}")
+                    self.log_print(f"Created backup of existing safe_senders YAML file: {backup_file}")
                 except Exception as e:
                     self.log_print(f"Warning: Could not create backup safe_senders file: {str(e)}")
 
@@ -915,9 +918,12 @@ class OutlookSecurityAgent:
             # Create a backup of the current YAML file if it exists
             if os.path.exists(rules_file):
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                backup_file = f"{os.path.splitext(rules_file)[0]}_backup_{timestamp}.yaml"
+                base_name = os.path.splitext(os.path.basename(rules_file))[0]
+                backup_file = f"{YAML_ARCHIVE_PATH}{base_name}_backup_{timestamp}.yaml"
                 try:
                     import shutil
+                    # Ensure archive directory exists
+                    os.makedirs(YAML_ARCHIVE_PATH, exist_ok=True)
                     shutil.copy2(rules_file, backup_file)
                     self.log_print(f"Created backup of existing YAML file: {backup_file}")
                 except Exception as e:
@@ -2273,7 +2279,7 @@ class OutlookSecurityAgent:
             second_pass_added_info = []
             
             for folder_name in EMAIL_BULK_FOLDER_NAMES:
-                bulk_folder = self._find_folder_recursive(self.target_folder, folder_name)
+                bulk_folder = self._get_account_folder(self.email_address, folder_name)
                 if bulk_folder:
                     self.log_print(f"Second-pass: Processing folder '{folder_name}' (found: {bulk_folder.Name})")
                     

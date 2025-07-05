@@ -9,7 +9,7 @@ from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Import the OutlookSecurityAgent from withOutlookRulesYAML
-from withOutlookRulesYAML import OutlookSecurityAgent, YAML_RULES_SAFE_SENDERS_FILE
+from withOutlookRulesYAML import OutlookSecurityAgent, YAML_RULES_SAFE_SENDERS_FILE, YAML_ARCHIVE_PATH
 
 def test_safe_senders_yaml():
     """Test loading and exporting safe senders YAML"""
@@ -43,9 +43,12 @@ def test_safe_senders_yaml():
 
         # Create a backup of the original file before we modify it
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_file = f"{os.path.splitext(YAML_RULES_SAFE_SENDERS_FILE)[0]}_test_backup_{timestamp}.yaml"
+        base_name = os.path.splitext(os.path.basename(YAML_RULES_SAFE_SENDERS_FILE))[0]
+        backup_file = f"{YAML_ARCHIVE_PATH}{base_name}_test_backup_{timestamp}.yaml"
 
         try:
+            # Ensure archive directory exists
+            os.makedirs(YAML_ARCHIVE_PATH, exist_ok=True)
             with open(YAML_RULES_SAFE_SENDERS_FILE, 'r', encoding='utf-8') as src, open(backup_file, 'w', encoding='utf-8') as dst:
                 dst.write(src.read())
             print(f"Created backup file: {backup_file}")

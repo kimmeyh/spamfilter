@@ -9,7 +9,7 @@ from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Import the OutlookSecurityAgent from withOutlookRulesYAML
-from withOutlookRulesYAML import OutlookSecurityAgent
+from withOutlookRulesYAML import OutlookSecurityAgent, YAML_ARCHIVE_PATH
 
 def normalize_yaml(yaml_content):
     """Convert YAML to normalized dictionary to ensure consistent comparison"""
@@ -120,15 +120,15 @@ def test_yaml_rules():
 
         # Step 3: Find the backup file created during export
         print("\nStep 3: Locating backup file")
-        backup_files = [f for f in os.listdir(os.path.dirname(agent.YAML_RULES_FILE))
+        backup_files = [f for f in os.listdir(YAML_ARCHIVE_PATH)
                        if f.startswith(os.path.basename(agent.YAML_RULES_FILE).split('.')[0] + "_backup_")
                        and f.endswith('.yaml')]
 
         assert backup_files, "No backup files found"
 
         # Sort by modification time to get the most recent backup
-        backup_files.sort(key=lambda x: os.path.getmtime(os.path.join(os.path.dirname(agent.YAML_RULES_FILE), x)), reverse=True)
-        latest_backup = os.path.join(os.path.dirname(agent.YAML_RULES_FILE), backup_files[0])
+        backup_files.sort(key=lambda x: os.path.getmtime(os.path.join(YAML_ARCHIVE_PATH, x)), reverse=True)
+        latest_backup = os.path.join(YAML_ARCHIVE_PATH, backup_files[0])
         print(f"Latest backup file: {latest_backup}")
 
         # Step 4: Compare the original and exported YAML files
