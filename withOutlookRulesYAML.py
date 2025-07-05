@@ -1939,7 +1939,7 @@ class OutlookSecurityAgent:
                 (datetime.now() - timedelta(days=days_back)).strftime('%m/%d/%Y') + "'"
             emails = folder.Items.Restrict(restriction)
             
-            if not emails:
+            if emails is None or emails.Count == 0:
                 self.log_print(f"No emails found in folder: {folder.Name}")
                 return []
             
