@@ -1,0 +1,185 @@
+{
+  "project_overview": {
+    "name": "OutlookMailSpamFilter",
+    "description": "Python-based email spam and phishing filter for Microsoft Outlook that processes bulk mail folder using configurable YAML rules",
+    "purpose": "Automated processing and removal of SPAM and phishing emails from Outlook accounts using intelligent filtering rules",
+    "type": "Email Security Tool",
+    "language": "Python",
+    "platform": "Windows (with Outlook integration via win32com)"
+  },
+  "architecture": {
+    "main_class": "OutlookSecurityAgent",
+    "primary_file": "withOutlookRulesYAML.py",
+    "core_components": [
+      {
+        "component": "Email Processing Engine",
+        "description": "Processes emails from specified Outlook folders using configurable rules"
+      },
+      {
+        "component": "Rule Management System", 
+        "description": "YAML-based rule configuration for headers, body content, subjects, and sender filtering"
+      },
+      {
+        "component": "Phishing Detection",
+        "description": "Identifies potential phishing attempts using pattern matching and suspicious indicators"
+      },
+      {
+        "component": "Safe Sender Management",
+        "description": "Maintains lists of trusted senders and domains to prevent false positives"
+      },
+      {
+        "component": "Logging and Reporting",
+        "description": "Comprehensive logging of all processing activities and email actions"
+      }
+    ]
+  },
+  "key_features": [
+    "YAML-based rule configuration for easy maintenance",
+    "Multi-criteria filtering (header, body, subject, sender)",
+    "Multi-folder processing with configurable folder list",
+    "Recursive folder search capability for nested folders",
+    "Phishing detection with suspicious URL and domain analysis", 
+    "Safe sender whitelist management",
+    "Automatic email deletion with safety checks",
+    "Comprehensive logging and audit trails",
+    "Interactive rule updates based on unmatched emails",
+    "Backup and restore functionality for rules",
+    "Cross-platform rule sharing capability"
+  ],
+  "file_structure": {
+    "configuration_files": [
+      "rules.yaml - Main spam filtering rules",
+      "rules_safe_senders.yaml - Trusted sender whitelist",
+      "requirements.txt - Python dependencies"
+    ],
+    "main_scripts": [
+      "withOutlookRulesYAML.py - Primary application script",
+      "temp.py - Testing and development script"
+    ],
+    "test_files": [
+      "test_withOutlook_rulesYAML_compare_inport_to_export.py",
+      "test_withOutlook_rulesYAML_compare_safe_senders_mport_to_export.py",
+      "withOutlookRulesTESTING.ipynb - Jupyter notebook for testing"
+    ],
+    "backup_files": [
+      "rules_backup_*.yaml - Timestamped rule backups",
+      "rules_safe_senders_backup_*.yaml - Safe sender backups"
+    ],
+    "archive": [
+      "Archive/ - Historical versions and development files"
+    ]
+  },
+  "configuration": {
+    "target_account": "kimmeyharold@aol.com",
+    "target_folders": ["Bulk Mail", "bulk"], 
+    "processing_days_back": "configurable (default varies)",
+    "rule_name_prefix": "SpamAutoDelete",
+    "log_locations": [
+      "D:/data/harold/OutlookRulesProcessing/OutlookRulesProcessingDEBUG_INFO.log",
+      "D:/data/harold/OutlookRulesProcessing/OutlookRulesProcessingSimple.log"
+    ]
+  },
+  "rule_types": {
+    "SpamAutoDeleteHeader": "Filters based on email headers and sender domains",
+    "SpamAutoDeleteBody": "Filters based on email body content and embedded URLs", 
+    "SpamAutoDeleteSubject": "Filters based on email subject patterns",
+    "Safe Senders": "Whitelist of trusted email addresses and domains"
+  },
+  "dependencies": [
+    "win32com.client - Outlook COM interface",
+    "yaml - YAML file processing",
+    "IPython - Interactive development support",
+    "logging - Application logging",
+    "re - Regular expression support"
+  ],
+  "development_standards": {
+    "feature_enhancement_process": {
+      "code_modification_principles": [
+        "ONLY change code that HAS to be CHANGED to implement the recommendation",
+        "Any code that should be removed should be commented out and not deleted",
+        "Do not remove any commented out code - preserve for reference and rollback capability",
+        "Maintain backward compatibility whenever possible"
+      ],
+      "testing_requirements": [
+        "Before confirming changes, all tests should run successfully",
+        "Updates must be applied until all tests can be run without errors or warnings",
+        "For all new features added, ensure an existing test covers the features or a new test is added to cover the features",
+        "Create comprehensive test coverage for new functionality",
+        "Validate both positive and negative test cases",
+        "Ensure import compatibility and syntax validation"
+      ],
+      "code_quality_standards": [
+        "Preserve existing functionality while adding new features",
+        "Use clear, descriptive variable and method names",
+        "Add comprehensive logging for new functionality",
+        "Document all changes in code comments and change logs",
+        "Follow existing code patterns and conventions"
+      ],
+      "validation_checklist": [
+        "Syntax validation - code compiles without errors",
+        "Import compatibility - all imports work correctly", 
+        "Functional testing - new features work as expected",
+        "Regression testing - existing features still work",
+        "Error handling - graceful handling of edge cases"
+      ]
+    },
+    "change_management": {
+      "documentation_requirements": [
+        "Update change log with timestamp and description",
+        "Update comments in code to reflect modifications",
+        "Update memory-bank documentation",
+        "Update README.md for user-facing changes"
+      ],
+      "backup_strategy": [
+        "Create timestamped backups before major changes",
+        "Preserve commented-out code for reference",
+        "Maintain version history in change logs",
+        "Use git branching for experimental features"
+      ]
+    }
+  },
+  "recent_development": {
+    "current_branch": "feature/20250605SeeCommits",
+    "last_major_update": "July 2025",
+    "key_improvements": [
+      "Migrated from CSV to YAML rule configuration",
+      "Added comprehensive backup system",
+      "Implemented safe sender management",
+      "Enhanced phishing detection capabilities",
+      "Added interactive rule update prompts",
+      "Implemented multi-folder processing support",
+      "Added recursive folder search capability"
+    ],
+    "development_methodology": {
+      "followed_standards": true,
+      "minimal_code_changes": true,
+      "preserved_commented_code": true,
+      "comprehensive_testing": true,
+      "zero_errors_warnings": true,
+      "backward_compatibility": true
+    }
+  },
+  "future_enhancements": [
+    "Memory bank integration for better rule learning",
+    "Reprocess emails in multiple folders for additional cleanup passes",
+    "Regex pattern support for all rule types",
+    "Cross-platform email client support",
+    "Machine learning-based spam detection",
+    "Mobile app development for cloud email providers",
+    "Move backup files to dedicated backup directory",
+    "Different processing rules for different folders",
+    "Email volume reporting and summary statistics"
+  ],
+  "usage_workflow": [
+    "1. Activate Python virtual environment (.venv\\scripts\\activate)",
+    "2. Run main script (python .\\withOutlookRulesYAML.py)",
+    "3. System processes emails in configured folders (Bulk Mail, bulk)",
+    "4. Applies filtering rules from rules.yaml to each folder",
+    "5. Checks against safe sender lists",
+    "6. Performs phishing detection",
+    "7. Takes configured actions (delete, move, flag)",
+    "8. Logs all activities with folder-specific information",
+    "9. Provides interactive prompts for unmatched emails",
+    "10. Creates backups of updated rules"
+  ]
+}
