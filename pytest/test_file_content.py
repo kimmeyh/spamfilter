@@ -9,11 +9,9 @@ import re
 
 def test_file_content():
     """Test the file content directly"""
-    file_path = "withOutlookRulesYAML.py"
+    file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "withOutlookRulesYAML.py")
     
-    if not os.path.exists(file_path):
-        print(f"✗ File not found: {file_path}")
-        return False
+    assert os.path.exists(file_path), f"File not found: {file_path}"
         
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -87,21 +85,16 @@ def test_file_content():
         
     print(f"\nTest Results: {tests_passed}/{tests_total} tests passed")
     
-    if tests_passed == tests_total:
-        print("🎉 All file content tests passed!")
-        return True
-    else:
-        print("❌ Some file content tests failed.")
-        return False
+    assert tests_passed == tests_total, f"File content tests failed: {tests_passed}/{tests_total} tests passed"
+    print("🎉 All file content tests passed!")
 
 def main():
     """Run the test"""
     print("Testing folder list changes in withOutlookRulesYAML.py (file content)")
     print("=" * 70)
     
-    success = test_file_content()
-    
-    if success:
+    try:
+        test_file_content()
         print("\n✅ SUCCESS: All changes have been properly implemented!")
         print("\nSummary of changes made:")
         print("• Changed EMAIL_BULK_FOLDER_NAME to EMAIL_BULK_FOLDER_NAMES list")
@@ -111,10 +104,10 @@ def main():
         print("• Updated email processing to work with multiple folders")
         print("• Added missing _find_folder_recursive method")
         print("• Commented out old code instead of deleting it")
-    else:
-        print("\n❌ FAILURE: Some changes are incomplete.")
-    
-    return success
+        return True
+    except AssertionError as e:
+        print(f"\n❌ FAILURE: {e}")
+        return False
 
 if __name__ == "__main__":
     success = main()

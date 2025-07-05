@@ -20,6 +20,8 @@
 - **Before confirming changes, all tests should run successfully**
 - **Updates must be applied until all tests can be run without errors or warnings**
 - **For all new features added, ensure an existing test covers the features or a new test is added to cover the features**
+- **All test files must be located in the `pytest/` directory**
+- **Use `python -m pytest pytest/ -v` to run all tests**
 - Create comprehensive test coverage for new functionality
 - Validate both positive and negative test cases
 - Ensure import compatibility and syntax validation
@@ -81,6 +83,9 @@ EMAIL_BULK_FOLDER_NAMES = ["Bulk Mail", "bulk"]  # Changed from single folder to
 - Syntax validation
 - Variable reference validation
 - Method signature validation
+- **All tests organized in `pytest/` directory for consistency**
+- **Test execution via `python -m pytest pytest/ -v`**
+- **Proper import path management for test isolation**
 
 ## Backup and Recovery
 
