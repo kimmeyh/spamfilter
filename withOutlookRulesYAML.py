@@ -1,32 +1,17 @@
-# 01/24/2025 Harold Kimmey All working as expected
-# 02/10/2025 Harold Kimmey Completed move to www.github.com/kimmeyh/spamfilter.git repository
-# 02/17/2025 Harold Kimmey Updated _process_actions to accurately pull the assign_to_category value by searching it as an object
-# 03/28/2025 Harold Kimmey Exported rules to JSON so that they can be maintained in a separate YAML file (the can be transferred between machines and platforms (Windows, Mac, Linux, Android, iOS, etc.))
-#   Spam filter rules - done
-#   Safe Senders - done
-#   Safe recipients - done (was empty)
-#   Blocked Senders - very small and were added manually to Outlook Rules - spam body# 03/30/2025 Harold Kimmey Added export and import of YAML rules
-# 04/01/2025 Harold Kimmey Verified export of rules from Outlook to YAML file (at exit) matches rules from import of YAML file
-# 04/01/2025 Harold Kimmey Switch to using YAML file as import instead of Outlook rules
-# 04/01/2025 Harold Kimmey Committed changes, pushed, PR to Main branch of kimmeyh/spamfilter.git
-# 05/13/2025 Harold Kimmey Current Status
-#   - All rules are being read from the YAML file
-#   - All rules are being written to the YAML file at the end of the run successfully
-#   - All safe_sender rules are being read from the YAML file
-#   - All safe_sender rules are being written to the YAML file (updated)
-#   - Removed checks for updates to rules and safe_senders - instead will save copies to Archive for each run
-#   - Update Output of rules.yaml - ensure they are written as compatible with regex strings  (double quoted, sorted, no duplicates)
-#   - Output of safe_senders.yaml - ensure they are written as compatible with regex strings (double quoted), sorted, and unique
-#   - Updated Output of rules.yaml - ensure each rule is sorted, and unique
-# 05/19/2025 Harold Kimmey - Updates for feature/userinputheader
+
+
+
+#------------------List of future enhancements------------------
 # - Need to add Next ****
+#       ✓ COMPLETED - Change folder to process to be a list of folders, add "bulk", change process to process a list of folders
+#       Reprocess all emails in the EMAIL_BULK_FOLDER_NAMES folder list a second time, in case any of the remaining emails can no be moved or deleted.
+
 #       Move backup files to a "backup directory"
 #       Update mail processing to use safe_senders list for all header exceptions
 #       Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
 
 
-#------------------List of future enhancements------------------
-# Where is the best place to add updates to rules based on emails not deleted
+
 # Add updates to rules for emails not deleted
 #   for each email not deleted
 #      show details of the email:  subject, from in header, URL's in the body
@@ -81,6 +66,31 @@
 # Add email volume reporting?
 # Create a summary report of processed emails?
 
+#------------------Change Log------------------
+# 01/24/2025 Harold Kimmey All working as expected
+# 02/10/2025 Harold Kimmey Completed move to www.github.com/kimmeyh/spamfilter.git repository
+# 02/17/2025 Harold Kimmey Updated _process_actions to accurately pull the assign_to_category value by searching it as an object
+# 03/28/2025 Harold Kimmey Exported rules to JSON so that they can be maintained in a separate YAML file (the can be transferred between machines and platforms (Windows, Mac, Linux, Android, iOS, etc.))
+#   Spam filter rules - done
+#   Safe Senders - done
+#   Safe recipients - done (was empty)
+#   Blocked Senders - very small and were added manually to Outlook Rules - spam body# 03/30/2025 Harold Kimmey Added export and import of YAML rules
+# 04/01/2025 Harold Kimmey Verified export of rules from Outlook to YAML file (at exit) matches rules from import of YAML file
+# 04/01/2025 Harold Kimmey Switch to using YAML file as import instead of Outlook rules
+# 04/01/2025 Harold Kimmey Committed changes, pushed, PR to Main branch of kimmeyh/spamfilter.git
+# 05/13/2025 Harold Kimmey Current Status
+#   - All rules are being read from the YAML file
+#   - All rules are being written to the YAML file at the end of the run successfully
+#   - All safe_sender rules are being read from the YAML file
+#   - All safe_sender rules are being written to the YAML file (updated)
+#   - Removed checks for updates to rules and safe_senders - instead will save copies to Archive for each run
+#   - Update Output of rules.yaml - ensure they are written as compatible with regex strings  (double quoted, sorted, no duplicates)
+#   - Output of safe_senders.yaml - ensure they are written as compatible with regex strings (double quoted), sorted, and unique
+#   - Updated Output of rules.yaml - ensure each rule is sorted, and unique
+# 05/19/2025 Harold Kimmey - Updates for feature/userinputheader
+# 07/03/2025 Harold Kimmey - Add memory-bank to repository to enhance Github Copilot suggestions
+# 07/04/2025 Harold Kimmey - Updated EMAIL_BULK_FOLDER_NAME to EMAIL_BULK_FOLDER_NAMES list, added "bulk" folder, updated processing to handle multiple folders
+
 #------------------General Documentation------------------
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
 
@@ -132,7 +142,8 @@ DEBUG_EMAILS_TO_PROCESS = 100 #100 for testing
 
 CRLF = "\n"
 EMAIL_ADDRESS = "kimmeyharold@aol.com"
-EMAIL_BULK_FOLDER_NAME = "Bulk Mail"
+# EMAIL_BULK_FOLDER_NAME = "Bulk Mail"  # Commented out - now using list below
+EMAIL_BULK_FOLDER_NAMES = ["Bulk Mail", "bulk"]  # Changed from single folder to list of folders
 EMAIL_INBOX_FOLDER_NAME = "Inbox"
 WIN32_CLIENT_DISPATCH = "Outlook.Application"
 OUTLOOK_GETNAMESPACE = "MAPI"
@@ -171,13 +182,13 @@ def simple_print(message):
         print(message)
 
 class OutlookSecurityAgent:
-    def __init__(self, email_address=EMAIL_ADDRESS, folder_name=EMAIL_BULK_FOLDER_NAME, debug_mode=DEBUG):
+    def __init__(self, email_address=EMAIL_ADDRESS, folder_names=EMAIL_BULK_FOLDER_NAMES, debug_mode=DEBUG):
         """
-        Initialize the Outlook Security Agent with specific account and folder
+        Initialize the Outlook Security Agent with specific account and folders
 
         Args:
             email_address: Email address of the account to process
-            folder_name: Name of the folder to process
+            folder_names: List of folder names to process
             debug_mode: If True, run in simulation mode with verbose output
         """
         self.debug_mode = debug_mode
@@ -198,14 +209,22 @@ class OutlookSecurityAgent:
             ]
         )
         self.log_print(f"\n=============================================================\nStarting new run")
-        self.log_print(f"Initializing agent for {email_address}, folder: {folder_name}")
+        self.log_print(f"Initializing agent for {email_address}, folders: {folder_names}")
         self.log_print(f"Debug mode: {debug_mode}")
 
-        # Get the specific account's folder
-        self.target_folder = self._get_account_folder(email_address, folder_name)
-        if not self.target_folder:
-            self.log_print(f"Could not find folder '{folder_name}' in account '{email_address}'")
-            raise ValueError(f"Could not find folder '{folder_name}' in account '{email_address}'")
+        # Get the specific account's folders - now handling multiple folders
+        self.target_folders = []
+        for folder_name in folder_names:
+            folder = self._get_account_folder(email_address, folder_name)
+            if folder:
+                self.target_folders.append(folder)
+                self.log_print(f"Successfully found folder: {folder_name}")
+            else:
+                self.log_print(f"Could not find folder '{folder_name}' in account '{email_address}'")
+        
+        if not self.target_folders:
+            raise ValueError(f"Could not find any of the specified folders {folder_names} in account '{email_address}'")
+        
         self.inbox_folder = self._get_account_folder(email_address, EMAIL_INBOX_FOLDER_NAME)
 
         self.rules = []
@@ -269,6 +288,22 @@ class OutlookSecurityAgent:
         except Exception as e:
             self.log_print(f"Error finding account folder: {str(e)}")
             return None
+
+    def _find_folder_recursive(self, root_folder, folder_name):
+        """Recursively search for a folder by name"""
+        try:
+            # Search in all subfolders
+            for folder in root_folder.Folders:
+                if folder.Name == folder_name:
+                    self.log_print(f"Found target folder recursively: {folder_name}")
+                    return folder
+                # Recursively search in subfolders
+                found_folder = self._find_folder_recursive(folder, folder_name)
+                if found_folder:
+                    return found_folder
+        except Exception as e:
+            self.log_print(f"Error in recursive folder search: {str(e)}")
+        return None
 
     def _escape_pattern(self, value):
         """Escape special characters in values for CSV storage"""
@@ -1590,7 +1625,7 @@ class OutlookSecurityAgent:
                 if from_domain:
                     if domains_with_individual_emails:
                         # For individual email domains, suggest adding full email address
-                        expected_responses = ['e', 's']
+                        expected_responses = ['d', 's']
                         prompt = f"{CRLF}Add '{from_email}' to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
                         response = self.get_safe_input(prompt, expected_responses)
                         from_domain = from_email  # Use full email address for individual domains
@@ -1896,9 +1931,9 @@ class OutlookSecurityAgent:
         return
 
     def process_emails(self, rules_json, safe_senders, days_back=DAYS_BACK_DEFAULT):
-        """Process emails based on the rules in the rules_json object"""
+        """Process emails based on the rules in the rules_json object - now processes multiple folders"""
         self.log_print(f"\n\nStarting email processing")
-        self.log_print(f"Target folder: {self.target_folder.Name}", "DEBUG")
+        self.log_print(f"Target folders: {[folder.Name for folder in self.target_folders]}", "DEBUG")
         self.log_print(f"Processing emails from last {days_back} days")
 
         try:
@@ -1912,19 +1947,48 @@ class OutlookSecurityAgent:
                 rules = rules_json if isinstance(rules_json, list) else [rules_json]
                 safe_senders = []
 
-            # Get recent emails from the target folder
-            restriction = "[ReceivedTime] >= '" + \
-                (datetime.now() - timedelta(days=days_back)).strftime('%m/%d/%Y') + "'"
-            emails = self.target_folder.Items.Restrict(restriction)
+            # Process emails from all target folders
+            all_emails_to_process = []
+            all_emails_added_info = []
+            
+            for target_folder in self.target_folders:
+                self.log_print(f"Processing folder: {target_folder.Name}")
+                
+                # Get recent emails from the current target folder
+                restriction = "[ReceivedTime] >= '" + \
+                    (datetime.now() - timedelta(days=days_back)).strftime('%m/%d/%Y') + "'"
+                emails = target_folder.Items.Restrict(restriction)
 
-            if not emails:
-                self.log_print("No emails found to process.")
+                if not emails:
+                    self.log_print(f"No emails found to process in folder: {target_folder.Name}")
+                    continue
 
-            if isinstance(emails, str):
-                self.log_print("Error: 'emails' is a string, expected a collection of email objects.")
+                if isinstance(emails, str):
+                    self.log_print(f"Error: 'emails' is a string, expected a collection of email objects in folder: {target_folder.Name}")
+                    continue
 
-            emails.Sort("[ReceivedTime]", Descending=True)
-            self.log_print(f"Total emails found: {emails.Count}")
+                emails.Sort("[ReceivedTime]", Descending=True)
+                self.log_print(f"Total emails found in {target_folder.Name}: {emails.Count}")
+
+                # Create a list of emails to process from this folder
+                folder_emails_to_process = [email for email in emails]
+                folder_emails_added_info = [{
+                    "match": False,
+                    "rule": "",
+                    "matched_keyword": "",
+                    "indicators": [],
+                    "email_header": "",
+                    "processed": False,
+                    "source_folder": target_folder.Name,  # Track which folder the email came from
+                } for email in folder_emails_to_process]
+                
+                # Add to the combined lists
+                all_emails_to_process.extend(folder_emails_to_process)
+                all_emails_added_info.extend(folder_emails_added_info)
+
+            if not all_emails_to_process:
+                self.log_print("No emails found to process in any folders.")
+                return
 
             processed_count = 0
             flagged_count = 0
@@ -1933,30 +1997,19 @@ class OutlookSecurityAgent:
             non_matched_emails = []
 
             self.log_print(f"{CRLF}Beginning email analysis:")
+            self.log_print(f"Total emails to process across all folders: {len(all_emails_to_process)}")
 
-            # Create a list of emails to process (done because if deleting emails in "email in emails") it will skip emails
-            emails_to_process = [email for email in emails]
-            self.log_print(f"before adding fields to emails_added_info", DEBUG)
-            emails_added_info = [{
-                "match": False,
-                "rule": "",
-                "matched_keyword": "",
-                "indicators": [],
-                "email_header": "",
-                "processed": False,
-            } for email in emails_to_process]
-            self.log_print(f"after adding fields to emails_added_info", DEBUG)
-
-            for email in emails_to_process:
+            for email in all_emails_to_process:
                 try:
                     processed_count += 1
-                    email_index = emails_to_process.index(email)
+                    email_index = all_emails_to_process.index(email)
                     email_deleted = False
                     email_header = self.combine_email_header_lines(email.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x007D001E"))
                     self.log_print(f"\n\nEmail {processed_count}:")
                     self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
                     self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress).lower()}")
                     self.log_print(f"Received: {email.ReceivedTime}")
+                    self.log_print(f"Source folder: {all_emails_added_info[email_index]['source_folder']}")
 
                     # Check each safe_senders before rules
                     self.log_print(f"DEBUG: Checking safe senders for email from: {email.SenderEmailAddress}")
@@ -1972,8 +2025,8 @@ class OutlookSecurityAgent:
                             self.move_email_with_retry(email, self.inbox_folder)  # Moves email to inbox
                             self.delete_email_with_retry(email)
                             email_deleted = True
-                            if email in emails_to_process:
-                                emails_to_process.remove(email)
+                            if email in all_emails_to_process:
+                                all_emails_to_process.remove(email)
                             self.log_print(f"Email moved to inbox")
 
                             break
@@ -2088,19 +2141,19 @@ class OutlookSecurityAgent:
                         # If match is true need to process 2 things, but do them in separate steps
                         # first, if matched save in the copy of emails, add the rule and the keyword matched
                         #   If not matched, will pull the information from the email
-                        # can use the original email if the index is available - can use the index of emails_added_info
+                        # can use the original email if the index is available - can use the index of all_emails_added_info
                         if match:
-                            emails_added_info[email_index]["match"] = match
-                            emails_added_info[email_index]["rule"] = rule
-                            emails_added_info[email_index]["matched_keyword"] = matched_keyword
-                            emails_added_info[email_index]["email_header"] = email_header
-                            emails_added_info[email_index]["processed"] = True
+                            all_emails_added_info[email_index]["match"] = match
+                            all_emails_added_info[email_index]["rule"] = rule
+                            all_emails_added_info[email_index]["matched_keyword"] = matched_keyword
+                            all_emails_added_info[email_index]["email_header"] = email_header
+                            all_emails_added_info[email_index]["processed"] = True
                         else:
-                            emails_added_info[email_index]["match"] = match
-                            emails_added_info[email_index]["rule"] = None
-                            emails_added_info[email_index]["matched_keyword"] = ""
-                            emails_added_info[email_index]["email_header"] = email_header
-                            emails_added_info[email_index]["processed"] = True
+                            all_emails_added_info[email_index]["match"] = match
+                            all_emails_added_info[email_index]["rule"] = None
+                            all_emails_added_info[email_index]["matched_keyword"] = ""
+                            all_emails_added_info[email_index]["email_header"] = email_header
+                            all_emails_added_info[email_index]["processed"] = True
 
                         if match:
                             self.log_print(f"Email matches rule: {rule['name']}")
@@ -2201,7 +2254,7 @@ class OutlookSecurityAgent:
                         if indicators:
                             flagged_count += 1
                             self.log_print(f"Phishing indicators found: {indicators}")
-                            emails_added_info[email_index]["phishing_indicators"] = indicators
+                            all_emails_added_info[email_index]["phishing_indicators"] = indicators
                         else:
                             self.log_print("No conditions or phishing indicators found")
                         # If it is in the Bulk Mail folder, but nothing indicated via rules or phishing,
@@ -2222,16 +2275,16 @@ class OutlookSecurityAgent:
             # Print a list for Phishing OR Match=false, report body unique URL stubs "/<domain>.<>" and ".<domain>.<>" so they can be easily added to the rules
             #     collect them all first, then determine uniqueness, then print one per line
             self.log_print(f"\nProcessing Report of URL's from phishing or match = False")
-            self.URL_report(emails_to_process, emails_added_info)
+            self.URL_report(all_emails_to_process, all_emails_added_info)
 
             # Print a list for Phishing OR Match=false with From: "@<domain>.<>" so they can be easily added to the rules
             self.log_print(f"\nProcessing Report of From's from phishing or match = False")
-            self.from_report(emails_to_process, emails_added_info, rules_json)
+            self.from_report(all_emails_to_process, all_emails_added_info, rules_json)
 
             # After processing all emails, prompt for rule updates based on unfiltered emails
             if processed_count > 0:
                 self.log_print(f"{CRLF}Prompting for rule updates based on unfiltered emails...")
-                rules_json, safe_senders = self.prompt_update_rules(emails_to_process, emails_added_info, rules_json, safe_senders)
+                rules_json, safe_senders = self.prompt_update_rules(all_emails_to_process, all_emails_added_info, rules_json, safe_senders)
 
             self.log_print(f"\nProcessing Summary:")
             self.log_print(f"Processed {processed_count} emails")

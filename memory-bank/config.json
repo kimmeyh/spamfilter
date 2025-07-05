@@ -1,0 +1,32 @@
+{
+  "description": "Memory bank configuration for OutlookMailSpamFilter project. Tracks development changes, architecture decisions, and project evolution.",
+  "last_updated": "2025-07-05",
+  "version": "2.1.1",
+  "recent_changes": [
+    {
+      "date": "2025-07-05",
+      "change": "Added comprehensive development standards and feature enhancement process guidelines",
+      "log_file": "development-standards.md"
+    },
+    {
+      "date": "2025-07-04",
+      "change": "Implemented multi-folder processing capability",
+      "log_file": "logs/multi-folder-implementation-2025-07-04.json"
+    }
+  ],
+  "development_guidelines": {
+    "standards_document": "development-standards.md",
+    "core_principles": [
+      "ONLY change code that HAS to be CHANGED",
+      "Comment out code instead of deleting",
+      "All tests must pass without errors or warnings",
+      "All new features must have test coverage",
+      "Preserve backward compatibility"
+    ]
+  },
+  "project_status": {
+    "phase": "active_development",
+    "branch": "feature/20250605SeeCommits", 
+    "next_milestone": "Implement second-pass email processing"
+  }
+}
