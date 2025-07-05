@@ -6,28 +6,28 @@ Tests the new _get_emails_from_folder method and second-pass processing logic
 
 import ast
 import inspect
+import os
 
 def test_helper_method_exists():
     """Test that the _get_emails_from_folder helper method exists"""
     try:
-        with open('withOutlookRulesYAML.py', 'r', encoding='utf-8') as f:
+        file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "withOutlookRulesYAML.py")
+        with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
         # Check if the method exists
-        if '_get_emails_from_folder' in content:
-            print("✓ _get_emails_from_folder method found")
-            return True
-        else:
-            print("✗ _get_emails_from_folder method not found")
-            return False
+        assert '_get_emails_from_folder' in content, "_get_emails_from_folder method not found"
+        print("✓ _get_emails_from_folder method found")
+            
     except Exception as e:
-        print(f"✗ Error reading file: {e}")
-        return False
+        print(f"✗ Error reading file or assertion failed: {e}")
+        raise
 
 def test_second_pass_logic():
     """Test that second-pass processing logic has been added"""
     try:
-        with open('withOutlookRulesYAML.py', 'r', encoding='utf-8') as f:
+        file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "withOutlookRulesYAML.py")
+        with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
         # Check for second-pass processing keywords
@@ -47,74 +47,61 @@ def test_second_pass_logic():
         
         print(f"✓ Found {len(found_indicators)}/{len(second_pass_indicators)} second-pass indicators")
         
-        if len(found_indicators) >= 4:  # At least 4 out of 6 indicators should be present
-            print("✓ Second-pass processing logic appears to be implemented")
-            return True
-        else:
-            print("✗ Second-pass processing logic incomplete")
-            return False
+        assert len(found_indicators) >= 4, f"Second-pass processing logic incomplete. Found only {len(found_indicators)}/{len(second_pass_indicators)} indicators"
+        print("✓ Second-pass processing logic appears to be implemented")
             
     except Exception as e:
-        print(f"✗ Error reading file: {e}")
-        return False
+        print(f"✗ Error reading file or assertion failed: {e}")
+        raise
 
 def test_method_signature():
     """Test that the _get_emails_from_folder method has correct signature"""
     try:
-        with open('withOutlookRulesYAML.py', 'r', encoding='utf-8') as f:
+        file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "withOutlookRulesYAML.py")
+        with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
         # Parse the AST to find the method
         tree = ast.parse(content)
         
+        method_found = False
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name == '_get_emails_from_folder':
+                method_found = True
                 # Check method signature
                 args = [arg.arg for arg in node.args.args]
                 expected_args = ['self', 'folder', 'days_back']
                 
-                if args == expected_args:
-                    print(f"✓ Method signature correct: {args}")
-                    return True
-                else:
-                    print(f"✗ Method signature incorrect. Expected: {expected_args}, Got: {args}")
-                    return False
+                assert args == expected_args, f"Method signature incorrect. Expected: {expected_args}, Got: {args}"
+                print(f"✓ Method signature correct: {args}")
+                break
         
-        print("✗ Method _get_emails_from_folder not found in AST")
-        return False
+        assert method_found, "Method _get_emails_from_folder not found in AST"
         
     except Exception as e:
-        print(f"✗ Error parsing file: {e}")
-        return False
+        print(f"✗ Error parsing file or assertion failed: {e}")
+        raise
 
 def test_after_prompt_update_rules():
     """Test that second-pass processing is placed after prompt_update_rules"""
     try:
-        with open('withOutlookRulesYAML.py', 'r', encoding='utf-8') as f:
+        file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "withOutlookRulesYAML.py")
+        with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
         # Find positions of key text
         prompt_update_pos = content.find('self.prompt_update_rules(')
         second_pass_pos = content.find('Second-pass processing:')
         
-        if prompt_update_pos == -1:
-            print("✗ prompt_update_rules call not found")
-            return False
+        assert prompt_update_pos != -1, "prompt_update_rules call not found"
+        assert second_pass_pos != -1, "Second-pass processing not found"
+        assert second_pass_pos > prompt_update_pos, "Second-pass processing not in correct position"
         
-        if second_pass_pos == -1:
-            print("✗ Second-pass processing not found")
-            return False
-        
-        if second_pass_pos > prompt_update_pos:
-            print("✓ Second-pass processing correctly placed after prompt_update_rules")
-            return True
-        else:
-            print("✗ Second-pass processing not in correct position")
-            return False
+        print("✓ Second-pass processing correctly placed after prompt_update_rules")
             
     except Exception as e:
-        print(f"✗ Error reading file: {e}")
-        return False
+        print(f"✗ Error reading file or assertion failed: {e}")
+        raise
 
 def main():
     """Run all tests for second-pass implementation"""
@@ -133,20 +120,22 @@ def main():
     
     for test in tests:
         print(f"\nRunning {test.__name__}...")
-        if test():
+        try:
+            test()
             passed += 1
-        else:
-            print(f"❌ {test.__name__} FAILED")
+            print(f"✅ {test.__name__} PASSED")
+        except AssertionError as e:
+            print(f"❌ {test.__name__} FAILED: {e}")
+        except Exception as e:
+            print(f"❌ {test.__name__} ERROR: {e}")
     
     print("\n" + "=" * 60)
     print(f"Test Results: {passed} passed, {total - passed} failed")
     
     if passed == total:
         print("✅ All second-pass implementation tests PASSED!")
-        return True
     else:
         print("❌ Some tests failed. Please check the implementation.")
-        return False
 
 if __name__ == "__main__":
     success = main()

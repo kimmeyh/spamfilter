@@ -50,8 +50,29 @@ Configuration can be modified in the script constants:
 - **rules.yaml** - Primary spam filtering rules
 - **rules_safe_senders.yaml** - Trusted sender whitelist
 - **requirements.txt** - Python dependencies
+- **pytest/** - All test files and test configuration
 - **Archive/** - Historical backups and development files
 - **memory-bank/** - Configuration for GitHub Copilot memory enhancement
+
+## Testing
+
+All tests are located in the `pytest/` directory. Run tests using:
+
+```bash
+# Run all tests
+python -m pytest pytest/ -v
+
+# Run specific test file
+python -m pytest pytest/test_file_content.py -v
+```
+
+Test files include:
+- `test_withOutlook_rulesYAML_compare_inport_to_export.py` - YAML import/export validation
+- `test_withOutlook_rulesYAML_compare_safe_senders_mport_to_export.py` - Safe senders validation
+- `test_file_content.py` - File content validation
+- `test_folder_list_changes.py` - Multi-folder configuration tests
+- `test_import_compatibility.py` - Import compatibility validation
+- `test_second_pass_implementation.py` - Second-pass processing tests
 
 ## Dependencies
 

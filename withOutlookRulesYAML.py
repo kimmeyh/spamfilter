@@ -133,8 +133,20 @@ import copy
 import traceback
 
 #Imports for packages that need to be installed
-import win32com.client
-import IPython
+# Handle win32com.client import gracefully for testing environments
+try:
+    import win32com.client
+    WIN32COM_AVAILABLE = True
+except ImportError:
+    # This allows tests to run in environments without win32com (e.g., Linux, macOS, CI/CD)
+    # while maintaining full functionality when win32com is available (Windows with Outlook)
+    WIN32COM_AVAILABLE = False
+    win32com = None
+
+try:
+    import IPython
+except ImportError:
+    IPython = None
 
 # Settings:
 DEBUG = False # True or False
@@ -193,8 +205,17 @@ class OutlookSecurityAgent:
             debug_mode: If True, run in simulation mode with verbose output
         """
         self.debug_mode = debug_mode
-        self.outlook = win32com.client.Dispatch(WIN32_CLIENT_DISPATCH)
-        self.namespace = self.outlook.GetNamespace(OUTLOOK_GETNAMESPACE)
+        
+        # Check if win32com is available before trying to use it
+        if not WIN32COM_AVAILABLE:
+            # Allow class instantiation for testing purposes without Outlook functionality
+            self.outlook = None
+            self.namespace = None
+            print("Warning: win32com.client not available. Outlook functionality disabled.")
+        else:
+            self.outlook = win32com.client.Dispatch(WIN32_CLIENT_DISPATCH)
+            self.namespace = self.outlook.GetNamespace(OUTLOOK_GETNAMESPACE)
+            
         self.YAMO_RULES_PATH = YAML_RULES_PATH  # Set appropriate default path
         self.YAML_RULES_FILE = YAML_RULES_FILE  # Set appropriate default file name
         self.YAML_SAFE_SENDERS_FILE = YAML_RULES_SAFE_SENDERS_FILE  # Set appropriate default file name
@@ -212,6 +233,9 @@ class OutlookSecurityAgent:
         self.log_print(f"\n=============================================================\nStarting new run")
         self.log_print(f"Initializing agent for {email_address}, folders: {folder_names}")
         self.log_print(f"Debug mode: {debug_mode}")
+
+        # Store email address for later use
+        self.email_address = email_address
 
         # Get the specific account's folders - now handling multiple folders
         self.target_folders = []
@@ -1626,122 +1650,49 @@ class OutlookSecurityAgent:
                 if from_domain:
                     if domains_with_individual_emails:
                         # For individual email domains, suggest adding full email address
-                        expected_responses = ['d', 's']
+                        expected_responses = ['d', 'e', 's']   # Treat 'd' and 'e' as 'e' for adding to header rule
                         prompt = f"{CRLF}Add '{from_email}' to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
                         response = self.get_safe_input(prompt, expected_responses)
-                        from_domain = from_email  # Use full email address for individual domains
+                        if response in ['e', 'd']:  # Treat 'd' and 'e' as 'e' for adding to header rule
+                            # Add from_email to safe_senders list
+                            for rule in rules_json["rules"]:
+                                if rule["name"] == "SpamAutoDeleteHeader":
+                                    if "header" not in rule["conditions"]:
+                                        rule["conditions"]["header"] = []
+                                    rule["conditions"]["header"].append(from_email)
+                                    rule_updated = True
+                                    self.log_print(f"Added '{from_email}' to SpamAutoDeleteHeader rule")
+                                    simple_print(f"Added '{from_email}' to SpamAutoDeleteHeader rule")
+                        elif response == 's':
+                            # Add from_domain to safe_senders list
+                            safe_senders["safe_senders"].append(from_email)  # working HK 05/18/25
+                            self.log_print(f"Added '{from_email}' to safe_senders list")
+                            simple_print(f"Added '{from_email}' to safe_senders list")
+                            rule_updated = True
+                        # else:
+                        #     expected_responses = ['d', 'e','s']
+                        #     prompt = f"{CRLF}Add '{from_domain}' or email domain to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
+                        #     response = self.get_safe_input(prompt, expected_responses)
                     else:
-                        expected_responses = ['d', 's']
-                        prompt = f"{CRLF}Add '{from_domain}' or email domain to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
+                        expected_responses = ['d', 'e', 's']   # Treat 'd' and 'e' as 'e' for adding to header rule
+                        prompt = f"{CRLF}Add '{from_email}' to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
                         response = self.get_safe_input(prompt, expected_responses)
-
-                    if response == 'd':
-                        # Find the SpamAutoDeleteHeader rule in the rules list and append to its header conditions
-                        for rule in rules_json["rules"]:
-                            if rule["name"] == "SpamAutoDeleteHeader":
-                                if "header" not in rule["conditions"]:
-                                    rule["conditions"]["header"] = []
-                                rule["conditions"]["header"].append(from_domain)
-                                rule_updated = True
-                                self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
-                                simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
-                    elif response == 'e':
-                        # Add from_email to safe_senders list
-                        for rule in rules_json["rules"]:
-                            if rule["name"] == "SpamAutoDeleteHeader":
-                                if "header" not in rule["conditions"]:
-                                    rule["conditions"]["header"] = []
-                                rule["conditions"]["header"].append(from_domain)
-                                rule_updated = True
-                                self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
-                                simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
-                    elif response == 's':
-                        # Add from_domain to safe_senders list
-                        safe_senders["safe_senders"].append(from_domain)  # working HK 05/18/25
-                        self.log_print(f"Added '{from_domain}' to safe_senders list")
-                        simple_print(f"Added '{from_domain}' to safe_senders list")
-                        rule_updated = True
-
-#**** Confirmed working up to this point 05/19/25 HK
-#fix these one at a time and add them back in - for now, skip the other options so we can test out the header rule
-                # # Step 2: If user declined header rule, suggest body rule for URLs
-                # if subject and rule_updated == False:
-                #     response = input(f"{CRLF}Add subject pattern '{subject}' to SpamAutoDeleteSubject rule? (y/n): ").lower()
-
-                #     if response == 'y':
-                #         subject_pattern = input(f"{CRLF}Enter pattern:")
-                #         # Find the SpamAutoDeleteSubject rule
-                #         rule_updated = True
-                #         for rule in rules_json:
-                #             if rule.get("name") == "SpamAutoDeleteSubject":
-                #                 if "subject" not in rule["conditions"]:
-                #                     rule["conditions"]["subject"] = []
-
-                #                 # Add subject to subject conditions if not already present
-                #                 if subject not in rule["conditions"]["subject"]:
-                #                     rule["conditions"]["subject"].append(subject_pattern)
-                #                     self.log_print(f"Added '{subject_pattern}' to SpamAutoDeleteSubject rule")
-                #                     simple_print(f"Added '{subject_pattern}' to SpamAutoDeleteSubject rule")
-                #                 else:
-                #                     simple_print(f"'{subject_pattern}' already exists in SpamAutoDeleteSubject rule")
-                #                 break
-
-                # # Step 3: Suggest subject rule if neither header nor body rules using URL's found
-                # if unique_urls and rule_updated == False: #process URL's
-                #     simple_print("{CRLF}The following URL patterns can be added to SpamAutoDeleteBody rule:")
-                #     for i, url in enumerate(unique_urls):
-                #         simple_print(f"{i+1}. {url}")
-
-                #     url_indices = input("Enter URL numbers to add (comma-separated, or 'all'), or press Enter to skip: ")
-
-                #     if url_indices.lower() == 'all':
-                #         selected_urls = unique_urls
-                #     elif url_indices:
-                #         try:
-                #             indices = [int(idx.strip()) - 1 for idx in url_indices.split(',')]
-                #             selected_urls = [unique_urls[i] for i in indices if 0 <= i < len(unique_urls)]
-                #         except ValueError:
-                #             simple_print("Invalid input. No URLs added.")
-                #             selected_urls = []
-                #     else:
-                #         selected_urls = []
-
-                #     if selected_urls:
-                #         # Add selected URLs to SpamAutoDeleteBody rule
-                #         rule_updated = True
-                #         for rule in rules_json:
-                #             if rule.get("name") == "SpamAutoDeleteBody":
-                #                 if "body" not in rule["conditions"]:
-                #                     rule["conditions"]["body"] = []
-
-                #                 for url in selected_urls:
-                #                     if url not in rule["conditions"]["body"]:
-                #                         rule["conditions"]["body"].append(url)
-                #                         self.log_print(f"Added '{url}' to SpamAutoDeleteBody rule")
-                #                         simple_print(f"Added '{url}' to SpamAutoDeleteBody rule")
-
-                # if rule_updated == False:  # request body content add if no other adds
-                #     print(f"{CRLF}Body Content:")
-                #     for line in email.Body.splitlines():
-                #         self.log_print(f"Body: {line}")
-                #     response = input(f"{CRLF}Add body content to SpamAutoDeleteBody rule? (y/n): ").lower()
-                #     if response == 'y':
-                #         body_content = input(f"{CRLF}Enter body content:")
-                #         # Find the SpamAutoDeleteBody rule
-                #         rule_updated = True
-                #         for rule in rules_json:
-                #             if rule.get("name") == "SpamAutoDeleteBody":
-                #                 if "body" not in rule["conditions"]:
-                #                     rule["conditions"]["body"] = []
-
-                #                 # Add body content to body conditions if not already present
-                #                 if body_content not in rule["conditions"]["body"]:
-                #                     rule["conditions"]["body"].append(body_content)
-                #                     self.log_print(f"Added '{body_content}' to SpamAutoDeleteBody rule")
-                #                     simple_print(f"Added '{body_content}' to SpamAutoDeleteBody rule")
-                #                 else:
-                #                     simple_print(f"'{body_content}' already exists in SpamAutoDeleteBody rule")
-                #                 break
+                        if response == 'd':
+                            # Find the SpamAutoDeleteHeader rule in the rules list and append to its header conditions
+                            for rule in rules_json["rules"]:
+                                if rule["name"] == "SpamAutoDeleteHeader":
+                                    if "header" not in rule["conditions"]:
+                                        rule["conditions"]["header"] = []
+                                    rule["conditions"]["header"].append(from_domain)
+                                    rule_updated = True
+                                    self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+                                    simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+                        elif response == 's':
+                            # Add from_domain to safe_senders list
+                            safe_senders["safe_senders"].append(from_domain)  # working HK 05/18/25
+                            self.log_print(f"Added '{from_domain}' to safe_senders list")
+                            simple_print(f"Added '{from_domain}' to safe_senders list")
+                            rule_updated = True
 
             except Exception as e:
                 self.log_print(f"Error processing email for rule updates: {str(e)} {email_header}")
@@ -2026,6 +1977,9 @@ class OutlookSecurityAgent:
             self.log_print(f"{CRLF}Beginning email analysis:")
             self.log_print(f"Total emails to process across all folders: {len(all_emails_to_process)}")
 
+            # Sort rules once per first-pass (optimization: moved outside email loop)
+            rules.sort(key=lambda rule: rule['actions'].get('delete', False))
+
             for email in all_emails_to_process:
                 try:
                     processed_count += 1
@@ -2058,9 +2012,6 @@ class OutlookSecurityAgent:
 
                             break
                                # no processing of rules needed if found in safe_senders
-
-                    # Sort rules to ensure delete actions are processed last
-                    rules.sort(key=lambda rule: rule['actions'].get('delete', False))
 
                     for rule in rules:
                         if not isinstance(rule, dict) or 'actions' not in rule:
@@ -2223,7 +2174,7 @@ class OutlookSecurityAgent:
                                 # Implement desktop alert display logic here
                             if 'copy_to_folder' in actions and actions['copy_to_folder']['folder_name']:
                                 folder_name = actions['copy_to_folder']['folder_name']
-                                target_folder = self.target_folder.Folders[folder_name]
+                                target_folder = self._get_account_folder(self.email_address, folder_name)
                                 email.Copy().Move(target_folder)
                                 self.log_print(f"Email copied to '{folder_name}' folder")
                             if 'forward' in actions and actions['forward']:
@@ -2255,7 +2206,7 @@ class OutlookSecurityAgent:
                                 self.log_print(f"Application started: {actions['start_application']['application_path']}")
                             if 'move_to_folder' in actions and actions['move_to_folder']['folder_name']:
                                 folder_name = actions['move_to_folder']['folder_name']
-                                target_folder = self.target_folder.Folders[folder_name]
+                                target_folder = self._get_account_folder(self.email_address, folder_name)
                                 email.Move(target_folder)
                                 self.log_print(f"Email moved to '{folder_name}' folder")
                             if 'stop_processing_more_rules' in actions and actions['stop_processing_more_rules']:
@@ -2354,6 +2305,9 @@ class OutlookSecurityAgent:
                 second_pass_deleted = 0
                 second_pass_flagged = 0
                 
+                # Sort rules once per second-pass (optimization: moved outside email loop)
+                rules.sort(key=lambda rule: rule['actions'].get('delete', False))
+                
                 for email_index, email in enumerate(second_pass_emails):
                     try:
                         if email_index >= len(second_pass_added_info):
@@ -2376,8 +2330,7 @@ class OutlookSecurityAgent:
                                 self.move_email_with_retry(email, self.inbox_folder)
                                 self.delete_email_with_retry(email)
                                 email_deleted = True
-                                if email in second_pass_emails:
-                                    emails_to_remove.append(email)
+                                # Email will be processed as deleted, no need to remove from list during iteration
                                 break
                         
                         if email_deleted:
@@ -2386,8 +2339,6 @@ class OutlookSecurityAgent:
                             continue
                         
                         # Process rules (same logic as first pass)
-                        rules.sort(key=lambda rule: rule['actions'].get('delete', False))
-                        
                         for rule in rules:
                             if not isinstance(rule, dict) or 'actions' not in rule:
                                 continue

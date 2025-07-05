@@ -7,8 +7,8 @@ This test validates that the configuration changes work correctly without requir
 import sys
 import os
 
-# Add the current directory to Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add the parent directory to Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def test_email_bulk_folder_names_variable():
     """Test that EMAIL_BULK_FOLDER_NAMES is properly defined"""
@@ -17,26 +17,17 @@ def test_email_bulk_folder_names_variable():
         print(f"✓ EMAIL_BULK_FOLDER_NAMES found: {EMAIL_BULK_FOLDER_NAMES}")
         
         # Verify it's a list
-        if isinstance(EMAIL_BULK_FOLDER_NAMES, list):
-            print("✓ EMAIL_BULK_FOLDER_NAMES is a list")
-        else:
-            print(f"✗ EMAIL_BULK_FOLDER_NAMES is not a list, type: {type(EMAIL_BULK_FOLDER_NAMES)}")
-            return False
+        assert isinstance(EMAIL_BULK_FOLDER_NAMES, list), f"EMAIL_BULK_FOLDER_NAMES is not a list, type: {type(EMAIL_BULK_FOLDER_NAMES)}"
+        print("✓ EMAIL_BULK_FOLDER_NAMES is a list")
             
         # Verify it contains "Bulk Mail" and "bulk"
         expected_folders = ["Bulk Mail", "bulk"]
         for folder in expected_folders:
-            if folder in EMAIL_BULK_FOLDER_NAMES:
-                print(f"✓ Found expected folder: {folder}")
-            else:
-                print(f"✗ Missing expected folder: {folder}")
-                return False
-        
-        return True
+            assert folder in EMAIL_BULK_FOLDER_NAMES, f"Missing expected folder: {folder}"
+            print(f"✓ Found expected folder: {folder}")
         
     except ImportError as e:
-        print(f"✗ Failed to import EMAIL_BULK_FOLDER_NAMES: {e}")
-        return False
+        assert False, f"Failed to import EMAIL_BULK_FOLDER_NAMES: {e}"
 
 def test_class_signature():
     """Test that the OutlookSecurityAgent class has updated signature"""
@@ -52,24 +43,15 @@ def test_class_signature():
         print(f"✓ OutlookSecurityAgent.__init__ parameters: {params}")
         
         # Check that 'folder_names' parameter exists (not 'folder_name')
-        if 'folder_names' in params:
-            print("✓ Found 'folder_names' parameter")
-        else:
-            print("✗ Missing 'folder_names' parameter")
-            return False
+        assert 'folder_names' in params, "Missing 'folder_names' parameter"
+        print("✓ Found 'folder_names' parameter")
             
         # Check that old 'folder_name' parameter is gone
-        if 'folder_name' not in params:
-            print("✓ Old 'folder_name' parameter correctly removed")
-        else:
-            print("✗ Old 'folder_name' parameter still exists")
-            return False
-            
-        return True
+        assert 'folder_name' not in params, "Old 'folder_name' parameter still exists"
+        print("✓ Old 'folder_name' parameter correctly removed")
         
     except Exception as e:
-        print(f"✗ Failed to inspect class signature: {e}")
-        return False
+        assert False, f"Failed to inspect class signature: {e}"
 
 def test_commented_old_variable():
     """Test that the old EMAIL_BULK_FOLDER_NAME variable is commented out"""
@@ -77,14 +59,11 @@ def test_commented_old_variable():
         # Try to import the old variable - it should fail
         try:
             from withOutlookRulesYAML import EMAIL_BULK_FOLDER_NAME
-            print("✗ Old EMAIL_BULK_FOLDER_NAME variable still exists (should be commented out)")
-            return False
+            assert False, "Old EMAIL_BULK_FOLDER_NAME variable still exists (should be commented out)"
         except ImportError:
             print("✓ Old EMAIL_BULK_FOLDER_NAME variable properly commented out")
-            return True
     except Exception as e:
-        print(f"✗ Unexpected error checking old variable: {e}")
-        return False
+        assert False, f"Unexpected error checking old variable: {e}"
 
 def main():
     """Run all tests"""
@@ -103,12 +82,12 @@ def main():
     for test in tests:
         print(f"\nRunning {test.__name__}...")
         try:
-            if test():
-                print(f"✓ {test.__name__} PASSED")
-                passed += 1
-            else:
-                print(f"✗ {test.__name__} FAILED")
-                failed += 1
+            test()
+            print(f"✓ {test.__name__} PASSED")
+            passed += 1
+        except AssertionError as e:
+            print(f"✗ {test.__name__} FAILED: {e}")
+            failed += 1
         except Exception as e:
             print(f"✗ {test.__name__} FAILED with exception: {e}")
             failed += 1
@@ -116,13 +95,13 @@ def main():
     print("\n" + "=" * 60)
     print(f"Test Results: {passed} passed, {failed} failed")
     
-    if failed == 0:
-        print("🎉 All tests passed! The folder list changes are working correctly.")
-        return True
-    else:
-        print("❌ Some tests failed. Please check the implementation.")
-        return False
+    assert failed == 0, f"Some tests failed: {passed} passed, {failed} failed"
+    print("🎉 All tests passed! The folder list changes are working correctly.")
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    try:
+        main()
+        sys.exit(0)
+    except AssertionError as e:
+        print(f"❌ Tests failed: {e}")
+        sys.exit(1)

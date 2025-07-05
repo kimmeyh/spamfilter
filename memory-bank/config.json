@@ -1,8 +1,13 @@
 {
   "description": "Memory bank configuration for OutlookMailSpamFilter project. Tracks development changes, architecture decisions, and project evolution.",
   "last_updated": "2025-07-05",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "recent_changes": [
+    {
+      "date": "2025-07-05", 
+      "change": "Relocated all test files to pytest/ directory and updated all documentation references",
+      "log_file": "logs/test-reorganization-2025-07-05.json"
+    },
     {
       "date": "2025-07-05",
       "change": "Added comprehensive development standards and feature enhancement process guidelines",
@@ -22,11 +27,16 @@
       "All tests must pass without errors or warnings",
       "All new features must have test coverage",
       "Preserve backward compatibility"
-    ]
+    ],
+    "testing": {
+      "test_location": "pytest/",
+      "test_command": "python -m pytest pytest/ -v",
+      "all_tests_must_pass": true
+    }
   },
   "project_status": {
     "phase": "active_development",
-    "branch": "feature/20250605SeeCommits", 
-    "next_milestone": "Implement second-pass email processing"
+    "branch": "feature/20250705_reprocess_after_prompts", 
+    "next_milestone": "Complete second-pass email processing implementation"
   }
 }
