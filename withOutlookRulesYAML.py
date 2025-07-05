@@ -2377,7 +2377,7 @@ class OutlookSecurityAgent:
                                 self.delete_email_with_retry(email)
                                 email_deleted = True
                                 if email in second_pass_emails:
-                                    second_pass_emails.remove(email)
+                                    emails_to_remove.append(email)
                                 break
                         
                         if email_deleted:
