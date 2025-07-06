@@ -54,8 +54,7 @@
       "requirements.txt - Python dependencies"
     ],
     "main_scripts": [
-      "withOutlookRulesYAML.py - Primary application script",
-      "temp.py - Testing and development script"
+      "withOutlookRulesYAML.py - Primary application script"
     ],
     "test_files": [
       "test_withOutlook_rulesYAML_compare_inport_to_export.py",
