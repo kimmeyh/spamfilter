@@ -31,7 +31,7 @@ DAYS_BACK_DEFAULT = 365 # default number of days to go back in the calendar
 
 
 @workspace 
-Change so that all current and future backup files are moved/created in the archive/ directory
+
 
 
 Completed:
