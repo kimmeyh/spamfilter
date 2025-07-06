@@ -3,7 +3,7 @@ Update to consider all Header, Body, Subject, From, lists strings to be regex pa
 create an optional YAML config files for all the major global variables.  List:
 EMAIL_BULK_FOLDER_NAMES # list of folders - example ["Bulk Mail", "bulk"] 
 EMAIL_INBOX_FOLDER_NAME = "Inbox"
-OUTLOOK_SECURITY_LOG_PATH = f"D:/data/harold/OutlookRulesProcessing/"
+OUTLOOK_SECURITY_LOG_PATH = f"D:/Data/Harold/OutlookRulesProcessing/"
 OUTLOOK_SECURITY_LOG = OUTLOOK_SECURITY_LOG_PATH + "OutlookRulesProcessingDEBUG_INFO.log"
 OUTLOOK_SIMPLE_LOG = OUTLOOK_SECURITY_LOG_PATH + "OutlookRulesProcessingSimple.log"
 OUTLOOK_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
@@ -31,7 +31,7 @@ DAYS_BACK_DEFAULT = 365 # default number of days to go back in the calendar
 
 
 @workspace 
-Change so that all current and future backup files are moved/created in the archive/ directory
+
 
 
 Completed:

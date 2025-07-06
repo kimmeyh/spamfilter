@@ -160,10 +160,10 @@ EMAIL_BULK_FOLDER_NAMES = ["Bulk Mail", "bulk"]  # Changed from single folder to
 EMAIL_INBOX_FOLDER_NAME = "Inbox"
 WIN32_CLIENT_DISPATCH = "Outlook.Application"
 OUTLOOK_GETNAMESPACE = "MAPI"
-OUTLOOK_SECURITY_LOG_PATH = f"D:/data/harold/OutlookRulesProcessing/"
+OUTLOOK_SECURITY_LOG_PATH = f"D:/Data/Harold/OutlookRulesProcessing/"
 OUTLOOK_SECURITY_LOG = OUTLOOK_SECURITY_LOG_PATH + "OutlookRulesProcessingDEBUG_INFO.log"
 OUTLOOK_SIMPLE_LOG = OUTLOOK_SECURITY_LOG_PATH + "OutlookRulesProcessingSimple.log"
-OUTLOOK_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
+OUTLOOK_RULES_PATH = f"D:/Data/Harold/github/OutlookMailSpamFilter/"
 OUTLOOK_RULES_FILE = OUTLOOK_RULES_PATH + "outlook_rules.csv"
 OUTLOOK_SAFE_SENDERS_FILE = OUTLOOK_RULES_PATH + "OutlookSafeSenders.csv"
 YAML_RULES_PATH = f"D:/data/harold/github/OutlookMailSpamFilter/"
@@ -196,7 +196,7 @@ def simple_print(message):
         print(message)
 
 class OutlookSecurityAgent:
-    def __init__(self, email_address=EMAIL_ADDRESS, folder_names=EMAIL_BULK_FOLDER_NAMES, debug_mode=DEBUG):
+    def __init__(self, email_address=EMAIL_ADDRESS, folder_names=EMAIL_BULK_FOLDER_NAMES, debug_mode=DEBUG, test_mode=False):
         """
         Initialize the Outlook Security Agent with specific account and folders
 
@@ -204,8 +204,10 @@ class OutlookSecurityAgent:
             email_address: Email address of the account to process
             folder_names: List of folder names to process
             debug_mode: If True, run in simulation mode with verbose output
+            test_mode: If True, allow initialization without finding Outlook folders (for testing)
         """
         self.debug_mode = debug_mode
+        self.test_mode = test_mode
         
         # Check if win32com is available before trying to use it
         if not WIN32COM_AVAILABLE:
@@ -234,22 +236,36 @@ class OutlookSecurityAgent:
         self.log_print(f"\n=============================================================\nStarting new run")
         self.log_print(f"Initializing agent for {email_address}, folders: {folder_names}")
         self.log_print(f"Debug mode: {debug_mode}")
+        self.log_print(f"Test mode: {test_mode}")
 
         # Store email address for later use
         self.email_address = email_address
 
-        # Get the specific account's folders - now handling multiple folders
+        # Get the specific account's folders - now handling multiple folders with retry logic
         self.target_folders = []
+        max_retries = 3
+        
         for folder_name in folder_names:
-            folder = self._get_account_folder(email_address, folder_name)
+            folder = None
+            for retry in range(max_retries):
+                folder = self._get_account_folder(email_address, folder_name)
+                if folder:
+                    break
+                elif retry < max_retries - 1:
+                    self.log_print(f"Retry {retry + 1}/{max_retries}: Could not find folder '{folder_name}', retrying...")
+                    import time
+                    time.sleep(0.5)  # Brief delay before retry
+            
             if folder:
                 self.target_folders.append(folder)
                 self.log_print(f"Successfully found folder: {folder_name}")
             else:
-                self.log_print(f"Could not find folder '{folder_name}' in account '{email_address}'")
+                self.log_print(f"Could not find folder '{folder_name}' in account '{email_address}' after {max_retries} attempts")
         
-        if not self.target_folders:
+        if not self.target_folders and not test_mode:
             raise ValueError(f"Could not find any of the specified folders {folder_names} in account '{email_address}'")
+        elif not self.target_folders and test_mode:
+            self.log_print(f"Test mode: No folders found, but continuing (expected in test environment)")
         
         self.inbox_folder = self._get_account_folder(email_address, EMAIL_INBOX_FOLDER_NAME)
 
@@ -776,7 +792,9 @@ class OutlookSecurityAgent:
 
             # 03/31/2025 Harold Kimmey Write json_rules to YAML file
             # Ensure directory exists
-            os.makedirs(os.path.dirname(rules_file), exist_ok=True)
+            rules_dir = os.path.dirname(rules_file)
+            if rules_dir:  # Only create directory if path has a directory component
+                os.makedirs(rules_dir, exist_ok=True)
 
             # The below section does the following:
             #   Ensure the JSON rules_json object is a valid JSON object before writing to YAML file
@@ -850,8 +868,22 @@ class OutlookSecurityAgent:
                 rules = json.loads(json.dumps(rules_json, default=str))
                 self.log_print(f"export_rules: Standardized rules JSON structure")
 
+            # Handle both old format (rules array) and new format (full YAML structure)
+            if isinstance(rules, list):
+                # Old format: rules is a list
+                rules_list = rules
+                full_structure = {"rules": rules_list}
+                self.log_print(f"export_rules: Processing old format (rules array)")
+            elif isinstance(rules, dict) and "rules" in rules:
+                # New format: rules is a dict with "rules" key
+                rules_list = rules["rules"]
+                full_structure = rules
+                self.log_print(f"export_rules: Processing new format (full YAML structure)")
+            else:
+                self.log_print(f"export_rules: Invalid rules format - expected list or dict with 'rules' key")
+                return False
 
-            for rule in rules:
+            for rule in rules_list:
                 if isinstance(rule, dict):
                     # Update last_modified in metadata if present, else create metadata
                     if "metadata" in rule and isinstance(rule["metadata"], dict):
@@ -872,7 +904,7 @@ class OutlookSecurityAgent:
 
             # Apply string formatting to all rules
 
-            standardized_rules = rules
+            standardized_rules = full_structure
             standardized_rules["rules"] = ensure_string_values(standardized_rules["rules"])
             # Sort all the condition_types for ease in finding them visually
             for rule in standardized_rules.get("rules", []):
@@ -894,8 +926,8 @@ class OutlookSecurityAgent:
         #     standardized_rules["safe_senders"] = sorted(standardized_rules["safe_senders"])
 
             formatted_output = standardized_rules
-            self.log_print(f"Number of rules: {len(rules["rules"])}")
-            # self.log_print(f"Show list of rules: {rules["rules"]}")
+            self.log_print(f"Number of rules: {len(rules_list)}")
+            # self.log_print(f"Show list of rules: {rules_list}")
             self.log_print(f"Number of standardized rules: {len(standardized_rules["rules"])}")
             #self.log_print(f"Show list of standardized_rules: {standardized_rules["rules"]}")
             self.log_print(f"Number of formatted_output: {len(formatted_output["rules"])}")
@@ -903,7 +935,9 @@ class OutlookSecurityAgent:
 
             # 03/31/2025 Harold Kimmey Write json_rules to YAML file
             # Ensure directory exists
-            os.makedirs(os.path.dirname(rules_file), exist_ok=True)
+            rules_dir = os.path.dirname(rules_file)
+            if rules_dir:  # Only create directory if path has a directory component
+                os.makedirs(rules_dir, exist_ok=True)
 
             # The below section does the following:
             #   Ensure the JSON rules_json object is a valid JSON object before writing to YAML file
@@ -2320,7 +2354,7 @@ class OutlookSecurityAgent:
                             continue  # Safety check
                         
                         email_deleted = False
-                        email_header = self._get_email_header(email)
+                        email_header = self.combine_email_header_lines(email.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x007D001E"))
                         second_pass_added_info[email_index]["email_header"] = email_header
                         
                         self.log_print(f"Second-pass processing email {email_index + 1}/{len(second_pass_emails)}")
