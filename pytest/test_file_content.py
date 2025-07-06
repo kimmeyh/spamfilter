@@ -35,9 +35,10 @@ def test_file_content():
     else:
         print("✗ Old EMAIL_BULK_FOLDER_NAME not properly commented out")
         
-    # Test 3: Check that __init__ method uses folder_names parameter
+    # Test 3: Check that __init__ method uses folder_names parameter (with optional test_mode)
     tests_total += 1
-    if 'def __init__(self, email_address=EMAIL_ADDRESS, folder_names=EMAIL_BULK_FOLDER_NAMES, debug_mode=DEBUG):' in content:
+    if ('def __init__(self, email_address=EMAIL_ADDRESS, folder_names=EMAIL_BULK_FOLDER_NAMES, debug_mode=DEBUG):' in content or
+        'def __init__(self, email_address=EMAIL_ADDRESS, folder_names=EMAIL_BULK_FOLDER_NAMES, debug_mode=DEBUG, test_mode=False):' in content):
         print("✓ __init__ method properly updated to use folder_names parameter")
         tests_passed += 1
     else:

@@ -101,12 +101,15 @@
         "Maintain backward compatibility whenever possible"
       ],
       "testing_requirements": [
-        "Before confirming changes, all tests should run successfully",
+        "Before confirming changes, all tests should run successfully (without errors, warnings or skipped tests)",
         "Updates must be applied until all tests can be run without errors or warnings",
         "For all new features added, ensure an existing test covers the features or a new test is added to cover the features",
         "Create comprehensive test coverage for new functionality",
         "Validate both positive and negative test cases",
-        "Ensure import compatibility and syntax validation"
+        "Ensure import compatibility and syntax validation",
+        "NEVER skip tests - if a test cannot run, fix the underlying issue rather than skipping",
+        "Tests should fail fast and provide clear error messages when prerequisites are not met",
+        "All test dependencies and prerequisites must be properly configured before running tests"
       ],
       "post_testing_update_steps": [
         "Always update memory-bank files for enhancements after all tests pass (See <attachments> above for file contents. You may not need to search or read the file again.)",
@@ -118,7 +121,9 @@
         "Use clear, descriptive variable and method names",
         "Add comprehensive logging for new functionality",
         "Document all changes in code comments and change logs",
-        "Follow existing code patterns and conventions"
+        "Follow existing code patterns and conventions",
+        "Write robust tests that fail clearly when prerequisites are not met",
+        "Never implement test skipping logic - address root causes instead"
       ],
       "validation_checklist": [
         "Syntax validation - code compiles without errors",
