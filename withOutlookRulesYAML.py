@@ -132,6 +132,9 @@ import yaml
 import copy
 import traceback
 
+# Code update timestamp: 2025-07-17 21:15:00
+print("Loading withOutlookRulesYAML.py - updated 2025-07-17 21:15:00")
+
 #Imports for packages that need to be installed
 # Handle win32com.client import gracefully for testing environments
 try:
@@ -680,12 +683,12 @@ class OutlookSecurityAgent:
 
         self.log_print("Importing safe senders from YAML file...")
         safe_senders = []
-        result = []
+        result = {"safe_senders": []}
 
         try:
             if not os.path.exists(rules_file):
                 self.log_print(f"Safe senders YAML file not found: {rules_file}")
-                return safe_senders
+                return result
 
             # Read YAML file and convert to Python JSON object per rules_safe_senders.proto definition
             # The YAML file should contain a list of safe senders or a dictionary with a "safe_senders" key
@@ -701,12 +704,12 @@ class OutlookSecurityAgent:
             if isinstance(safe_senders, dict) and 'safe_senders' in safe_senders:
                 self.log_print(f"Successfully imported {len(safe_senders['safe_senders'])} safe senders from YAML file")
                 self.log_print(f"Safe senders (first 5): {safe_senders['safe_senders'][:5]}")
+                result = json.loads(json.dumps(safe_senders, default=str))
             elif isinstance(safe_senders, list):
                 self.log_print(f"ERROR:  Safe_senders imported as a list from YAML file - need to resolve")
+                result = {"safe_senders": safe_senders}
             else:
                 self.log_print("No 'safe_senders' key found in YAML file")
-
-            result = json.loads(json.dumps(safe_senders, default=str))
 
             return result
 
@@ -1963,7 +1966,7 @@ class OutlookSecurityAgent:
             else:
                 # Handle direct rules array
                 rules = rules_json if isinstance(rules_json, list) else [rules_json]
-                safe_senders = []
+                # Don't reset safe_senders - keep the loaded safe_senders
 
             # Process emails from all target folders
             all_emails_to_process = []
@@ -2025,7 +2028,12 @@ class OutlookSecurityAgent:
                     processed_count += 1
                     email_index = all_emails_to_process.index(email)
                     email_deleted = False
-                    email_header = self.combine_email_header_lines(email.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x007D001E"))
+                    try:
+                        raw_header = email.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x007D001E")
+                        email_header = self.combine_email_header_lines(raw_header)
+                    except Exception as e:
+                        self.log_print(f"Error getting email header: {str(e)}")
+                        email_header = ""
                     self.log_print(f"\n\nEmail {processed_count}:")
                     self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
                     self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress).lower()}")
@@ -2033,7 +2041,6 @@ class OutlookSecurityAgent:
                     self.log_print(f"Source folder: {all_emails_added_info[email_index]['source_folder']}")
 
                     # Check each safe_senders before rules
-                    self.log_print(f"DEBUG: Checking safe senders for email from: {email.SenderEmailAddress}")
                     # safe_senders only needs to be checked once
                     for sender in safe_senders["safe_senders"]:
                         sender_lower = sender.lower()
@@ -2049,7 +2056,6 @@ class OutlookSecurityAgent:
                             if email in all_emails_to_process:
                                 all_emails_to_process.remove(email)
                             self.log_print(f"Email moved to inbox")
-
                             break
                                # no processing of rules needed if found in safe_senders
 
@@ -2066,12 +2072,29 @@ class OutlookSecurityAgent:
 
                         # Check 'from' addresses
                         if 'from' in conditions:
-                            from_addresses = [addr['address'].lower() for addr in conditions['from']]
-                            if any(addr in email.SenderEmailAddress.lower() for addr in from_addresses):
-                                match = True
-                                matched_keyword = next((addr['address'] for addr in conditions['from'] if addr['address'].lower() in email.SenderEmailAddress.lower()), None)
-                                self.log_print(f"Matched keyword in from address: {matched_keyword}")
-                                self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress)}")
+                            from_addresses = [addr.lower() for addr in conditions['from']]
+                            sender_email_lower = email.SenderEmailAddress.lower()
+                            
+                            for addr in from_addresses:
+                                addr_lower = addr.lower()
+                                matched = False
+                                
+                                if addr_lower.startswith('*'):
+                                    # Handle wildcard patterns like "*@greyhub.com"
+                                    pattern_without_wildcard = addr_lower[1:]  # Remove the '*'
+                                    if sender_email_lower.endswith(pattern_without_wildcard):
+                                        matched = True
+                                else:
+                                    # Handle exact patterns or simple substring matches
+                                    if addr_lower in sender_email_lower:
+                                        matched = True
+                                
+                                if matched:
+                                    match = True
+                                    matched_keyword = addr
+                                    self.log_print(f"Matched keyword in from address: {matched_keyword}")
+                                    self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress)}")
+                                    break
 
                         # Check 'subject' keywords
                         if 'subject' in conditions:
@@ -2119,12 +2142,29 @@ class OutlookSecurityAgent:
                         # Check exceptions
 
                         if match and 'from' in exceptions:
-                            from_addresses = [addr['address'].lower() for addr in exceptions['from']]
-                            if any(addr in email.SenderEmailAddress.lower() for addr in from_addresses):
-                                match = False
-                                matched_keyword = next((addr['address'] for addr in exceptions['from'] if addr['address'].lower() in email.SenderEmailAddress.lower()), None)
-                                self.log_print(f"Exception matched keyword in from address: {matched_keyword}")
-                                self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress)}")
+                            from_addresses = [addr.lower() for addr in exceptions['from']]
+                            sender_email_lower = email.SenderEmailAddress.lower()
+                            
+                            for addr in from_addresses:
+                                addr_lower = addr.lower()
+                                exception_matched = False
+                                
+                                if addr_lower.startswith('*'):
+                                    # Handle wildcard patterns like "*@greyhub.com"
+                                    pattern_without_wildcard = addr_lower[1:]  # Remove the '*'
+                                    if sender_email_lower.endswith(pattern_without_wildcard):
+                                        exception_matched = True
+                                else:
+                                    # Handle exact patterns or simple substring matches
+                                    if addr_lower in sender_email_lower:
+                                        exception_matched = True
+                                
+                                if exception_matched:
+                                    match = False
+                                    matched_keyword = addr
+                                    self.log_print(f"Exception matched keyword in from address: {matched_keyword}")
+                                    self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress)}")
+                                    break
 
                         # Check subject keywords in exceptions
                         if match and 'subject' in exceptions:
@@ -2393,10 +2433,27 @@ class OutlookSecurityAgent:
                             
                             # Check conditions (simplified version of first-pass logic)
                             if 'from' in conditions:
-                                from_addresses = [addr['address'].lower() for addr in conditions['from']]
-                                if any(addr in email.SenderEmailAddress.lower() for addr in from_addresses):
-                                    match = True
-                                    matched_keyword = next((addr['address'] for addr in conditions['from'] if addr['address'].lower() in email.SenderEmailAddress.lower()), None)
+                                from_addresses = [addr.lower() for addr in conditions['from']]
+                                sender_email_lower = email.SenderEmailAddress.lower()
+                                
+                                for addr in from_addresses:
+                                    addr_lower = addr.lower()
+                                    matched = False
+                                    
+                                    if addr_lower.startswith('*'):
+                                        # Handle wildcard patterns like "*@greyhub.com"
+                                        pattern_without_wildcard = addr_lower[1:]  # Remove the '*'
+                                        if sender_email_lower.endswith(pattern_without_wildcard):
+                                            matched = True
+                                    else:
+                                        # Handle exact patterns or simple substring matches
+                                        if addr_lower in sender_email_lower:
+                                            matched = True
+                                    
+                                    if matched:
+                                        match = True
+                                        matched_keyword = addr
+                                        break
                             
                             if 'subject' in conditions and not match:
                                 subject_keywords = [keyword.lower() for keyword in conditions['subject']]
@@ -2419,8 +2476,25 @@ class OutlookSecurityAgent:
                             # Check exceptions (simplified version)
                             if match:
                                 if 'from' in exceptions:
-                                    if any(keyword.lower() in email.SenderEmailAddress.lower() for keyword in exceptions['from']):
-                                        match = False
+                                    sender_email_lower = email.SenderEmailAddress.lower()
+                                    
+                                    for keyword in exceptions['from']:
+                                        keyword_lower = keyword.lower()
+                                        exception_matched = False
+                                        
+                                        if keyword_lower.startswith('*'):
+                                            # Handle wildcard patterns like "*@greyhub.com"
+                                            pattern_without_wildcard = keyword_lower[1:]  # Remove the '*'
+                                            if sender_email_lower.endswith(pattern_without_wildcard):
+                                                exception_matched = True
+                                        else:
+                                            # Handle exact patterns or simple substring matches
+                                            if keyword_lower in sender_email_lower:
+                                                exception_matched = True
+                                        
+                                        if exception_matched:
+                                            match = False
+                                            break
                                 if 'subject' in exceptions and match:
                                     if any(keyword.lower() in email.Subject.lower() for keyword in exceptions['subject']):
                                         match = False

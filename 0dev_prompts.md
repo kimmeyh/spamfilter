@@ -1,5 +1,6 @@
 Next:
 Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
+
 create an optional YAML config files for all the major global variables.  List:
 EMAIL_BULK_FOLDER_NAMES # list of folders - example ["Bulk Mail", "bulk"] 
 EMAIL_INBOX_FOLDER_NAME = "Inbox"
