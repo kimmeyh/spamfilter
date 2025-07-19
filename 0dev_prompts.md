@@ -1,5 +1,20 @@
 Next:
+@workspace 'memory-bank\config.json' 'memory-bank\development-standards.md' 'memory-bank\enhancement-second-pass-processing.md' 'memory-bank\memory-bank.json' 'rules.yaml' 'withOutlookRulesYAML.py'
+'rulesregex.yaml'
+In rulesregex.yaml please update all the current header, body, subject, and from strings to ensure they are regex compatible.
+No need to explain show a list of changes, just make the changes.
+
+
 Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
+
+Template:
+@workspace 'memory-bank\config.json' 'memory-bank\development-standards.md' 'memory-bank\enhancement-second-pass-processing.md' 'memory-bank\memory-bank.json' 'rules.yaml' 'withOutlookRulesYAML.py'
+
+Any code that should be removed should be commented out and not deleted.
+Do not remove any commented out code.
+Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
+
+
 
 create an optional YAML config files for all the major global variables.  List:
 EMAIL_BULK_FOLDER_NAMES # list of folders - example ["Bulk Mail", "bulk"] 
