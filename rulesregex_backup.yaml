@@ -2943,30 +2943,30 @@ rules:
       folder_name: ''
       folder_path: ''
     play_sound:
-      sound_file: ""
-    redirect: []
-  exceptions:
-    body: []
-    from: []
-    header: []
-    subject: []
-  metadata:
-    last_modified: '2025-07-19T10:54:20.303316'
-    created_by: 'system'
-    tags:
-    - 'spam'
-    - 'auto-delete'
-    - 'sender'
-- name: 'SpamAutoDeleteSubject'
-  enabled: 'True'
-  isLocal: 'True'
-  executionOrder: '4'
-  conditions:
-    type: 'OR'
-    body: []
-    from: []
-    header: []
-    subject:
+      "sound_file": ""
+    "redirect": []
+  "exceptions":
+    "body": []
+    "from": []
+    "header": []
+    "subject": []
+  "metadata":
+    "last_modified": "2025-07-19T10:54:20.303316"
+    "created_by": "system"
+    "tags":
+    - "spam"
+    - "auto-delete"
+    - "sender"
+- "name": "SpamAutoDeleteSubject"
+  "enabled": "True"
+  "isLocal": "True"
+  "executionOrder": "4"
+  "conditions":
+    "type": "OR"
+    "body": []
+    "from": []
+    "header": []
+    "subject":
     - '5-second morning hack'
     - 'aarp'
     - 'construction-jobsearch'
@@ -2994,71 +2994,71 @@ rules:
     - 'trumpvictory47'
     - 'valvoline oil'
     - 'walmart surprise'
-  actions:
-    assign_to_category:
-      category_name: 'SpamSubject'
-    delete: 'True'
-    copy_to_folder:
-      folder_name: ""
-      folder_path: ""
-    forward: []
-    mark_as_task:
-      task_due_date: ""
-    move_to_folder:
-      folder_name: ""
-      folder_path: ""
-    play_sound:
-      sound_file: ""
-    redirect: []
-  exceptions:
-    body: []
-    from: []
-    header: []
-    subject: []
-  metadata:
-    last_modified: '2025-07-19T10:54:20.303316'
-    created_by: 'system'
-    tags:
-    - 'spam'
-    - 'auto-delete'
-    - 'subject'
-- name: 'SpamAutoDeleteBody-imgur.com'
-  enabled: 'True'
-  isLocal: 'True'
-  executionOrder: '5'
-  conditions:
-    type: 'OR'
-    body:
+  "actions":
+    "assign_to_category":
+      "category_name": "SpamSubject"
+    "delete": "True"
+    "copy_to_folder":
+      "folder_name": ""
+      "folder_path": ""
+    "forward": []
+    "mark_as_task":
+      "task_due_date": ""
+    "move_to_folder":
+      "folder_name": ""
+      "folder_path": ""
+    "play_sound":
+      "sound_file": ""
+    "redirect": []
+  "exceptions":
+    "body": []
+    "from": []
+    "header": []
+    "subject": []
+  "metadata":
+    "last_modified": "2025-07-19T10:54:20.303316"
+    "created_by": "system"
+    "tags":
+    - "spam"
+    - "auto-delete"
+    - "subject"
+- "name": "SpamAutoDeleteBody-imgur.com"
+  "enabled": "True"
+  "isLocal": "True"
+  "executionOrder": "5"
+  "conditions":
+    "type": "OR"
+    "body":
     - '\.imgur\.'
     - '/imgur\.'
-    from: []
-    header: []
-    subject: []
-  actions:
-    assign_to_category:
-      category_name: 'SpamImgur'
-    delete: 'True'
-    copy_to_folder:
-      folder_name: ""
-      folder_path: ""
-    forward: []
-    mark_as_task:
-      task_due_date: ""
-    move_to_folder:
-      folder_name: ""
-      folder_path: ""
-    play_sound:
-      sound_file: ""
-    redirect: []
-  exceptions:
-    body: []
-    from: []
-    header: []
-    subject: []
-  metadata:
-    last_modified: '2025-07-19T10:54:20.303316'
-    created_by: 'system'
-    tags:
-    - 'spam'
-    - 'auto-delete'
-    - 'imgur'
+    "from": []
+    "header": []
+    "subject": []
+  "actions":
+    "assign_to_category":
+      "category_name": "SpamImgur"
+    "delete": "True"
+    "copy_to_folder":
+      "folder_name": ""
+      "folder_path": ""
+    "forward": []
+    "mark_as_task":
+      "task_due_date": ""
+    "move_to_folder":
+      "folder_name": ""
+      "folder_path": ""
+    "play_sound":
+      "sound_file": ""
+    "redirect": []
+  "exceptions":
+    "body": []
+    "from": []
+    "header": []
+    "subject": []
+  "metadata":
+    "last_modified": "2025-07-19T10:54:20.303316"
+    "created_by": "system"
+    "tags":
+    - "spam"
+    - "auto-delete"
+    - "imgur"
