@@ -1,4 +1,9 @@
 Next:
+@workspace
+Can you help me add an input parameter, -update_rules or -u, to toggle if prompt_update_rules is called.  it should default to not call prompt_update_rules
+use memory-bank to understand the workspace
+Any code that should be removed should be commented out and not deleted.
+Do not remove any commented out code.
 
 from past experience, because the lists of strings under header, body, subject, and from strings are complex regex strings they must be single quoted.
 

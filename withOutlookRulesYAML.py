@@ -1,12 +1,18 @@
 #------------------List of future enhancements------------------
 # - Need to add Next ****
-#       Update so that it can run with no input (skips input) by default, takes a flag --input (or -i or -interactive) to run with input
 #       Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
 #       Completed - create updated rules.yaml with all regex strings as rulesregex.yaml
+#       Create updated rules_safe_senders.yaml with all regex strings as rules_safe_sendersregex.yaml
+#       Independent program that reads all rules.yaml entries and if missing adds them to rulesregex.yaml
+#       Independent program that reads all rules_safe_senders.yaml entries and if missing adds them to rules_safe_sendersregex.yaml
+#       rename rulesregex.yaml back to rules.yaml
+#       rename rules_safe_sendersregex.yaml back to rules_safe_senders.yaml
 #       Need to analyze and change all rules.yaml strings to regex patterns. Examples:
 #            ".<domain>.<org>" and "/<domain>.<org>" to "[./\<domain>.<org>"
 #            add a "*.*.jp" (and othe org's) and then remove all entries with .jp
 #            add a "*.*.cz" (and othe org's) and then remove all entries with .cz...
+#       Update all new regex in rules.yaml to use wildcards
+#       Update all new regex in rules_safe_senders.yaml to use wildcards
 #       Updated rules_safe_senders.yaml to all be regex pattern
 #            update entries for "@<sub-domain>.ibm.com" to "@*.ibm.com" regex patterns
 # ----------------------------------------------------
@@ -67,6 +73,8 @@
 #  COMPLETED - Reprocess all emails in the EMAIL_BULK_FOLDER_NAMES folder list a second time, in case any of the remaining emails can no be moved or deleted.
 #  COMPLETED - Move backup files to a archive/"backup directory"
 #  COMPLETED - Update mail processing to use safe_senders list for all header exceptions
+#  08/25/2025 Harold Kimmey - Update so that it can run with no input by default.  New flag -u -update to update via user input
+
 #------------------General Documentation------------------
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
 
@@ -106,6 +114,7 @@ import os
 import yaml
 import copy
 import traceback
+import argparse
 
 # Code update timestamp: 2025-07-17 21:15:00
 print("Loading withOutlookRulesYAML.py - updated 2025-07-17 21:15:00")
@@ -1926,11 +1935,12 @@ class OutlookSecurityAgent:
             self.log_print(f"Error getting emails from folder {folder.Name}: {str(e)}")
             return []
 
-    def process_emails(self, rules_json, safe_senders, days_back=DAYS_BACK_DEFAULT):
+    def process_emails(self, rules_json, safe_senders, days_back=DAYS_BACK_DEFAULT, update_rules=False):
         """Process emails based on the rules in the rules_json object - now processes multiple folders"""
         self.log_print(f"\n\nStarting email processing")
         self.log_print(f"Target folders: {[folder.Name for folder in self.target_folders]}", "DEBUG")
         self.log_print(f"Processing emails from last {days_back} days")
+        self.log_print(f"Interactive rule updates: {'enabled' if update_rules else 'disabled'}")
 
         try:
             # Extract rules array if rules_json is a dictionary with a 'rules' key
@@ -2316,8 +2326,16 @@ class OutlookSecurityAgent:
 
             # After processing all emails, prompt for rule updates based on unfiltered emails
             if processed_count > 0:
-                self.log_print(f"{CRLF}Prompting for rule updates based on unfiltered emails...")
-                rules_json, safe_senders = self.prompt_update_rules(all_emails_to_process, all_emails_added_info, rules_json, safe_senders)
+                self.log_print(f"{CRLF}Checking for rule updates based on unfiltered emails...")
+                # Original call to prompt_update_rules (commented out)
+                # rules_json, safe_senders = self.prompt_update_rules(all_emails_to_process, all_emails_added_info, rules_json, safe_senders)
+                
+                # New conditional call based on command line argument
+                if update_rules:
+                    self.log_print(f"Interactive rule updates enabled - prompting for rule updates...")
+                    rules_json, safe_senders = self.prompt_update_rules(all_emails_to_process, all_emails_added_info, rules_json, safe_senders)
+                else:
+                    self.log_print(f"Interactive rule updates disabled (use -u or --update_rules to enable)")
 
             # Second-pass processing: Reprocess all emails in bulk folders after rule updates
             self.log_print(f"{CRLF}Starting second-pass email processing after rule updates...")
@@ -2576,6 +2594,13 @@ class OutlookSecurityAgent:
 # Main program execution
 def main():
     """Main function to run the security agent"""
+    
+    # Add argument parsing
+    parser = argparse.ArgumentParser(description='Outlook Mail Spam Filter')
+    parser.add_argument('-u', '--update_rules', action='store_true', 
+                       help='Enable interactive rule updates (default: disabled)')
+    
+    args = parser.parse_args()
 
     # Initialize agent
     agent = OutlookSecurityAgent()  # setup for calling functions in class OutlookSecurityAgent
@@ -2595,7 +2620,7 @@ def main():
         # Process last N days of emails - see DAYS_BACK_DEFAULT
         agent.log_print(f"{CRLF}Begin email analysis{CRLF}")
 
-        agent.process_emails(rules_json, safe_senders)
+        agent.process_emails(rules_json, safe_senders, update_rules=args.update_rules)
 
         agent.log_print(f"{CRLF}End email analysis{CRLF}")
 
