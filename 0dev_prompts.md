@@ -1,6 +1,14 @@
 Next:
-@workspace
-Can you help me add an input parameter, -update_rules or -u, to toggle if prompt_update_rules is called.  it should default to not call prompt_update_rules
+@workspace 'withOutlookRulesYAM.py'
+Can you help me guide me on the order for doing the following upgrade to the withOutlookRulesYAM.py:
+- convert rules.yaml from existing rules (if you look at the first 20 rows of each rule, the would be sufficient to understand) to equivalent regex strings. Likely at about 500 rule entries at a time
+- convert rules_safe_senders.yaml from existing rules (if you look at the first 20 rows of each rule, the would be sufficient to understand) to equivalent regex strings. Likely at about 500 rule entries at a time
+- convert the processing in 'withOutlookRulesYAM.py'of the rules.yaml rules so that it now expects regex strings as input and processing the rules as regex strings.
+- convert the processing in 'withOutlookRulesYAM.py'of the rules_safe_senders.yaml rules so that it now expects regex strings as input and processing the rules as regex strings.
+- for intermediate/small adjustments may want to add the rules as new files (with _regex) at the end of the filenames and an option to use either the current or _regex version of the files/processing in order to incrementally test changes.
+- provide pytests to insure all changes are working as expected.
+- provide a way to back out changes to the current working version if changes do not work as expected
+
 use memory-bank to understand the workspace
 Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
@@ -75,6 +83,8 @@ DAYS_BACK_DEFAULT = 365 # default number of days to go back in the calendar
 
 
 Completed:
+Can you help me add an input parameter, -update_rules or -u, to toggle if prompt_update_rules is called.  it should default to not call prompt_update_rules
+
 I want you to review file rulesregex.yaml for yaml errors and fix them.
 from past experience, because the lists of strings under header, body, subject, and from strings are complex regex strings most must be single quoted.  For consistency keep all lines with single quotes.
 
