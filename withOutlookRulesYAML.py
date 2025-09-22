@@ -210,10 +210,15 @@ class OutlookSecurityAgent:
         else:
             self.outlook = win32com.client.Dispatch(WIN32_CLIENT_DISPATCH)
             self.namespace = self.outlook.GetNamespace(OUTLOOK_GETNAMESPACE)
-            
+
+        # Default file paths (legacy by default)
         self.YAMO_RULES_PATH = YAML_RULES_PATH  # Set appropriate default path
-        self.YAML_RULES_FILE = YAML_RULES_FILE  # Set appropriate default file name
-        self.YAML_SAFE_SENDERS_FILE = YAML_RULES_SAFE_SENDERS_FILE  # Set appropriate default file name
+        self.YAML_RULES_FILE = YAML_RULES_FILE  # Default legacy rules file
+        self.YAML_SAFE_SENDERS_FILE = YAML_RULES_SAFE_SENDERS_FILE  # Default legacy safe senders file
+
+        # Active files used for all reads/writes; main() will set these based on CLI flags
+        self.active_rules_file = self.YAML_RULES_FILE
+        self.active_safe_senders_file = self.YAML_SAFE_SENDERS_FILE
 
         # Configure logging
         log_format = '%(asctime)s - %(levelname)s - %(message)s'
@@ -752,7 +757,7 @@ class OutlookSecurityAgent:
             self.log_print(f"Error accessing Outlook rules: {str(e)}")
             return json.dumps({"error": str(e)})
 
-    def get_safe_senders_rules(self, rules_file=YAML_RULES_SAFE_SENDERS_FILE):
+    def get_safe_senders_rules(self, rules_file=None):
         """
         Read safe senders from YAML file and return as JSON object.
         The safe_senders YAML file contains a list of patterns that can be email addresses or domains.
@@ -769,6 +774,8 @@ class OutlookSecurityAgent:
         result = {"safe_senders": []}
 
         try:
+            if rules_file is None:
+                rules_file = self.active_safe_senders_file
             if not os.path.exists(rules_file):
                 self.log_print(f"Safe senders YAML file not found: {rules_file}")
                 return result
@@ -803,11 +810,13 @@ class OutlookSecurityAgent:
             self.log_print(f"Traceback: {traceback.format_exc()}")
             return result
 
-    def get_yaml_rules(self, rules_file=YAML_RULES_FILE):
+    def get_yaml_rules(self, rules_file=None):
         """Import rules from yaml file and return as JSON object (not string)"""
         #*** UPdate to use .proto file
         self.log_print("Importing rules from YAML file...")
         try:
+            if rules_file is None:
+                rules_file = self.active_rules_file
             if not os.path.exists(rules_file):
                 self.log_print(f"Rules YAML file not found: {rules_file}")
                 return []
@@ -844,7 +853,7 @@ class OutlookSecurityAgent:
             self.log_print(f"Traceback: {traceback.format_exc()}")
             return []
 
-    def export_safe_senders_to_yaml(self, rules_json=None, rules_file=YAML_RULES_SAFE_SENDERS_FILE):
+    def export_safe_senders_to_yaml(self, rules_json=None, rules_file=None):
         """Export (updated) safe_senders JSON to yaml file"""
         # Update timestamp for each rule - may not be used
         timestamp_rule = datetime.now().isoformat()
@@ -879,6 +888,8 @@ class OutlookSecurityAgent:
 
             # 03/31/2025 Harold Kimmey Write json_rules to YAML file
             # Ensure directory exists
+            if rules_file is None:
+                rules_file = self.active_safe_senders_file
             rules_dir = os.path.dirname(rules_file)
             if rules_dir:  # Only create directory if path has a directory component
                 os.makedirs(rules_dir, exist_ok=True)
@@ -933,7 +944,7 @@ class OutlookSecurityAgent:
             return False
 
 
-    def export_rules_to_yaml(self, rules_json=None, rules_file=YAML_RULES_FILE):
+    def export_rules_to_yaml(self, rules_json=None, rules_file=None):
         """Export JSON/YAML rules to yaml file"""
         # Update timestamp for each rule
         timestamp = datetime.now().isoformat()
@@ -1022,6 +1033,8 @@ class OutlookSecurityAgent:
 
             # 03/31/2025 Harold Kimmey Write json_rules to YAML file
             # Ensure directory exists
+            if rules_file is None:
+                rules_file = self.active_rules_file
             rules_dir = os.path.dirname(rules_file)
             if rules_dir:  # Only create directory if path has a directory component
                 os.makedirs(rules_dir, exist_ok=True)
@@ -1037,6 +1050,8 @@ class OutlookSecurityAgent:
             #   If no errors writing the YAML_RULES_FILE, delete the temp file
 
             # Create a backup of the current YAML file if it exists
+            if rules_file is None:
+                rules_file = self.active_rules_file
             if os.path.exists(rules_file):
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 base_name = os.path.splitext(os.path.basename(rules_file))[0]
@@ -1091,10 +1106,9 @@ class OutlookSecurityAgent:
         """Get rules from YAML file if available, otherwise from Outlook"""
         # 03/31/2025 Harold Kimmey Changing import rules from CSV to YAML file (easy import/export via JSON/YAML)
 
-        YAML_rules = []
-        selected_rules_file = YAML_RULES_FILE_REGEX if use_regex_files else YAML_RULES_FILE
-        YAML_rules = self.get_yaml_rules(selected_rules_file)
-        self.log_print(f"Import rules from YAML ({selected_rules_file})")
+        # Note: actual file chosen will be self.active_rules_file set by main()
+        YAML_rules = self.get_yaml_rules()
+        self.log_print(f"Import rules from YAML ({self.active_rules_file})")
 
         #Stop getting Outlook Rules
         # outlook_rules = []
@@ -1107,8 +1121,7 @@ class OutlookSecurityAgent:
         # debugging - for future runs, no longer use Outlook rules
         #rules = outlook_rules
 
-        selected_safe_senders_file = YAML_RULES_SAFE_SENDERS_FILE_REGEX if use_regex_files else YAML_RULES_SAFE_SENDERS_FILE
-        safe_senders = self.get_safe_senders_rules(selected_safe_senders_file)
+        safe_senders = self.get_safe_senders_rules()
 
         # **NOT needed - after verifying, these lines can be removed
         # # Extract rules array from dictionary if needed
@@ -2850,7 +2863,13 @@ def main():
 
         agent.log_print(f"Operating mode: {'REGEX (default)' if effective_use_regex_files else 'LEGACY (fallback flag)'}")
 
-        # Load rules using effective mode
+        # Set active files to align reads/writes with mode
+        agent.active_rules_file = YAML_RULES_FILE_REGEX if effective_use_regex_files else YAML_RULES_FILE
+        agent.active_safe_senders_file = YAML_RULES_SAFE_SENDERS_FILE_REGEX if effective_use_regex_files else YAML_RULES_SAFE_SENDERS_FILE
+        agent.log_print(f"Using rules file: {agent.active_rules_file}")
+        agent.log_print(f"Using safe_senders file: {agent.active_safe_senders_file}")
+
+        # Load rules using active files
         rules_json, safe_senders = agent.get_rules(use_regex_files=effective_use_regex_files)
 
         # Process last N days of emails - see DAYS_BACK_DEFAULT
@@ -2861,9 +2880,9 @@ def main():
         agent.log_print(f"{CRLF}End email analysis{CRLF}")
 
         # Export rules every time (saving copies to backups to Archive directory)
-        agent.export_rules_to_yaml(rules_json)
+        agent.export_rules_to_yaml(rules_json)  # defaults to agent.active_rules_file
 
-        agent.export_safe_senders_to_yaml(safe_senders)
+        agent.export_safe_senders_to_yaml(safe_senders)  # defaults to agent.active_safe_senders_file
 
         simple_print(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}")
         simple_print(f"=============================================================\n")

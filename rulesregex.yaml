@@ -12,27 +12,37 @@
     "from": []
     "header":
     - ".*\\-offers\\.com"
+    - ".*\\-offers\\.com$"
     - ".*\\.meredith\\.com"
+    - ".*\\.meredith\\.com$"
     - ".*ofefrsdtops.*"
+    - ".*ofefrsdtops.*$"
     - "/locals\\.com"
-    - "@%\\-offers\\.com"
-    - "@%\\.ru"
-    - "@%\\.space"
-    - "@%offernet\\.com"
-    - "@%offert\\.com"
-    - "@.*\\.nwm"
-    - "@.*\\.online\\.com"
-    - "@.*grubfeed\\.com"
-    - "@.*ofefrsdtops.*"
-    - "@15mingroup\\."
-    - "@24x7\\.com"
-    - "@2lai\\.top"
-    - "@310606176\\.honestlife\\.it\\.com"
-    - "@310606176\\.honestlifes\\.com"
-    - "@36075957\\.mailchimpapp\\.com"
-    - "@3qei\\.com"
-    - "@\\..*\\\\\\.ac\\\\\\.ir"
-    - "@\\..*\\\\\\.jp\\\\\\.net"
+    - "/locals\\.com$"
+    - "@(.*\\.)?bigrecipe\\.com$"
+    - "@(.*\\.)?funnysnails\\.com$"
+    - "@(.*\\.)?laughorshutup\\.com$"
+    - "@(.*\\.)?lettermuse\\.com$"
+    - "@(.*\\.)?nationalcircus\\.com$"
+    - "@(.*\\.)?shesofunny\\.com$"
+    - "@.*\\-offers\\.com$"
+    - "@.*\\.ac\\.ir$"
+    - "@.*\\.jp\\.net$"
+    - "@.*\\.nwm$"
+    - "@.*\\.online\\.com$"
+    - "@.*\\.ru$"
+    - "@.*\\.space$"
+    - "@.*grubfeed\\.com$"
+    - "@.*ofefrsdtops.*$"
+    - "@.*offernet\\.com$"
+    - "@.*offert\\.com$"
+    - "@15mingroup\\.$"
+    - "@24x7\\.com$"
+    - "@2lai\\.top$"
+    - "@310606176\\.honestlife\\.it\\.com$"
+    - "@310606176\\.honestlifes\\.com$"
+    - "@36075957\\.mailchimpapp\\.com$"
+    - "@3qei\\.com$"
     - "@a\\.veritasliberty\\.com"
     - "@aamuap\\.com"
     - "@aarielhall\\."
@@ -1452,6 +1462,7 @@
     - "@rapsolar\\.com"
     - "@raptarr\\.com"
     - "@ratleg\\.nl"
+    - "@rau.fourthedral.org.uk"
     - "@raullazar\\."
     - "@rausieusach\\.com"
     - "@ravdretyhukol\\.store"
@@ -1540,6 +1551,7 @@
     - "@schultz\\.dreamfathom\\.org"
     - "@scokelo\\.com"
     - "@scoutbazaar\\.one"
+    - "@scrackhe.com"
     - "@screepin\\.com"
     - "@sctelco\\.net\\.au"
     - "@scvgo\\.com"
@@ -1617,24 +1629,6 @@
     - "@smileathlon\\.com"
     - "@smitham\\.urbandreamx\\.dev"
     - "@smokepages\\.com"
-    - "@smtp1\\.bigrecipe\\.com"
-    - "@smtp1\\.funnysnails\\.com"
-    - "@smtp1\\.lettermuse\\.com"
-    - "@smtp1\\.nationalcircus\\.com"
-    - "@smtp2\\.bigrecipe\\.com"
-    - "@smtp2\\.funnysnails\\.com"
-    - "@smtp2\\.laughorshutup\\.com"
-    - "@smtp2\\.nationalcircus\\.com"
-    - "@smtp2\\.shesofunny\\.com"
-    - "@smtp3\\.funnysnails\\.com"
-    - "@smtp3\\.laughorshutup\\.com"
-    - "@smtp3\\.lettermuse\\.com"
-    - "@smtp3\\.nationalcircus\\.com"
-    - "@smtp3\\.shesofunny\\.com"
-    - "@smtp4\\.funnysnails\\.com"
-    - "@smtp4\\.lettermuse\\.com"
-    - "@smtp4\\.nationalcircus\\.com"
-    - "@smtp4\\.shesofunny\\.com"
     - "@smudmarketplace\\.com"
     - "@smuniversity\\.org"
     - "@socialapparatus\\.com"
@@ -2199,7 +2193,7 @@
     "header": []
     "subject": []
   "metadata":
-    "last_modified": "2025-09-20T22:40:35.220760"
+    "last_modified": "2025-09-22T09:01:19.267158"
     "created_by": "system"
     "tags":
     - "spam"
@@ -3353,7 +3347,7 @@
     "header": []
     "subject": []
   "metadata":
-    "last_modified": "2025-09-20T22:40:35.220760"
+    "last_modified": "2025-09-22T09:01:19.267158"
     "created_by": "system"
     "tags":
     - "spam"
@@ -3392,7 +3386,7 @@
     "header": []
     "subject": []
   "metadata":
-    "last_modified": "2025-09-20T22:40:35.220760"
+    "last_modified": "2025-09-22T09:01:19.267158"
     "created_by": "system"
     "tags":
     - "spam"
@@ -3457,7 +3451,7 @@
     "header": []
     "subject": []
   "metadata":
-    "last_modified": "2025-09-20T22:40:35.220760"
+    "last_modified": "2025-09-22T09:01:19.267158"
     "created_by": "system"
     "tags":
     - "spam"
@@ -3497,7 +3491,7 @@
     "header": []
     "subject": []
   "metadata":
-    "last_modified": "2025-09-20T22:40:35.220760"
+    "last_modified": "2025-09-22T09:01:19.267158"
     "created_by": "system"
     "tags":
     - "spam"
