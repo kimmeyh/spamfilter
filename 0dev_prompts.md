@@ -1,5 +1,10 @@
 Next:
 @workspace 'withOutlookRulesYAM.py' 'rulesregex.yaml' "do not use 0dev_prompts.md"
+Reminder to use the memory-bank MCP server and memory-bank/ files to understand the workspace
+Can you help me update how domains are added to the rulesregex.yaml file.
+If the user confirms by responding with a 'd' to add a domain, first find the first sub-domain below the top-level domain.  Then add a regex based on this sub-domain based on this 
+Example:  '@<any sub-domain>.<any-subdomain...>.<specific sub-domain, ex yglic>.<any sub-domain>.<any-subdomain...>.<any top-level domain>" should result in '@(?:[a-z0-9-]+\.)*ygllc\.[a-z0-9.-]+$'
+
 
 use memory-bank to understand the workspace
 Any code that should be removed should be commented out and not deleted.

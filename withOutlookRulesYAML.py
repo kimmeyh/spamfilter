@@ -180,7 +180,7 @@ CRLF = "\n"             # Carriage return and line feed for formatting
 
 
 def simple_print(message):
-    """Print message to a file or stdout based on OUTLOOK_SIMPLE_LOG"""
+    r"""Print message to a file or stdout based on OUTLOOK_SIMPLE_LOG"""
     if OUTLOOK_SIMPLE_LOG:
         with open(OUTLOOK_SIMPLE_LOG, 'a') as f:
             f.write(message + '\n')
@@ -189,7 +189,7 @@ def simple_print(message):
 
 class OutlookSecurityAgent:
     def __init__(self, email_address=EMAIL_ADDRESS, folder_names=EMAIL_BULK_FOLDER_NAMES, debug_mode=DEBUG, test_mode=False):
-        """
+        r"""
         Initialize the Outlook Security Agent with specific account and folders
 
         Args:
@@ -275,8 +275,65 @@ class OutlookSecurityAgent:
             "SpamAutoDeleteSubject":        "SpamSubject"
         }
 
+    def build_domain_regex_from_address(self, addr_or_domain: str) -> str:
+        r"""
+        Build a domain regex anchored on the first meaningful subdomain below the TLD.
+
+        Output form:
+            '@(?:[a-z0-9-]+\.)*<anchor>\.[a-z0-9.-]+$'
+
+        Where <anchor> is chosen by scanning left from the TLD to find a label that:
+          - is not a common infra label (www, mail, smtp, ...), and
+          - is at least 3 chars (to avoid overly-generic anchors), and
+          - matches [a-z0-9-]+
+
+        Example desired behavior:
+            Description of desired outcome: '@<any sub-domain>.<any-subdomain...>.<specific sub-domain, ex "yglic">.<any sub-domain>.<any-subdomain...>.<any top-level domain>" 
+                          should result in: '@(?:[a-z0-9-]+\.)*ygllc\.[a-z0-9.-]+$'
+        """
+        s = (addr_or_domain or '').strip().lower()
+
+        # Extract domain portion
+        if s.startswith('@'):
+            domain = s[1:]
+        elif '@' in s:
+            domain = s.split('@', 1)[1]
+        else:
+            domain = s
+
+        domain = domain.strip('.')
+        labels = [lbl for lbl in domain.split('.') if lbl]
+
+        # Fallbacks
+        if len(labels) == 0: #complete failure to find base domain as desired
+            self.log_print(f"Could not find any specific sub-domain in: {addr_or_domain}")
+            return addr_or_domain
+        if len(labels) == 1:
+            anchor = labels[0]
+            self.log_print(f"Found selected highest sub-domain in add domain request: {re.escape(anchor)} from: {addr_or_domain}")
+            return f"@(?:[a-z0-9-]+\\.)*{re.escape(anchor)}\\.[a-z0-9.-]+$"
+
+        SKIP_LABELS = {
+            'www', 'mail', 'smtp', 'mx', 'ns', 'cdn', 'img', 'static', 'assets',
+            'api', 'dev', 'test', 'stg', 'stage', 'beta',
+            'co', 'com', 'net', 'org', 'gov', 'edu', 'mil', 'biz', 'info',
+            'news', 'shop', 'store', 'support'
+        }
+
+        anchor = None
+        for i in range(len(labels) - 2, -1, -1):
+            candidate = labels[i]
+            if candidate and candidate not in SKIP_LABELS and re.fullmatch(r'[a-z0-9-]{3,}', candidate):
+                anchor = candidate
+                break
+        if not anchor:
+            anchor = labels[-2]
+                    
+        self.log_print(f"Found selected highest sub-domain in add domain request: {re.escape(anchor)} from: {addr_or_domain}")
+        return f"@(?:[a-z0-9-]+\\.)*{re.escape(anchor)}\\.[a-z0-9.-]+$"
+
     def set_active_mode(self, use_regex_files: bool):
-        """Set active read/write files based on desired mode and log the selection."""
+        r"""Set active read/write files based on desired mode and log the selection."""
         self.active_rules_file = YAML_RULES_FILE_REGEX if use_regex_files else YAML_RULES_FILE
         self.active_safe_senders_file = YAML_RULES_SAFE_SENDERS_FILE_REGEX if use_regex_files else YAML_RULES_SAFE_SENDERS_FILE
         self.log_print(f"Operating mode: {'REGEX (default)' if use_regex_files else 'LEGACY (fallback flag)'}")
@@ -284,13 +341,13 @@ class OutlookSecurityAgent:
         self.log_print(f"Using safe_senders file: {self.active_safe_senders_file}")
 
     def convert_safe_senders_yaml_to_regex(self, source_file=YAML_RULES_SAFE_SENDERS_FILE, dest_file=YAML_RULES_SAFE_SENDERS_FILE_REGEX):
-        """Convert safe_senders.yaml entries into regex-compatible patterns and write to parallel file.
+        r"""Convert safe_senders.yaml entries into regex-compatible patterns and write to parallel file.
 
         - Treat '*' as glob wildcard -> '.*'
         - Escape other regex metacharacters
         - Keep lowercase, sorted, unique via export_safe_senders_to_yaml
         - Create backups via export method
-        """
+    """
         try:
             src = self.get_safe_senders_rules(source_file)
             patterns = src.get("safe_senders", []) if isinstance(src, dict) else []
@@ -324,14 +381,14 @@ class OutlookSecurityAgent:
             return False
 
     def convert_rules_yaml_to_regex(self, source_file=YAML_RULES_FILE, dest_file=YAML_RULES_FILE_REGEX):
-        """Convert rules.yaml to rulesregex.yaml by converting header/body/subject/from lists to regex.
+        r"""Convert rules.yaml to rulesregex.yaml by converting header/body/subject/from lists to regex.
 
         - Replace '*' with '.*' (glob to regex)
         - Escape other regex metacharacters using re.escape
         - Lowercase/trim entries
         - Preserve overall YAML structure (version/settings/metadata), but ensure rules are normalized
         - Use export_rules_to_yaml to sort/dedupe lists and back up
-        """
+    """
         try:
             doc = self.get_yaml_rules(source_file)
             if not doc or not isinstance(doc, dict) or 'rules' not in doc:
@@ -391,14 +448,14 @@ class OutlookSecurityAgent:
         return
 
     def _sanitize_string(self, s):
-        """Sanitize string to replace non-ASCII characters"""
+        r"""Sanitize string to replace non-ASCII characters"""
         try:
             return re.sub(r'[^\x00-\x7F]+', '', s)
         except UnicodeEncodeError:
             return re.sub(r'[^\x00-\x7F]+', '', s.encode('utf-8', 'replace').decode('utf-8'))
 
     def _get_account_folder(self, email_address, folder_name):
-        """Get a specific folder from a specific email account"""
+        r"""Get a specific folder from a specific email account"""
         self.log_print(f"Searching for folder: {folder_name} in account: {email_address}", "DEBUG")
 
         try:
@@ -519,7 +576,7 @@ class OutlookSecurityAgent:
         return differences
 
     def _deep_compare_lists(self, list1, list2, path=""):
-        """Compare two lists and return differences."""
+        r"""Compare two lists and return differences."""
         differences = []
 
         # Check for length differences
@@ -637,7 +694,7 @@ class OutlookSecurityAgent:
 
 
     def output_rules_differences(self, rule_set_one, rule_set_one_name, rule_set_two, rule_set_two_name):
-        """Output the differences between 2 sets of JSON rules"""
+        r"""Output the differences between 2 sets of JSON rules"""
         differences = self.compare_rules(rule_set_one, rule_set_two)
 
         # Print the differences
@@ -700,7 +757,7 @@ class OutlookSecurityAgent:
     #     return options_dict # will need to be converted and appended to the json rules object
 
     def get_outlook_rules(self):    # no longer in use - YAML rules file is used
-        """
+        r"""
         Convert Outlook rules to JSON format with comprehensive error checking.
         Returns a list of rule dictionaries with all available properties.
         """
@@ -766,7 +823,7 @@ class OutlookSecurityAgent:
             return json.dumps({"error": str(e)})
 
     def get_safe_senders_rules(self, rules_file=None):
-        """
+        r"""
         Read safe senders from YAML file and return as JSON object.
         The safe_senders YAML file contains a list of patterns that can be email addresses or domains.
 
@@ -775,7 +832,7 @@ class OutlookSecurityAgent:
 
         Returns:
             list: List of safe sender patterns, or empty list if file not found/error
-        """
+    """
 
         self.log_print("Importing safe senders from YAML file...")
         safe_senders = []
@@ -1861,19 +1918,34 @@ class OutlookSecurityAgent:
                         response = self.get_safe_input(prompt, expected_responses)
                         if response == 'd':
                             # Find the SpamAutoDeleteHeader rule in the rules list and append to its header conditions
+                            # On 'd', add a domain-based regex anchored on the first meaningful subdomain below the TLD
                             for rule in rules_json["rules"]:
                                 if rule["name"] == "SpamAutoDeleteHeader":
                                     if "header" not in rule["conditions"]:
                                         rule["conditions"]["header"] = []
-                                    rule["conditions"]["header"].append(from_domain)
-                                    rule_updated = True
-                                    self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
-                                    simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+
                                     try:
-                                        self.export_rules_to_yaml(rules_json)
-                                        self.log_print(f"Appended to: {self.active_rules_file}")
+                                        domain_regex = self.build_domain_regex_from_address(from_domain or from_email)
                                     except Exception:
-                                        pass
+                                        # Conservative default if unexpected input
+                                        domain_regex = '@(?:[a-z0-9-]+\\.)*[a-z0-9-]+\\.[a-z0-9.-]+$'
+
+                                    # Avoid duplicates
+                                    if domain_regex not in rule["conditions"]["header"]:
+                                        rule["conditions"]["header"].append(domain_regex)
+                                        rule_updated = True
+                                        self.log_print(f"Added domain regex '{domain_regex}' to SpamAutoDeleteHeader rule")
+                                        simple_print(f"Added domain regex '{domain_regex}' to SpamAutoDeleteHeader rule")
+                                        try:
+                                            self.export_rules_to_yaml(rules_json)
+                                            self.log_print(f"Appended to: {self.active_rules_file}")
+                                        except Exception:
+                                            pass
+
+                                    # Previous literal behavior retained for reference:
+                                    # rule["conditions"]["header"].append(from_domain)
+                                    # self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+                                    # simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
                         elif response == 's':
                             # Add from_domain to safe_senders list
                             safe_senders["safe_senders"].append(from_domain)  # working HK 05/18/25
