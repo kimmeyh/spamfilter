@@ -347,7 +347,7 @@ class OutlookSecurityAgent:
         - Escape other regex metacharacters
         - Keep lowercase, sorted, unique via export_safe_senders_to_yaml
         - Create backups via export method
-    """
+        """
         try:
             src = self.get_safe_senders_rules(source_file)
             patterns = src.get("safe_senders", []) if isinstance(src, dict) else []
@@ -388,7 +388,7 @@ class OutlookSecurityAgent:
         - Lowercase/trim entries
         - Preserve overall YAML structure (version/settings/metadata), but ensure rules are normalized
         - Use export_rules_to_yaml to sort/dedupe lists and back up
-    """
+        """
         try:
             doc = self.get_yaml_rules(source_file)
             if not doc or not isinstance(doc, dict) or 'rules' not in doc:
@@ -727,7 +727,7 @@ class OutlookSecurityAgent:
 
     # NOTE: tried to get the outlook junk email options and lists, but could not get it to work
     # def get_outlook_junk_mail_options(self):
-    #     """
+    #     r"""
     #     Retrieve the Outlook Junk Email Options settings (as shown in Outlook Classic > Home > Junk Email Options > Options)
     #     and convert them to a dictionary for further processing or export.
     #     """
@@ -832,7 +832,7 @@ class OutlookSecurityAgent:
 
         Returns:
             list: List of safe sender patterns, or empty list if file not found/error
-    """
+        """
 
         self.log_print("Importing safe senders from YAML file...")
         safe_senders = []
@@ -1244,7 +1244,7 @@ class OutlookSecurityAgent:
             self.log_print(f"Error printing rules summary: {str(e)}")
 
     def combine_email_header_lines(self, email_header):
-        """
+        r"""
         Combine email headers, handling lines split across multiple lines, and find the first line containing "from:".
 
         Args:
@@ -1275,7 +1275,7 @@ class OutlookSecurityAgent:
         return updated_email_header
 
     def header_from(self, email_header):
-        """
+        r"""
         Process email headers to find the first line containing "from:" and extract the domain.
 
         Args:
@@ -1309,7 +1309,7 @@ class OutlookSecurityAgent:
         return blank
 
     def from_report(self, emails_to_process, emails_added_info, rules_json):
-        """
+        r"""
         Generate a report of emails with phishing indicators or no rule matches, including the From domain.
 
         Args:
@@ -1380,7 +1380,7 @@ class OutlookSecurityAgent:
         return unique_stubs
 
     def URL_report(self, emails_to_process, emails_added_info):
-        """
+        r"""
         Generate a report of emails with phishing indicators or no rule matches,
             including unique URL stubs "/<domain>.<>" and ".<domain>.<>" from the body.
 
@@ -1708,7 +1708,7 @@ class OutlookSecurityAgent:
         return actions
 
     def get_safe_input(self, prompt_text, valid_responses=None, isregex=False):
-        """
+        r"""
         Get user input with security validation.
 
         Args:
@@ -1766,7 +1766,7 @@ class OutlookSecurityAgent:
 
 
     def prompt_update_rules(self, emails_to_process, emails_added_info, rules_json, safe_senders):
-        """
+        r"""
         Prompt user to update rules based on unfiltered emails.
 
         Args:
@@ -2009,7 +2009,7 @@ class OutlookSecurityAgent:
         return indicators
 
     def delete_email_with_retry(self, email, max_retries=10, delay=1):
-        """
+        r"""
         Attempt to delete an email with retries.
 
         Args:
@@ -2051,7 +2051,7 @@ class OutlookSecurityAgent:
         return
 
     def move_email_with_retry(self, email, target_folder, max_retries=10, delay=1):
-        """
+        r"""
         Attempt to move an email to a target folder with retries.
         First it makes a copy of the email, then it moves it to the inbox
         Args:
@@ -2077,7 +2077,7 @@ class OutlookSecurityAgent:
         return
 
     def mark_email_read_with_retry(self, email, max_retries=10, delay=1):
-        """
+        r"""
         Attempt to mark an email as unread with retries.
 
         Args:
@@ -2101,7 +2101,7 @@ class OutlookSecurityAgent:
         return
 
     def clear_email_flag_with_retry(self, email, max_retries=10, delay=1):
-        """
+        r"""
         Attempt to clear the flag on an email; with with retries.
 
         Args:
@@ -2124,7 +2124,7 @@ class OutlookSecurityAgent:
         return
 
     def assign_category_to_email_with_retry(self, email, category_name, max_retries=10, delay=1):
-        """
+        r"""
         Attempt to mark an email as unread with retries.
 
         Args:
@@ -2147,7 +2147,7 @@ class OutlookSecurityAgent:
         return
 
     def _get_emails_from_folder(self, folder, days_back):
-        """Helper method to get emails from a specific folder for reprocessing"""
+        r"""Helper method to get emails from a specific folder for reprocessing"""
         try:
             # Create date restriction for recent emails
             restriction = "[ReceivedTime] >= '" + \
@@ -2190,7 +2190,7 @@ class OutlookSecurityAgent:
         return False, None
 
     def _regex_match_header_any(self, compiled_patterns, email_header: str, sender_email: str):
-        """Match only against the displayed tokens: From (sender email) and Domain (extracted).
+        r"""Match only against the displayed tokens: From (sender email) and Domain (extracted).
 
         This aligns matching with what is printed during -u: "From:" and "Domain:",
         after stripping leading/trailing spaces.
