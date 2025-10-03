@@ -159,6 +159,11 @@ YAML_RULES_FILE = YAML_RULES_PATH + "rules.yaml"
 #YAML_RULES_FILE = YAML_RULES_PATH + "rules_new.yaml" # this was temporary and no longer needed
 YAML_RULES_SAFE_SENDERS_FILE    = YAML_RULES_PATH + "rules_safe_senders.yaml"
 
+# Regex-mode YAML variants (used when --use-regex-files is enabled)
+# Keeping originals; do not remove commented-out lines.
+YAML_RULES_FILE_REGEX = YAML_RULES_PATH + "rulesregex.yaml"
+YAML_RULES_SAFE_SENDERS_FILE_REGEX = YAML_RULES_PATH + "rules_safe_sendersregex.yaml"
+
 # not sure if these will be used
 YAML_RULES_BODY_FILE            = YAML_RULES_PATH + "rules_body.yaml"
 YAML_RULES_HEADER_FILE          = YAML_RULES_PATH + "rules_header.yaml"
@@ -175,7 +180,7 @@ CRLF = "\n"             # Carriage return and line feed for formatting
 
 
 def simple_print(message):
-    """Print message to a file or stdout based on OUTLOOK_SIMPLE_LOG"""
+    r"""Print message to a file or stdout based on OUTLOOK_SIMPLE_LOG"""
     if OUTLOOK_SIMPLE_LOG:
         with open(OUTLOOK_SIMPLE_LOG, 'a') as f:
             f.write(message + '\n')
@@ -184,7 +189,7 @@ def simple_print(message):
 
 class OutlookSecurityAgent:
     def __init__(self, email_address=EMAIL_ADDRESS, folder_names=EMAIL_BULK_FOLDER_NAMES, debug_mode=DEBUG, test_mode=False):
-        """
+        r"""
         Initialize the Outlook Security Agent with specific account and folders
 
         Args:
@@ -205,10 +210,15 @@ class OutlookSecurityAgent:
         else:
             self.outlook = win32com.client.Dispatch(WIN32_CLIENT_DISPATCH)
             self.namespace = self.outlook.GetNamespace(OUTLOOK_GETNAMESPACE)
-            
+
+        # Default file paths (legacy by default)
         self.YAMO_RULES_PATH = YAML_RULES_PATH  # Set appropriate default path
-        self.YAML_RULES_FILE = YAML_RULES_FILE  # Set appropriate default file name
-        self.YAML_SAFE_SENDERS_FILE = YAML_RULES_SAFE_SENDERS_FILE  # Set appropriate default file name
+        self.YAML_RULES_FILE = YAML_RULES_FILE  # Default legacy rules file
+        self.YAML_SAFE_SENDERS_FILE = YAML_RULES_SAFE_SENDERS_FILE  # Default legacy safe senders file
+
+        # Active files used for all reads/writes; main() will set these based on CLI flags
+        self.active_rules_file = self.YAML_RULES_FILE
+        self.active_safe_senders_file = self.YAML_SAFE_SENDERS_FILE
 
         # Configure logging
         log_format = '%(asctime)s - %(levelname)s - %(message)s'
@@ -265,6 +275,165 @@ class OutlookSecurityAgent:
             "SpamAutoDeleteSubject":        "SpamSubject"
         }
 
+    def build_domain_regex_from_address(self, addr_or_domain: str) -> str:
+        r"""
+        Build a domain regex anchored on the first meaningful subdomain below the TLD.
+
+        Output form:
+            '@(?:[a-z0-9-]+\.)*<anchor>\.[a-z0-9.-]+$'
+
+        Where <anchor> is chosen by scanning left from the TLD to find a label that:
+          - is not a common infra label (www, mail, smtp, ...), and
+          - is at least 3 chars (to avoid overly-generic anchors), and
+          - matches [a-z0-9-]+
+
+        Example desired behavior:
+            Description of desired outcome: '@<any sub-domain>.<any-subdomain...>.<specific sub-domain, ex "yglic">.<any sub-domain>.<any-subdomain...>.<any top-level domain>" 
+                          should result in: '@(?:[a-z0-9-]+\.)*ygllc\.[a-z0-9.-]+$'
+        """
+        s = (addr_or_domain or '').strip().lower()
+
+        # Extract domain portion
+        if s.startswith('@'):
+            domain = s[1:]
+        elif '@' in s:
+            domain = s.split('@', 1)[1]
+        else:
+            domain = s
+
+        domain = domain.strip('.')
+        labels = [lbl for lbl in domain.split('.') if lbl]
+
+        # Fallbacks
+        if len(labels) == 0: #complete failure to find base domain as desired
+            self.log_print(f"Could not find any specific sub-domain in: {addr_or_domain}")
+            return addr_or_domain
+        if len(labels) == 1:
+            anchor = labels[0]
+            self.log_print(f"Found selected highest sub-domain in add domain request: {re.escape(anchor)} from: {addr_or_domain}")
+            return f"@(?:[a-z0-9-]+\\.)*{re.escape(anchor)}\\.[a-z0-9.-]+$"
+
+        SKIP_LABELS = {
+            'www', 'mail', 'smtp', 'mx', 'ns', 'cdn', 'img', 'static', 'assets',
+            'api', 'dev', 'test', 'stg', 'stage', 'beta',
+            'co', 'com', 'net', 'org', 'gov', 'edu', 'mil', 'biz', 'info',
+            'news', 'shop', 'store', 'support'
+        }
+
+        anchor = None
+        for i in range(len(labels) - 2, -1, -1):
+            candidate = labels[i]
+            if candidate and candidate not in SKIP_LABELS and re.fullmatch(r'[a-z0-9-]{3,}', candidate):
+                anchor = candidate
+                break
+        if not anchor:
+            anchor = labels[-2]
+                    
+        self.log_print(f"Found selected highest sub-domain in add domain request: {re.escape(anchor)} from: {addr_or_domain}")
+        return f"@(?:[a-z0-9-]+\\.)*{re.escape(anchor)}\\.[a-z0-9.-]+$"
+
+    def set_active_mode(self, use_regex_files: bool):
+        r"""Set active read/write files based on desired mode and log the selection."""
+        self.active_rules_file = YAML_RULES_FILE_REGEX if use_regex_files else YAML_RULES_FILE
+        self.active_safe_senders_file = YAML_RULES_SAFE_SENDERS_FILE_REGEX if use_regex_files else YAML_RULES_SAFE_SENDERS_FILE
+        self.log_print(f"Operating mode: {'REGEX (default)' if use_regex_files else 'LEGACY (fallback flag)'}")
+        self.log_print(f"Using rules file: {self.active_rules_file}")
+        self.log_print(f"Using safe_senders file: {self.active_safe_senders_file}")
+
+    def convert_safe_senders_yaml_to_regex(self, source_file=YAML_RULES_SAFE_SENDERS_FILE, dest_file=YAML_RULES_SAFE_SENDERS_FILE_REGEX):
+        r"""Convert safe_senders.yaml entries into regex-compatible patterns and write to parallel file.
+
+        - Treat '*' as glob wildcard -> '.*'
+        - Escape other regex metacharacters
+        - Keep lowercase, sorted, unique via export_safe_senders_to_yaml
+        - Create backups via export method
+        """
+        try:
+            src = self.get_safe_senders_rules(source_file)
+            patterns = src.get("safe_senders", []) if isinstance(src, dict) else []
+
+            def to_regex(p: str) -> str:
+                if not isinstance(p, str):
+                    p = str(p)
+                raw = p.strip().lower()
+                # Preserve wildcard semantics for '*': replace temporarily, escape, then restore
+                placeholder = "__WILDCARD__"
+                raw = raw.replace('*', placeholder)
+                escaped = re.escape(raw)
+                # Restore wildcard as '.*'
+                escaped = escaped.replace(placeholder, ".*")
+                return escaped
+
+            converted = [to_regex(p) for p in patterns]
+
+            # Build document structure compatible with export
+            out_doc = {"safe_senders": converted}
+
+            # Reuse export to normalize (lowercase, dedupe, sort) and back up, writing to dest_file
+            ok = self.export_safe_senders_to_yaml(out_doc, rules_file=dest_file)
+            if ok:
+                self.log_print(f"Converted {len(converted)} safe_senders to regex and wrote {dest_file}")
+            else:
+                self.log_print(f"Failed to write converted safe_senders to {dest_file}")
+            return ok
+        except Exception as e:
+            self.log_print(f"Error converting safe_senders to regex: {str(e)}")
+            return False
+
+    def convert_rules_yaml_to_regex(self, source_file=YAML_RULES_FILE, dest_file=YAML_RULES_FILE_REGEX):
+        r"""Convert rules.yaml to rulesregex.yaml by converting header/body/subject/from lists to regex.
+
+        - Replace '*' with '.*' (glob to regex)
+        - Escape other regex metacharacters using re.escape
+        - Lowercase/trim entries
+        - Preserve overall YAML structure (version/settings/metadata), but ensure rules are normalized
+        - Use export_rules_to_yaml to sort/dedupe lists and back up
+        """
+        try:
+            doc = self.get_yaml_rules(source_file)
+            if not doc or not isinstance(doc, dict) or 'rules' not in doc:
+                self.log_print(f"No rules found in {source_file}")
+                return False
+
+            def to_regex(p: str) -> str:
+                if not isinstance(p, str):
+                    p = str(p)
+                raw = p.strip().lower()
+                placeholder = "__WILDCARD__"
+                raw = raw.replace('*', placeholder)
+                escaped = re.escape(raw)
+                escaped = escaped.replace(placeholder, ".*")
+                return escaped
+
+            new_doc = json.loads(json.dumps(doc))  # deep copy via JSON
+            for rule in new_doc.get('rules', []):
+                if not isinstance(rule, dict):
+                    continue
+                # Convert conditions
+                cond = rule.get('conditions') or {}
+                for key in ['header', 'body', 'subject', 'from']:
+                    vals = cond.get(key)
+                    if isinstance(vals, list):
+                        cond[key] = [to_regex(v) for v in vals]
+                rule['conditions'] = cond
+                # Convert exceptions
+                exc = rule.get('exceptions') or {}
+                for key in ['header', 'body', 'subject', 'from']:
+                    vals = exc.get(key)
+                    if isinstance(vals, list):
+                        exc[key] = [to_regex(v) for v in vals]
+                rule['exceptions'] = exc
+
+            ok = self.export_rules_to_yaml(new_doc, rules_file=dest_file)
+            if ok:
+                self.log_print(f"Converted rules to regex and wrote {dest_file}")
+            else:
+                self.log_print(f"Failed to write converted rules to {dest_file}")
+            return ok
+        except Exception as e:
+            self.log_print(f"Error converting rules to regex: {str(e)}")
+            return False
+
     def log_print(self, message, level="INFO"):
         try:
             sanitized_message = self._sanitize_string(message)
@@ -279,14 +448,14 @@ class OutlookSecurityAgent:
         return
 
     def _sanitize_string(self, s):
-        """Sanitize string to replace non-ASCII characters"""
+        r"""Sanitize string to replace non-ASCII characters"""
         try:
             return re.sub(r'[^\x00-\x7F]+', '', s)
         except UnicodeEncodeError:
             return re.sub(r'[^\x00-\x7F]+', '', s.encode('utf-8', 'replace').decode('utf-8'))
 
     def _get_account_folder(self, email_address, folder_name):
-        """Get a specific folder from a specific email account"""
+        r"""Get a specific folder from a specific email account"""
         self.log_print(f"Searching for folder: {folder_name} in account: {email_address}", "DEBUG")
 
         try:
@@ -407,7 +576,7 @@ class OutlookSecurityAgent:
         return differences
 
     def _deep_compare_lists(self, list1, list2, path=""):
-        """Compare two lists and return differences."""
+        r"""Compare two lists and return differences."""
         differences = []
 
         # Check for length differences
@@ -525,7 +694,7 @@ class OutlookSecurityAgent:
 
 
     def output_rules_differences(self, rule_set_one, rule_set_one_name, rule_set_two, rule_set_two_name):
-        """Output the differences between 2 sets of JSON rules"""
+        r"""Output the differences between 2 sets of JSON rules"""
         differences = self.compare_rules(rule_set_one, rule_set_two)
 
         # Print the differences
@@ -558,7 +727,7 @@ class OutlookSecurityAgent:
 
     # NOTE: tried to get the outlook junk email options and lists, but could not get it to work
     # def get_outlook_junk_mail_options(self):
-    #     """
+    #     r"""
     #     Retrieve the Outlook Junk Email Options settings (as shown in Outlook Classic > Home > Junk Email Options > Options)
     #     and convert them to a dictionary for further processing or export.
     #     """
@@ -588,7 +757,7 @@ class OutlookSecurityAgent:
     #     return options_dict # will need to be converted and appended to the json rules object
 
     def get_outlook_rules(self):    # no longer in use - YAML rules file is used
-        """
+        r"""
         Convert Outlook rules to JSON format with comprehensive error checking.
         Returns a list of rule dictionaries with all available properties.
         """
@@ -653,8 +822,8 @@ class OutlookSecurityAgent:
             self.log_print(f"Error accessing Outlook rules: {str(e)}")
             return json.dumps({"error": str(e)})
 
-    def get_safe_senders_rules(self, rules_file=YAML_RULES_SAFE_SENDERS_FILE):
-        """
+    def get_safe_senders_rules(self, rules_file=None):
+        r"""
         Read safe senders from YAML file and return as JSON object.
         The safe_senders YAML file contains a list of patterns that can be email addresses or domains.
 
@@ -670,6 +839,8 @@ class OutlookSecurityAgent:
         result = {"safe_senders": []}
 
         try:
+            if rules_file is None:
+                rules_file = self.active_safe_senders_file
             if not os.path.exists(rules_file):
                 self.log_print(f"Safe senders YAML file not found: {rules_file}")
                 return result
@@ -677,7 +848,8 @@ class OutlookSecurityAgent:
             # Read YAML file and convert to Python JSON object per rules_safe_senders.proto definition
             # The YAML file should contain a list of safe senders or a dictionary with a "safe_senders" key
             # where safe_senders[safe_senders] is a list of strings that hold regex pattern strings
-            with open(YAML_RULES_SAFE_SENDERS_FILE, 'r', encoding='utf-8') as yaml_file:
+            # Honor the rules_file parameter rather than the constant
+            with open(rules_file, 'r', encoding='utf-8') as yaml_file:
                 safe_senders = yaml.safe_load(yaml_file)
 
             if not safe_senders:    # check if file was empty or did not load correctly
@@ -703,11 +875,13 @@ class OutlookSecurityAgent:
             self.log_print(f"Traceback: {traceback.format_exc()}")
             return result
 
-    def get_yaml_rules(self, rules_file=YAML_RULES_FILE):
+    def get_yaml_rules(self, rules_file=None):
         """Import rules from yaml file and return as JSON object (not string)"""
         #*** UPdate to use .proto file
         self.log_print("Importing rules from YAML file...")
         try:
+            if rules_file is None:
+                rules_file = self.active_rules_file
             if not os.path.exists(rules_file):
                 self.log_print(f"Rules YAML file not found: {rules_file}")
                 return []
@@ -735,6 +909,24 @@ class OutlookSecurityAgent:
 
             # Convert to JSON using json.dumps and json.loads to ensure consistent structure
             result_json = json.loads(json.dumps(result, default=str))
+
+            # Optional diagnostics: show first few patterns per condition for quick visual scan
+            try:
+                preview_n = 3
+                cond_keys = ["from", "subject", "body", "header"]
+                head = {k: [] for k in cond_keys}
+                for rule in result_json.get("rules", [])[:preview_n]:
+                    conds = rule.get("conditions", {}) or {}
+                    for ck in cond_keys:
+                        vals = conds.get(ck)
+                        if isinstance(vals, list):
+                            head[ck].extend(vals[:preview_n])
+                for ck in cond_keys:
+                    if head[ck]:
+                        self.log_print(f"Initial {ck} patterns (first {preview_n}): {head[ck][:preview_n]}", level="DEBUG")
+            except Exception:
+                pass
+
             return result_json
 
         except Exception as e:
@@ -744,7 +936,7 @@ class OutlookSecurityAgent:
             self.log_print(f"Traceback: {traceback.format_exc()}")
             return []
 
-    def export_safe_senders_to_yaml(self, rules_json=None, rules_file=YAML_RULES_SAFE_SENDERS_FILE):
+    def export_safe_senders_to_yaml(self, rules_json=None, rules_file=None):
         """Export (updated) safe_senders JSON to yaml file"""
         # Update timestamp for each rule - may not be used
         timestamp_rule = datetime.now().isoformat()
@@ -779,6 +971,8 @@ class OutlookSecurityAgent:
 
             # 03/31/2025 Harold Kimmey Write json_rules to YAML file
             # Ensure directory exists
+            if rules_file is None:
+                rules_file = self.active_safe_senders_file
             rules_dir = os.path.dirname(rules_file)
             if rules_dir:  # Only create directory if path has a directory component
                 os.makedirs(rules_dir, exist_ok=True)
@@ -809,8 +1003,10 @@ class OutlookSecurityAgent:
 
             try:
                 with open(rules_file, 'w', encoding='utf-8') as yaml_file:
-                    yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False, default_style='"')
-                self.log_print(f"Successfully exported {len(standardized_rules["safe_senders"])} safe_senders to YAML file: {rules_file}")
+                    # Prefer single quotes when writing the regex safe_senders file to avoid escape churn
+                    default_style = "'" if os.path.basename(rules_file) == os.path.basename(YAML_RULES_SAFE_SENDERS_FILE_REGEX) else '"'
+                    yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False, default_style=default_style)
+                self.log_print(f"Successfully exported {len(standardized_rules['safe_senders'])} safe_senders to YAML file: {rules_file}")
 
                 # # Clean up - delete temporary file
                 # try:
@@ -833,7 +1029,7 @@ class OutlookSecurityAgent:
             return False
 
 
-    def export_rules_to_yaml(self, rules_json=None, rules_file=YAML_RULES_FILE):
+    def export_rules_to_yaml(self, rules_json=None, rules_file=None):
         """Export JSON/YAML rules to yaml file"""
         # Update timestamp for each rule
         timestamp = datetime.now().isoformat()
@@ -922,6 +1118,8 @@ class OutlookSecurityAgent:
 
             # 03/31/2025 Harold Kimmey Write json_rules to YAML file
             # Ensure directory exists
+            if rules_file is None:
+                rules_file = self.active_rules_file
             rules_dir = os.path.dirname(rules_file)
             if rules_dir:  # Only create directory if path has a directory component
                 os.makedirs(rules_dir, exist_ok=True)
@@ -937,6 +1135,8 @@ class OutlookSecurityAgent:
             #   If no errors writing the YAML_RULES_FILE, delete the temp file
 
             # Create a backup of the current YAML file if it exists
+            if rules_file is None:
+                rules_file = self.active_rules_file
             if os.path.exists(rules_file):
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 base_name = os.path.splitext(os.path.basename(rules_file))[0]
@@ -959,11 +1159,10 @@ class OutlookSecurityAgent:
             try:
 
                 with open(rules_file, 'w', encoding='utf-8') as yaml_file:
-                    # If somehow not a list, write as-is (fallback)
-                    #*** try new below to have all strings written with double quotes
-                    # temporarily remove #yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False)
-                    yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False, default_style='"', width=4096)
-                    self.log_print(f"Successfully exported {len(standardized_rules["rules"])} rules to YAML file: {rules_file}")
+                    # Prefer single quotes when writing the regex rules file to avoid escape churn
+                    default_style = "'" if os.path.basename(rules_file) == os.path.basename(YAML_RULES_FILE_REGEX) else '"'
+                    yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False, default_style=default_style, width=4096)
+                    self.log_print(f"Successfully exported {len(standardized_rules['rules'])} rules to YAML file: {rules_file}")
 
                 # Clean up - delete temporary file
                 # try:
@@ -986,14 +1185,14 @@ class OutlookSecurityAgent:
             return False
 
 
-    def get_rules(self):
+    def get_rules(self, use_regex_files: bool = False):
 
         """Get rules from YAML file if available, otherwise from Outlook"""
         # 03/31/2025 Harold Kimmey Changing import rules from CSV to YAML file (easy import/export via JSON/YAML)
 
-        YAML_rules = []
-        YAML_rules = self.get_yaml_rules(YAML_RULES_FILE)
-        self.log_print(f"Import rules from YAML ({YAML_RULES_FILE})")
+        # Note: actual file chosen will be self.active_rules_file set by main()
+        YAML_rules = self.get_yaml_rules()
+        self.log_print(f"Import rules from YAML ({self.active_rules_file})")
 
         #Stop getting Outlook Rules
         # outlook_rules = []
@@ -1006,17 +1205,17 @@ class OutlookSecurityAgent:
         # debugging - for future runs, no longer use Outlook rules
         #rules = outlook_rules
 
-        safe_senders = self.get_safe_senders_rules(YAML_RULES_SAFE_SENDERS_FILE)
+        safe_senders = self.get_safe_senders_rules()
 
         # **NOT needed - after verifying, these lines can be removed
         # # Extract rules array from dictionary if needed
         # if isinstance(rules, dict) and "rules" in rules:
         #     self.log_print(f"Extracted rules array from dictionary wrapper")
         #     return rules["rules"]
-        self.log_print(f"Number of rules: {len(YAML_rules["rules"])}")
-        #self.log_print(f"Show list of rules: {YAML_rules["rules"]}")
-        self.log_print(f"Number of safe_senders rules: {len(safe_senders["safe_senders"])}")
-        #self.log_print(f"Show list of safe_senders rules: {safe_senders["safe_senders"]}")
+        self.log_print(f"Number of rules: {len(YAML_rules['rules'])}")
+        # self.log_print(f"Show list of rules: {YAML_rules['rules']}")
+        self.log_print(f"Number of safe_senders rules: {len(safe_senders['safe_senders'])}")
+        # self.log_print(f"Show list of safe_senders rules: {safe_senders['safe_senders']}")
 
         # Otherwise, return the rules directly
         return YAML_rules, safe_senders
@@ -1045,7 +1244,7 @@ class OutlookSecurityAgent:
             self.log_print(f"Error printing rules summary: {str(e)}")
 
     def combine_email_header_lines(self, email_header):
-        """
+        r"""
         Combine email headers, handling lines split across multiple lines, and find the first line containing "from:".
 
         Args:
@@ -1076,7 +1275,7 @@ class OutlookSecurityAgent:
         return updated_email_header
 
     def header_from(self, email_header):
-        """
+        r"""
         Process email headers to find the first line containing "from:" and extract the domain.
 
         Args:
@@ -1110,7 +1309,7 @@ class OutlookSecurityAgent:
         return blank
 
     def from_report(self, emails_to_process, emails_added_info, rules_json):
-        """
+        r"""
         Generate a report of emails with phishing indicators or no rule matches, including the From domain.
 
         Args:
@@ -1181,7 +1380,7 @@ class OutlookSecurityAgent:
         return unique_stubs
 
     def URL_report(self, emails_to_process, emails_added_info):
-        """
+        r"""
         Generate a report of emails with phishing indicators or no rule matches,
             including unique URL stubs "/<domain>.<>" and ".<domain>.<>" from the body.
 
@@ -1509,7 +1708,7 @@ class OutlookSecurityAgent:
         return actions
 
     def get_safe_input(self, prompt_text, valid_responses=None, isregex=False):
-        """
+        r"""
         Get user input with security validation.
 
         Args:
@@ -1567,7 +1766,7 @@ class OutlookSecurityAgent:
 
 
     def prompt_update_rules(self, emails_to_process, emails_added_info, rules_json, safe_senders):
-        """
+        r"""
         Prompt user to update rules based on unfiltered emails.
 
         Args:
@@ -1579,6 +1778,8 @@ class OutlookSecurityAgent:
             list: Updated rules in JSON format.
         """
         self.log_print(f"{CRLF}Checking for emails that can be added to rules...")
+        # Surface current mode and file paths for clarity during interactive updates
+        self.log_print(f"Interactive updates will write to: rules={self.active_rules_file}, safe_senders={self.active_safe_senders_file}")
         unfiltered_emails = []
 
         self.log_print(f"Number of emails to process: {len(emails_to_process)}")
@@ -1690,12 +1891,23 @@ class OutlookSecurityAgent:
                                     rule_updated = True
                                     self.log_print(f"Added '{from_email}' to SpamAutoDeleteHeader rule")
                                     simple_print(f"Added '{from_email}' to SpamAutoDeleteHeader rule")
+                                    try:
+                                        # Persist immediately to the active file
+                                        self.export_rules_to_yaml(rules_json)
+                                        self.log_print(f"Appended to: {self.active_rules_file}")
+                                    except Exception:
+                                        pass
                         elif response == 's':
                             # Add from_domain to safe_senders list
                             safe_senders["safe_senders"].append(from_email)  # working HK 05/18/25
                             self.log_print(f"Added '{from_email}' to safe_senders list")
                             simple_print(f"Added '{from_email}' to safe_senders list")
                             rule_updated = True
+                            try:
+                                self.export_safe_senders_to_yaml(safe_senders)
+                                self.log_print(f"Appended to: {self.active_safe_senders_file}")
+                            except Exception:
+                                pass
                         # else:
                         #     expected_responses = ['d', 'e','s']
                         #     prompt = f"{CRLF}Add '{from_domain}' or email domain to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
@@ -1706,20 +1918,45 @@ class OutlookSecurityAgent:
                         response = self.get_safe_input(prompt, expected_responses)
                         if response == 'd':
                             # Find the SpamAutoDeleteHeader rule in the rules list and append to its header conditions
+                            # On 'd', add a domain-based regex anchored on the first meaningful subdomain below the TLD
                             for rule in rules_json["rules"]:
                                 if rule["name"] == "SpamAutoDeleteHeader":
                                     if "header" not in rule["conditions"]:
                                         rule["conditions"]["header"] = []
-                                    rule["conditions"]["header"].append(from_domain)
-                                    rule_updated = True
-                                    self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
-                                    simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+
+                                    try:
+                                        domain_regex = self.build_domain_regex_from_address(from_domain or from_email)
+                                    except Exception:
+                                        # Conservative default if unexpected input
+                                        domain_regex = '@(?:[a-z0-9-]+\\.)*[a-z0-9-]+\\.[a-z0-9.-]+$'
+
+                                    # Avoid duplicates
+                                    if domain_regex not in rule["conditions"]["header"]:
+                                        rule["conditions"]["header"].append(domain_regex)
+                                        rule_updated = True
+                                        self.log_print(f"Added domain regex '{domain_regex}' to SpamAutoDeleteHeader rule")
+                                        simple_print(f"Added domain regex '{domain_regex}' to SpamAutoDeleteHeader rule")
+                                        try:
+                                            self.export_rules_to_yaml(rules_json)
+                                            self.log_print(f"Appended to: {self.active_rules_file}")
+                                        except Exception:
+                                            pass
+
+                                    # Previous literal behavior retained for reference:
+                                    # rule["conditions"]["header"].append(from_domain)
+                                    # self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
+                                    # simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
                         elif response == 's':
                             # Add from_domain to safe_senders list
                             safe_senders["safe_senders"].append(from_domain)  # working HK 05/18/25
                             self.log_print(f"Added '{from_domain}' to safe_senders list")
                             simple_print(f"Added '{from_domain}' to safe_senders list")
                             rule_updated = True
+                            try:
+                                self.export_safe_senders_to_yaml(safe_senders)
+                                self.log_print(f"Appended to: {self.active_safe_senders_file}")
+                            except Exception:
+                                pass
 
             except Exception as e:
                 self.log_print(f"Error processing email for rule updates: {str(e)} {email_header}")
@@ -1772,7 +2009,7 @@ class OutlookSecurityAgent:
         return indicators
 
     def delete_email_with_retry(self, email, max_retries=10, delay=1):
-        """
+        r"""
         Attempt to delete an email with retries.
 
         Args:
@@ -1814,7 +2051,7 @@ class OutlookSecurityAgent:
         return
 
     def move_email_with_retry(self, email, target_folder, max_retries=10, delay=1):
-        """
+        r"""
         Attempt to move an email to a target folder with retries.
         First it makes a copy of the email, then it moves it to the inbox
         Args:
@@ -1840,7 +2077,7 @@ class OutlookSecurityAgent:
         return
 
     def mark_email_read_with_retry(self, email, max_retries=10, delay=1):
-        """
+        r"""
         Attempt to mark an email as unread with retries.
 
         Args:
@@ -1864,7 +2101,7 @@ class OutlookSecurityAgent:
         return
 
     def clear_email_flag_with_retry(self, email, max_retries=10, delay=1):
-        """
+        r"""
         Attempt to clear the flag on an email; with with retries.
 
         Args:
@@ -1887,7 +2124,7 @@ class OutlookSecurityAgent:
         return
 
     def assign_category_to_email_with_retry(self, email, category_name, max_retries=10, delay=1):
-        """
+        r"""
         Attempt to mark an email as unread with retries.
 
         Args:
@@ -1910,7 +2147,7 @@ class OutlookSecurityAgent:
         return
 
     def _get_emails_from_folder(self, folder, days_back):
-        """Helper method to get emails from a specific folder for reprocessing"""
+        r"""Helper method to get emails from a specific folder for reprocessing"""
         try:
             # Create date restriction for recent emails
             restriction = "[ReceivedTime] >= '" + \
@@ -1935,11 +2172,51 @@ class OutlookSecurityAgent:
             self.log_print(f"Error getting emails from folder {folder.Name}: {str(e)}")
             return []
 
-    def process_emails(self, rules_json, safe_senders, days_back=DAYS_BACK_DEFAULT, update_rules=False):
+    def _compile_pattern_list(self, patterns):
+        compiled = []
+        for p in patterns:
+            try:
+                # Treat patterns as full regex; ensure lowercased as input is normalized elsewhere
+                compiled.append(re.compile(p, re.IGNORECASE))
+            except re.error as e:
+                self.log_print(f"Invalid regex skipped: {p} ({str(e)})")
+        return compiled
+
+    def _any_regex_match(self, compiled_patterns, text):
+        tl = text or ""
+        for pat in compiled_patterns:
+            if pat.search(tl):
+                return True, pat.pattern
+        return False, None
+
+    def _regex_match_header_any(self, compiled_patterns, email_header: str, sender_email: str):
+        r"""Match only against the displayed tokens: From (sender email) and Domain (extracted).
+
+        This aligns matching with what is printed during -u: "From:" and "Domain:",
+        after stripping leading/trailing spaces.
+        """
+        if not compiled_patterns:
+            return False, None
+        from_tok = (self.header_from(email_header) or "").strip().lower()
+        sender_tok = (sender_email or "").strip().lower()
+        candidates = []
+        if from_tok:
+            candidates.append(from_tok)
+        if sender_tok:
+            candidates.append(sender_tok)
+        for cand in candidates:
+            m, pat = self._any_regex_match(compiled_patterns, cand)
+            if m:
+                return True, pat
+        return False, None
+
+    def process_emails(self, rules_json, safe_senders, days_back=DAYS_BACK_DEFAULT, update_rules=False, use_regex=False):
         """Process emails based on the rules in the rules_json object - now processes multiple folders"""
         self.log_print(f"\n\nStarting email processing")
         self.log_print(f"Target folders: {[folder.Name for folder in self.target_folders]}", "DEBUG")
         self.log_print(f"Processing emails from last {days_back} days")
+        self.log_print(f"Regex mode: {'enabled' if use_regex else 'disabled'}")
+        self.log_print(f"Matching semantics: {'regex' if use_regex else 'legacy substring/wildcard'}")
         self.log_print(f"Interactive rule updates: {'enabled' if update_rules else 'disabled'}")
 
         try:
@@ -2008,6 +2285,11 @@ class OutlookSecurityAgent:
             # Sort rules once per first-pass (optimization: moved outside email loop)
             rules.sort(key=lambda rule: rule['actions'].get('delete', False))
 
+            # Precompile safe sender patterns for regex mode
+            compiled_safe_senders = []
+            if use_regex:
+                compiled_safe_senders = self._compile_pattern_list(safe_senders.get("safe_senders", []))
+
             for email in all_emails_to_process:
                 try:
                     processed_count += 1
@@ -2027,21 +2309,39 @@ class OutlookSecurityAgent:
 
                     # Check each safe_senders before rules
                     # safe_senders only needs to be checked once
-                    for sender in safe_senders["safe_senders"]:
-                        sender_lower = sender.lower()
-                        header_lower = email_header.lower()
-                        if sender_lower in header_lower:
-                            match = False
-                            matched_sender = sender
-                            self.log_print(f"Safe sender matched in header: {matched_sender}")
-                            # move email back to inbox if found in safe_senders
-                            self.move_email_with_retry(email, self.inbox_folder)  # Moves email to inbox
+                    if use_regex:
+                        matched_safe, matched_pat = self._regex_match_header_any(compiled_safe_senders, email_header, email.SenderEmailAddress)
+                        if matched_safe:
+                            self.log_print(f"Safe sender (regex) matched in header: {matched_pat}")
+                            self.move_email_with_retry(email, self.inbox_folder)
                             self.delete_email_with_retry(email)
                             email_deleted = True
                             if email in all_emails_to_process:
                                 all_emails_to_process.remove(email)
                             self.log_print(f"Email moved to inbox")
-                            break
+                            continue
+                    else:
+                        # Legacy safe_senders: only compare against trimmed From and Domain tokens
+                        from_tok = (self.header_from(email_header) or "").strip().lower()
+                        sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                        for sender_pat in safe_senders["safe_senders"]:
+                            pat_lower = (sender_pat or "").strip().lower()
+                            # Wildcard prefix semantics: '*foo' means any ending with 'foo'
+                            def legacy_match(pat: str, val: str) -> bool:
+                                if not pat:
+                                    return False
+                                if pat.startswith('*'):
+                                    return val.endswith(pat[1:])
+                                return pat in val
+                            if legacy_match(pat_lower, from_tok) or legacy_match(pat_lower, sender_tok):
+                                self.log_print(f"Safe sender matched (legacy) on token: {pat_lower}")
+                                self.move_email_with_retry(email, self.inbox_folder)
+                                self.delete_email_with_retry(email)
+                                email_deleted = True
+                                if email in all_emails_to_process:
+                                    all_emails_to_process.remove(email)
+                                self.log_print(f"Email moved to inbox")
+                                break
                                # no processing of rules needed if found in safe_senders
 
                     for rule in rules:
@@ -2057,47 +2357,75 @@ class OutlookSecurityAgent:
 
                         # Check 'from' addresses
                         if 'from' in conditions:
-                            from_addresses = [addr.lower() for addr in conditions['from']]
+                            from_list = conditions['from']
                             sender_email_lower = email.SenderEmailAddress.lower()
-                            
-                            for addr in from_addresses:
-                                addr_lower = addr.lower()
-                                matched = False
-                                
-                                if addr_lower.startswith('*'):
-                                    # Handle wildcard patterns like "*@greyhub.com"
-                                    pattern_without_wildcard = addr_lower[1:]  # Remove the '*'
-                                    if sender_email_lower.endswith(pattern_without_wildcard):
-                                        matched = True
-                                else:
-                                    # Handle exact patterns or simple substring matches
-                                    if addr_lower in sender_email_lower:
-                                        matched = True
-                                
-                                if matched:
+                            if use_regex:
+                                compiled = self._compile_pattern_list(from_list)
+                                m, pat = self._any_regex_match(compiled, sender_email_lower)
+                                if m:
                                     match = True
-                                    matched_keyword = addr
-                                    self.log_print(f"Matched keyword in from address: {matched_keyword}")
+                                    matched_keyword = pat
+                                    self.log_print(f"Matched regex in from address: {matched_keyword}")
+                                    self.log_print(f"Rule matched: {rule['name']} via FROM pattern: {matched_keyword}")
                                     self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress)}")
-                                    break
+                            else:
+                                from_addresses = [addr.lower() for addr in from_list]
+                                for addr in from_addresses:
+                                    addr_lower = addr.lower()
+                                    matched_simple = False
+                                    if addr_lower.startswith('*'):
+                                        pattern_without_wildcard = addr_lower[1:]
+                                        if sender_email_lower.endswith(pattern_without_wildcard):
+                                            matched_simple = True
+                                    else:
+                                        if addr_lower in sender_email_lower:
+                                            matched_simple = True
+                                    if matched_simple:
+                                        match = True
+                                        matched_keyword = addr
+                                        self.log_print(f"Matched keyword in from address: {matched_keyword}")
+                                        self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress)}")
+                                        break
 
                         # Check 'subject' keywords
                         if 'subject' in conditions:
-                            if any(keyword.lower() in email.Subject.lower() for keyword in conditions['subject']):
-                                match = True
-                                matched_keyword = next((keyword for keyword in conditions['subject'] if keyword.lower() in email.Subject.lower()), None)
-                                self.log_print(f"Matched keyword in subject: {matched_keyword}")
-                                self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
+                            if use_regex:
+                                compiled = self._compile_pattern_list(conditions['subject'])
+                                m, pat = self._any_regex_match(compiled, email.Subject)
+                                if m:
+                                    match = True
+                                    matched_keyword = pat
+                                    self.log_print(f"Matched regex in subject: {matched_keyword}")
+                                    self.log_print(f"Rule matched: {rule['name']} via SUBJECT pattern: {matched_keyword}")
+                                    self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
+                            else:
+                                if any(keyword.lower() in email.Subject.lower() for keyword in conditions['subject']):
+                                    match = True
+                                    matched_keyword = next((keyword for keyword in conditions['subject'] if keyword.lower() in email.Subject.lower()), None)
+                                    self.log_print(f"Matched keyword in subject: {matched_keyword}")
+                                    self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
 
                         # Check 'body' keywords
                         if 'body' in conditions:
-                            if any(keyword.lower() in email.Body.lower() for keyword in conditions['body']):
-                                match = True
-                                matched_keyword = next((keyword for keyword in conditions['body'] if keyword.lower() in email.Body.lower()), None)
-                                self.log_print(f"Matched keyword in body: {matched_keyword}")
-                                matched_lines = [line for line in email.Body.splitlines() if matched_keyword.lower() in line.lower()]
-                                if matched_lines:
-                                    self.log_print(f"First line of body that matches the keyword: {matched_lines[0]}")
+                            if use_regex:
+                                compiled = self._compile_pattern_list(conditions['body'])
+                                m, pat = self._any_regex_match(compiled, email.Body)
+                                if m:
+                                    match = True
+                                    matched_keyword = pat
+                                    self.log_print(f"Matched regex in body: {matched_keyword}")
+                                    self.log_print(f"Rule matched: {rule['name']} via BODY pattern: {matched_keyword}")
+                                    matched_lines = [line for line in email.Body.splitlines() if re.search(pat, line, re.IGNORECASE)]
+                                    if matched_lines:
+                                        self.log_print(f"First line of body that matches the regex: {matched_lines[0]}")
+                            else:
+                                if any(keyword.lower() in email.Body.lower() for keyword in conditions['body']):
+                                    match = True
+                                    matched_keyword = next((keyword for keyword in conditions['body'] if keyword.lower() in email.Body.lower()), None)
+                                    self.log_print(f"Matched keyword in body: {matched_keyword}")
+                                    matched_lines = [line for line in email.Body.splitlines() if matched_keyword.lower() in line.lower()]
+                                    if matched_lines:
+                                        self.log_print(f"First line of body that matches the keyword: {matched_lines[0]}")
                                 # below will print all the body lines that match if needed for debugging
                                 if DEBUG:
                                     for line in email.Body.splitlines():
@@ -2105,13 +2433,32 @@ class OutlookSecurityAgent:
                                             self.log_print(f"Body: {line}", "DEBUG")
                         # Check 'header' keywords
                         if 'header' in conditions:
-                            if any(keyword.lower() in email_header for keyword in conditions['header']):
-                                match = True
-                                matched_keyword = next((keyword for keyword in conditions['header'] if keyword.lower() in email_header.lower()), None)
-                                self.log_print(f"Matched keyword in header: {matched_keyword}")
-                                matched_lines = [line for line in email_header.splitlines() if matched_keyword.lower() in line.lower()]
-                                if matched_lines:
-                                    self.log_print(f"First line of header that matches the keyword: {matched_lines[0]}")
+                            if use_regex:
+                                compiled = self._compile_pattern_list(conditions['header'])
+                                m, pat = self._regex_match_header_any(compiled, email_header, email.SenderEmailAddress)
+                                if m:
+                                    match = True
+                                    matched_keyword = pat
+                                    self.log_print(f"Matched regex in header: {matched_keyword}")
+                                    self.log_print(f"Rule matched: {rule['name']} via HEADER pattern: {matched_keyword}")
+                                    # No need to scan header lines; match is against tokens only
+                            else:
+                                # Legacy: only compare against trimmed From and Domain tokens
+                                from_tok = (self.header_from(email_header) or "").strip().lower()
+                                sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                                header_vals = [(kw or "").strip().lower() for kw in conditions['header']]
+                                def legacy_match(pat: str, val: str) -> bool:
+                                    if not pat:
+                                        return False
+                                    if pat.startswith('*'):
+                                        return val.endswith(pat[1:])
+                                    return pat in val
+                                for kw in header_vals:
+                                    if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
+                                        match = True
+                                        matched_keyword = kw
+                                        self.log_print(f"Matched keyword in header (legacy token): {matched_keyword}")
+                                        break
                                 # below will print all the body lines that match if needed for debugging
                                 # for header in email_header.splitlines():
                                 if DEBUG:
@@ -2130,51 +2477,92 @@ class OutlookSecurityAgent:
                             from_addresses = [addr.lower() for addr in exceptions['from']]
                             sender_email_lower = email.SenderEmailAddress.lower()
                             
-                            for addr in from_addresses:
-                                addr_lower = addr.lower()
-                                exception_matched = False
-                                
-                                if addr_lower.startswith('*'):
-                                    # Handle wildcard patterns like "*@greyhub.com"
-                                    pattern_without_wildcard = addr_lower[1:]  # Remove the '*'
-                                    if sender_email_lower.endswith(pattern_without_wildcard):
-                                        exception_matched = True
-                                else:
-                                    # Handle exact patterns or simple substring matches
-                                    if addr_lower in sender_email_lower:
-                                        exception_matched = True
-                                
-                                if exception_matched:
+                            if use_regex:
+                                compiled = self._compile_pattern_list(from_addresses)
+                                m, pat = self._any_regex_match(compiled, sender_email_lower)
+                                if m:
                                     match = False
-                                    matched_keyword = addr
-                                    self.log_print(f"Exception matched keyword in from address: {matched_keyword}")
+                                    matched_keyword = pat
+                                    self.log_print(f"Exception matched regex in from address: {matched_keyword}")
                                     self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress)}")
-                                    break
+                            else:
+                                for addr in from_addresses:
+                                    addr_lower = addr.lower()
+                                    exception_matched = False
+                                    if addr_lower.startswith('*'):
+                                        pattern_without_wildcard = addr_lower[1:]
+                                        if sender_email_lower.endswith(pattern_without_wildcard):
+                                            exception_matched = True
+                                    else:
+                                        if addr_lower in sender_email_lower:
+                                            exception_matched = True
+                                    if exception_matched:
+                                        match = False
+                                        matched_keyword = addr
+                                        self.log_print(f"Exception matched keyword in from address: {matched_keyword}")
+                                        self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress)}")
+                                        break
 
                         # Check subject keywords in exceptions
                         if match and 'subject' in exceptions:
-                            if any(keyword.lower() in email.Subject.lower() for keyword in exceptions['subject']):
-                                match = False
-                                matched_keyword = next((keyword for keyword in exceptions['subject'] if keyword.lower() in email.Subject.lower()), None)
-                                self.log_print(f"Exception matched keyword in subject: {matched_keyword}")
-                                self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
+                            if use_regex:
+                                compiled = self._compile_pattern_list(exceptions['subject'])
+                                m, pat = self._any_regex_match(compiled, email.Subject)
+                                if m:
+                                    match = False
+                                    matched_keyword = pat
+                                    self.log_print(f"Exception matched regex in subject: {matched_keyword}")
+                                    self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
+                            else:
+                                if any(keyword.lower() in email.Subject.lower() for keyword in exceptions['subject']):
+                                    match = False
+                                    matched_keyword = next((keyword for keyword in exceptions['subject'] if keyword.lower() in email.Subject.lower()), None)
+                                    self.log_print(f"Exception matched keyword in subject: {matched_keyword}")
+                                    self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
 
                         # Check body keywords in exceptions
                         if match and 'body' in exceptions:
-                            if any(keyword.lower() in email.Body.lower() for keyword in exceptions['body']):
-                                match = False
-                                matched_keyword = next((keyword for keyword in exceptions['body'] if keyword.lower() in email.Body.lower()), None)
-                                self.log_print(f"Exception matched keyword in body: {matched_keyword}")
-                                self.log_print(f"Body: {self._sanitize_string(email.Body)}")
+                            if use_regex:
+                                compiled = self._compile_pattern_list(exceptions['body'])
+                                m, pat = self._any_regex_match(compiled, email.Body)
+                                if m:
+                                    match = False
+                                    matched_keyword = pat
+                                    self.log_print(f"Exception matched regex in body: {matched_keyword}")
+                                    self.log_print(f"Body: {self._sanitize_string(email.Body)}")
+                            else:
+                                if any(keyword.lower() in email.Body.lower() for keyword in exceptions['body']):
+                                    match = False
+                                    matched_keyword = next((keyword for keyword in exceptions['body'] if keyword.lower() in email.Body.lower()), None)
+                                    self.log_print(f"Exception matched keyword in body: {matched_keyword}")
+                                    self.log_print(f"Body: {self._sanitize_string(email.Body)}")
 
                         # Check header keywords in exceptions
                         if match and 'header' in exceptions:
-                            if any(keyword.lower() in email_header for keyword in exceptions['header']):
-                                match = False
-                                matched_keyword = next((keyword for keyword in exceptions['header'] if keyword.lower() in email_header.lower()), None)
-                                self.log_print(f"Exception matched keyword in header: {matched_keyword}")
-                                for header in email_header.splitlines():
-                                    self.log_print(f"Header: {header}")
+                            if use_regex:
+                                compiled = self._compile_pattern_list(exceptions['header'])
+                                m, pat = self._regex_match_header_any(compiled, email_header, email.SenderEmailAddress)
+                                if m:
+                                    match = False
+                                    matched_keyword = pat
+                                    self.log_print(f"Exception matched regex in header: {matched_keyword}")
+                                    # Match was against tokens; no need to list header lines
+                            else:
+                                from_tok = (self.header_from(email_header) or "").strip().lower()
+                                sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                                exc_vals = [(kw or "").strip().lower() for kw in exceptions['header']]
+                                def legacy_match(pat: str, val: str) -> bool:
+                                    if not pat:
+                                        return False
+                                    if pat.startswith('*'):
+                                        return val.endswith(pat[1:])
+                                    return pat in val
+                                for kw in exc_vals:
+                                    if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
+                                        match = False
+                                        matched_keyword = kw
+                                        self.log_print(f"Exception matched keyword in header (legacy token): {matched_keyword}")
+                                        break
 
                         # # Check for attachments - not using. could be added later - will need to be updated; will not work as-is
                         # if 'has_attachments' in conditions:
@@ -2300,6 +2688,21 @@ class OutlookSecurityAgent:
                             all_emails_added_info[email_index]["phishing_indicators"] = indicators
                         else:
                             self.log_print("No conditions or phishing indicators found")
+                            # Optional DEBUG: When in regex mode, show the sender and the first few FROM patterns to help diagnose misses
+                            if use_regex and all_emails_added_info[email_index]["match"] == False:
+                                try:
+                                    preview_k = 5
+                                    from_patterns = []
+                                    for r in rules:
+                                        vals = (r.get('conditions') or {}).get('from')
+                                        if isinstance(vals, list):
+                                            from_patterns.extend(vals)
+                                    self.log_print(
+                                        f"DEBUG no-match: sender={self._sanitize_string(email.SenderEmailAddress).lower()} | top FROM patterns={from_patterns[:preview_k]}",
+                                        level="DEBUG"
+                                    )
+                                except Exception:
+                                    pass
                         # If it is in the Bulk Mail folder, but nothing indicated via rules or phishing,
                         # show the body and header, so we information needed to add it to a rule
                         for line in email.Body.splitlines():
@@ -2372,6 +2775,11 @@ class OutlookSecurityAgent:
             self.log_print(f"Second-pass: Found {len(second_pass_emails)} emails to reprocess")
             simple_print(f"Second-pass: Found {len(second_pass_emails)} emails to reprocess")
             
+            # Precompile safe sender patterns for regex mode (second pass may include updates)
+            second_pass_compiled_safe_senders = []
+            if use_regex:
+                second_pass_compiled_safe_senders = self._compile_pattern_list(safe_senders.get("safe_senders", []))
+
             # Process second-pass emails if any found
             if second_pass_emails:
                 second_pass_processed = 0
@@ -2394,24 +2802,39 @@ class OutlookSecurityAgent:
                         self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
                         self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress).lower()}")
                         
-                        # Check safe senders first (same logic as first pass)
-                        for sender in safe_senders["safe_senders"]:
-                            sender_lower = sender.lower()
-                            header_lower = email_header.lower()
-                            if sender_lower in header_lower:
-                                self.log_print(f"Second-pass: Safe sender matched: {sender}")
+                        # Check safe senders first (mirror first-pass logic)
+                        if use_regex:
+                            matched_safe, matched_pat = self._regex_match_header_any(second_pass_compiled_safe_senders, email_header, email.SenderEmailAddress)
+                            if matched_safe:
+                                self.log_print(f"Second-pass: Safe sender (regex) matched in header: {matched_pat}")
                                 self.move_email_with_retry(email, self.inbox_folder)
                                 self.delete_email_with_retry(email)
                                 email_deleted = True
-                                # Email will be processed as deleted, no need to remove from list during iteration
-                                break
+                        else:
+                            # Legacy safe_senders: only compare against trimmed From and Domain tokens
+                            from_tok = (self.header_from(email_header) or "").strip().lower()
+                            sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                            def legacy_match(pat: str, val: str) -> bool:
+                                if not pat:
+                                    return False
+                                if pat.startswith('*'):
+                                    return val.endswith(pat[1:])
+                                return pat in val
+                            for sender_pat in safe_senders.get("safe_senders", []):
+                                pat_lower = (sender_pat or "").strip().lower()
+                                if legacy_match(pat_lower, from_tok) or legacy_match(pat_lower, sender_tok):
+                                    self.log_print(f"Second-pass: Safe sender matched (legacy token): {pat_lower}")
+                                    self.move_email_with_retry(email, self.inbox_folder)
+                                    self.delete_email_with_retry(email)
+                                    email_deleted = True
+                                    break
                         
                         if email_deleted:
                             second_pass_processed += 1
                             second_pass_deleted += 1
                             continue
                         
-                        # Process rules (same logic as first pass)
+                        # Process rules (mirror first-pass logic; regex-aware)
                         for rule in rules:
                             if not isinstance(rule, dict) or 'actions' not in rule:
                                 continue
@@ -2423,80 +2846,160 @@ class OutlookSecurityAgent:
                             
                             match = False
                             matched_keyword = ""
-                            
-                            # Check conditions (simplified version of first-pass logic)
-                            if 'from' in conditions:
-                                from_addresses = [addr.lower() for addr in conditions['from']]
-                                sender_email_lower = email.SenderEmailAddress.lower()
-                                
-                                for addr in from_addresses:
-                                    addr_lower = addr.lower()
-                                    matched = False
-                                    
-                                    if addr_lower.startswith('*'):
-                                        # Handle wildcard patterns like "*@greyhub.com"
-                                        pattern_without_wildcard = addr_lower[1:]  # Remove the '*'
-                                        if sender_email_lower.endswith(pattern_without_wildcard):
-                                            matched = True
-                                    else:
-                                        # Handle exact patterns or simple substring matches
-                                        if addr_lower in sender_email_lower:
-                                            matched = True
-                                    
-                                    if matched:
+
+                            # FROM
+                            if 'from' in conditions and not match:
+                                sender_email_lower = (email.SenderEmailAddress or '').lower()
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(conditions['from'])
+                                    m, pat = self._any_regex_match(compiled, sender_email_lower)
+                                    if m:
                                         match = True
-                                        matched_keyword = addr
-                                        break
-                            
+                                        matched_keyword = pat
+                                        self.log_print(f"Second-pass: Matched regex in from address: {matched_keyword}")
+                                else:
+                                    from_addresses = [addr.lower() for addr in conditions['from']]
+                                    for addr in from_addresses:
+                                        addr_lower = addr.lower()
+                                        matched_simple = False
+                                        if addr_lower.startswith('*'):
+                                            pattern_without_wildcard = addr_lower[1:]
+                                            if sender_email_lower.endswith(pattern_without_wildcard):
+                                                matched_simple = True
+                                        else:
+                                            if addr_lower in sender_email_lower:
+                                                matched_simple = True
+                                        if matched_simple:
+                                            match = True
+                                            matched_keyword = addr
+                                            break
+
+                            # SUBJECT
                             if 'subject' in conditions and not match:
-                                subject_keywords = [keyword.lower() for keyword in conditions['subject']]
-                                if any(keyword in email.Subject.lower() for keyword in subject_keywords):
-                                    match = True
-                                    matched_keyword = next((keyword for keyword in conditions['subject'] if keyword.lower() in email.Subject.lower()), None)
-                            
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(conditions['subject'])
+                                    m, pat = self._any_regex_match(compiled, email.Subject)
+                                    if m:
+                                        match = True
+                                        matched_keyword = pat
+                                        self.log_print(f"Second-pass: Matched regex in subject: {matched_keyword}")
+                                else:
+                                    if any(keyword.lower() in email.Subject.lower() for keyword in conditions['subject']):
+                                        match = True
+                                        matched_keyword = next((keyword for keyword in conditions['subject'] if keyword.lower() in email.Subject.lower()), None)
+
+                            # BODY
                             if 'body' in conditions and not match:
-                                body_keywords = [keyword.lower() for keyword in conditions['body']]
-                                if any(keyword in email.Body.lower() for keyword in body_keywords):
-                                    match = True
-                                    matched_keyword = next((keyword for keyword in conditions['body'] if keyword.lower() in email.Body.lower()), None)
-                            
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(conditions['body'])
+                                    m, pat = self._any_regex_match(compiled, email.Body)
+                                    if m:
+                                        match = True
+                                        matched_keyword = pat
+                                        self.log_print(f"Second-pass: Matched regex in body: {matched_keyword}")
+                                else:
+                                    if any(keyword.lower() in email.Body.lower() for keyword in conditions['body']):
+                                        match = True
+                                        matched_keyword = next((keyword for keyword in conditions['body'] if keyword.lower() in email.Body.lower()), None)
+
+                            # HEADER
                             if 'header' in conditions and not match:
-                                header_keywords = [keyword.lower() for keyword in conditions['header']]
-                                if any(keyword in email_header.lower() for keyword in header_keywords):
-                                    match = True
-                                    matched_keyword = next((keyword for keyword in conditions['header'] if keyword.lower() in email_header.lower()), None)
-                            
-                            # Check exceptions (simplified version)
-                            if match:
-                                if 'from' in exceptions:
-                                    sender_email_lower = email.SenderEmailAddress.lower()
-                                    
-                                    for keyword in exceptions['from']:
-                                        keyword_lower = keyword.lower()
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(conditions['header'])
+                                    m, pat = self._regex_match_header_any(compiled, email_header, email.SenderEmailAddress)
+                                    if m:
+                                        match = True
+                                        matched_keyword = pat
+                                        self.log_print(f"Second-pass: Matched regex in header: {matched_keyword}")
+                                else:
+                                    # Legacy: only compare against trimmed From and Domain tokens
+                                    from_tok = (self.header_from(email_header) or "").strip().lower()
+                                    sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                                    header_vals = [(kw or "").strip().lower() for kw in conditions['header']]
+                                    def legacy_match(pat: str, val: str) -> bool:
+                                        if not pat:
+                                            return False
+                                        if pat.startswith('*'):
+                                            return val.endswith(pat[1:])
+                                        return pat in val
+                                    for kw in header_vals:
+                                        if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
+                                            match = True
+                                            matched_keyword = kw
+                                            break
+
+                            # Exceptions
+                            if match and 'from' in exceptions:
+                                sender_email_lower = (email.SenderEmailAddress or '').lower()
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(exceptions['from'])
+                                    m, pat = self._any_regex_match(compiled, sender_email_lower)
+                                    if m:
+                                        match = False
+                                        matched_keyword = pat
+                                else:
+                                    from_addresses = [addr.lower() for addr in exceptions['from']]
+                                    for addr in from_addresses:
+                                        addr_lower = addr.lower()
                                         exception_matched = False
-                                        
-                                        if keyword_lower.startswith('*'):
-                                            # Handle wildcard patterns like "*@greyhub.com"
-                                            pattern_without_wildcard = keyword_lower[1:]  # Remove the '*'
+                                        if addr_lower.startswith('*'):
+                                            pattern_without_wildcard = addr_lower[1:]
                                             if sender_email_lower.endswith(pattern_without_wildcard):
                                                 exception_matched = True
                                         else:
-                                            # Handle exact patterns or simple substring matches
-                                            if keyword_lower in sender_email_lower:
+                                            if addr_lower in sender_email_lower:
                                                 exception_matched = True
-                                        
                                         if exception_matched:
                                             match = False
+                                            matched_keyword = addr
                                             break
-                                if 'subject' in exceptions and match:
+
+                            if match and 'subject' in exceptions:
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(exceptions['subject'])
+                                    m, pat = self._any_regex_match(compiled, email.Subject)
+                                    if m:
+                                        match = False
+                                        matched_keyword = pat
+                                else:
                                     if any(keyword.lower() in email.Subject.lower() for keyword in exceptions['subject']):
                                         match = False
-                                if 'body' in exceptions and match:
+                                        matched_keyword = next((keyword for keyword in exceptions['subject'] if keyword.lower() in email.Subject.lower()), None)
+
+                            if match and 'body' in exceptions:
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(exceptions['body'])
+                                    m, pat = self._any_regex_match(compiled, email.Body)
+                                    if m:
+                                        match = False
+                                        matched_keyword = pat
+                                else:
                                     if any(keyword.lower() in email.Body.lower() for keyword in exceptions['body']):
                                         match = False
-                                if 'header' in exceptions and match:
-                                    if any(keyword.lower() in email_header.lower() for keyword in exceptions['header']):
+                                        matched_keyword = next((keyword for keyword in exceptions['body'] if keyword.lower() in email.Body.lower()), None)
+
+                            if match and 'header' in exceptions:
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(exceptions['header'])
+                                    m, pat = self._regex_match_header_any(compiled, email_header, email.SenderEmailAddress)
+                                    if m:
                                         match = False
+                                        matched_keyword = pat
+                                else:
+                                    from_tok = (self.header_from(email_header) or "").strip().lower()
+                                    sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                                    exc_vals = [(kw or "").strip().lower() for kw in exceptions['header']]
+                                    def legacy_match(pat: str, val: str) -> bool:
+                                        if not pat:
+                                            return False
+                                        if pat.startswith('*'):
+                                            return val.endswith(pat[1:])
+                                        return pat in val
+                                    for kw in exc_vals:
+                                        if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
+                                            match = False
+                                            matched_keyword = kw
+                                            break
                             
                             # Update email info
                             if match:
@@ -2504,9 +3007,9 @@ class OutlookSecurityAgent:
                                 second_pass_added_info[email_index]["rule"] = rule
                                 second_pass_added_info[email_index]["matched_keyword"] = matched_keyword
                                 second_pass_added_info[email_index]["processed"] = True
-                                
+
                                 self.log_print(f"Second-pass: Email matches rule: {rule['name']}")
-                                
+
                                 # Process actions (focus on delete action for second pass)
                                 actions = rule['actions']
                                 if 'delete' in actions and actions['delete']:
@@ -2518,25 +3021,23 @@ class OutlookSecurityAgent:
                                         break
                                     except Exception as e:
                                         self.log_print(f"Second-pass: Error deleting email: {str(e)}")
-                            if match:
-                                second_pass_added_info[email_index]["match"] = True
-                                second_pass_added_info[email_index]["rule"] = rule
-                                second_pass_added_info[email_index]["matched_keyword"] = matched_keyword
-                                second_pass_added_info[email_index]["processed"] = True
-                                
-                                self.log_print(f"Second-pass: Email matches rule: {rule['name']}")
-                                
-                                # Process actions (focus on delete action for second pass)
-                                actions = rule['actions']
-                                if 'delete' in actions and actions['delete']:
-                                    try:
-                                        self.delete_email_with_retry(email)
-                                        email_deleted = True
-                                        second_pass_deleted += 1
-                                        self.log_print(f"Second-pass: Email deleted by rule: {rule['name']}")
-                                        break
-                                    except Exception as e:
-                                        self.log_print(f"Second-pass: Error deleting email: {str(e)}")
+                            # Duplicated action block below was causing double-processing; keeping for history but disabled
+                            # if match:
+                            #     second_pass_added_info[email_index]["match"] = True
+                            #     second_pass_added_info[email_index]["rule"] = rule
+                            #     second_pass_added_info[email_index]["matched_keyword"] = matched_keyword
+                            #     second_pass_added_info[email_index]["processed"] = True
+                            #     self.log_print(f"Second-pass: Email matches rule: {rule['name']}")
+                            #     actions = rule['actions']
+                            #     if 'delete' in actions and actions['delete']:
+                            #         try:
+                            #             self.delete_email_with_retry(email)
+                            #             email_deleted = True
+                            #             second_pass_deleted += 1
+                            #             self.log_print(f"Second-pass: Email deleted by rule: {rule['name']}")
+                            #             break
+                            #         except Exception as e:
+                            #             self.log_print(f"Second-pass: Error deleting email: {str(e)}")
                         
                         # Check phishing indicators for unmatched emails
                         if not email_deleted and not second_pass_added_info[email_index]["match"]:
@@ -2599,6 +3100,14 @@ def main():
     parser = argparse.ArgumentParser(description='Outlook Mail Spam Filter')
     parser.add_argument('-u', '--update_rules', action='store_true', 
                        help='Enable interactive rule updates (default: disabled)')
+    parser.add_argument('--use-regex-files', action='store_true',
+                       help='Load regex variants of YAML files (rulesregex.yaml and rules_safe_sendersregex.yaml). Default: ON (use --use-legacy-files to force legacy)')
+    parser.add_argument('--use-legacy-files', action='store_true',
+                       help='Force legacy YAML files (rules.yaml and rules_safe_senders.yaml) and legacy string matching')
+    parser.add_argument('--convert-safe-senders-to-regex', action='store_true',
+                        help='Convert rules_safe_senders.yaml to rules_safe_sendersregex.yaml and exit')
+    parser.add_argument('--convert-rules-to-regex', action='store_true',
+                        help='Convert rules.yaml to rulesregex.yaml and exit')
     
     args = parser.parse_args()
 
@@ -2615,19 +3124,42 @@ def main():
         agent.log_print(f"This will make changes")
         agent.log_print(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")
 
-        rules_json, safe_senders = agent.get_rules()
+        # Optional one-shot conversion and exit
+        if args.convert_safe_senders_to_regex:
+            agent.convert_safe_senders_yaml_to_regex()
+            return
+        if args.convert_rules_to_regex:
+            agent.convert_rules_yaml_to_regex()
+            return
+
+        # Determine effective mode: regex is default; legacy only if explicitly requested
+        effective_use_regex_files = True
+        if args.use_legacy_files and args.use_regex_files:
+            # Prefer legacy if both provided; log the conflict
+            agent.log_print("Both --use-regex-files and --use-legacy-files provided; defaulting to legacy for this run")
+            effective_use_regex_files = False
+        elif args.use_legacy_files:
+            effective_use_regex_files = False
+        else:
+            effective_use_regex_files = True
+
+        # Set mode and log file paths
+        agent.set_active_mode(effective_use_regex_files)
+
+        # Load rules using active files
+        rules_json, safe_senders = agent.get_rules(use_regex_files=effective_use_regex_files)
 
         # Process last N days of emails - see DAYS_BACK_DEFAULT
         agent.log_print(f"{CRLF}Begin email analysis{CRLF}")
 
-        agent.process_emails(rules_json, safe_senders, update_rules=args.update_rules)
+        agent.process_emails(rules_json, safe_senders, update_rules=args.update_rules, use_regex=effective_use_regex_files)
 
         agent.log_print(f"{CRLF}End email analysis{CRLF}")
 
         # Export rules every time (saving copies to backups to Archive directory)
-        agent.export_rules_to_yaml(rules_json)
+        agent.export_rules_to_yaml(rules_json)  # defaults to agent.active_rules_file
 
-        agent.export_safe_senders_to_yaml(safe_senders)
+        agent.export_safe_senders_to_yaml(safe_senders)  # defaults to agent.active_safe_senders_file
 
         simple_print(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}")
         simple_print(f"=============================================================\n")
