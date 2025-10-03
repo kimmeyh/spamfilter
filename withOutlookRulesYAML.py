@@ -2775,6 +2775,11 @@ class OutlookSecurityAgent:
             self.log_print(f"Second-pass: Found {len(second_pass_emails)} emails to reprocess")
             simple_print(f"Second-pass: Found {len(second_pass_emails)} emails to reprocess")
             
+            # Precompile safe sender patterns for regex mode (second pass may include updates)
+            second_pass_compiled_safe_senders = []
+            if use_regex:
+                second_pass_compiled_safe_senders = self._compile_pattern_list(safe_senders.get("safe_senders", []))
+
             # Process second-pass emails if any found
             if second_pass_emails:
                 second_pass_processed = 0
@@ -2797,24 +2802,39 @@ class OutlookSecurityAgent:
                         self.log_print(f"Subject: {self._sanitize_string(email.Subject)}")
                         self.log_print(f"From: {self._sanitize_string(email.SenderEmailAddress).lower()}")
                         
-                        # Check safe senders first (same logic as first pass)
-                        for sender in safe_senders["safe_senders"]:
-                            sender_lower = sender.lower()
-                            header_lower = email_header.lower()
-                            if sender_lower in header_lower:
-                                self.log_print(f"Second-pass: Safe sender matched: {sender}")
+                        # Check safe senders first (mirror first-pass logic)
+                        if use_regex:
+                            matched_safe, matched_pat = self._regex_match_header_any(second_pass_compiled_safe_senders, email_header, email.SenderEmailAddress)
+                            if matched_safe:
+                                self.log_print(f"Second-pass: Safe sender (regex) matched in header: {matched_pat}")
                                 self.move_email_with_retry(email, self.inbox_folder)
                                 self.delete_email_with_retry(email)
                                 email_deleted = True
-                                # Email will be processed as deleted, no need to remove from list during iteration
-                                break
+                        else:
+                            # Legacy safe_senders: only compare against trimmed From and Domain tokens
+                            from_tok = (self.header_from(email_header) or "").strip().lower()
+                            sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                            def legacy_match(pat: str, val: str) -> bool:
+                                if not pat:
+                                    return False
+                                if pat.startswith('*'):
+                                    return val.endswith(pat[1:])
+                                return pat in val
+                            for sender_pat in safe_senders.get("safe_senders", []):
+                                pat_lower = (sender_pat or "").strip().lower()
+                                if legacy_match(pat_lower, from_tok) or legacy_match(pat_lower, sender_tok):
+                                    self.log_print(f"Second-pass: Safe sender matched (legacy token): {pat_lower}")
+                                    self.move_email_with_retry(email, self.inbox_folder)
+                                    self.delete_email_with_retry(email)
+                                    email_deleted = True
+                                    break
                         
                         if email_deleted:
                             second_pass_processed += 1
                             second_pass_deleted += 1
                             continue
                         
-                        # Process rules (same logic as first pass)
+                        # Process rules (mirror first-pass logic; regex-aware)
                         for rule in rules:
                             if not isinstance(rule, dict) or 'actions' not in rule:
                                 continue
@@ -2826,80 +2846,160 @@ class OutlookSecurityAgent:
                             
                             match = False
                             matched_keyword = ""
-                            
-                            # Check conditions (simplified version of first-pass logic)
-                            if 'from' in conditions:
-                                from_addresses = [addr.lower() for addr in conditions['from']]
-                                sender_email_lower = email.SenderEmailAddress.lower()
-                                
-                                for addr in from_addresses:
-                                    addr_lower = addr.lower()
-                                    matched = False
-                                    
-                                    if addr_lower.startswith('*'):
-                                        # Handle wildcard patterns like "*@greyhub.com"
-                                        pattern_without_wildcard = addr_lower[1:]  # Remove the '*'
-                                        if sender_email_lower.endswith(pattern_without_wildcard):
-                                            matched = True
-                                    else:
-                                        # Handle exact patterns or simple substring matches
-                                        if addr_lower in sender_email_lower:
-                                            matched = True
-                                    
-                                    if matched:
+
+                            # FROM
+                            if 'from' in conditions and not match:
+                                sender_email_lower = (email.SenderEmailAddress or '').lower()
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(conditions['from'])
+                                    m, pat = self._any_regex_match(compiled, sender_email_lower)
+                                    if m:
                                         match = True
-                                        matched_keyword = addr
-                                        break
-                            
+                                        matched_keyword = pat
+                                        self.log_print(f"Second-pass: Matched regex in from address: {matched_keyword}")
+                                else:
+                                    from_addresses = [addr.lower() for addr in conditions['from']]
+                                    for addr in from_addresses:
+                                        addr_lower = addr.lower()
+                                        matched_simple = False
+                                        if addr_lower.startswith('*'):
+                                            pattern_without_wildcard = addr_lower[1:]
+                                            if sender_email_lower.endswith(pattern_without_wildcard):
+                                                matched_simple = True
+                                        else:
+                                            if addr_lower in sender_email_lower:
+                                                matched_simple = True
+                                        if matched_simple:
+                                            match = True
+                                            matched_keyword = addr
+                                            break
+
+                            # SUBJECT
                             if 'subject' in conditions and not match:
-                                subject_keywords = [keyword.lower() for keyword in conditions['subject']]
-                                if any(keyword in email.Subject.lower() for keyword in subject_keywords):
-                                    match = True
-                                    matched_keyword = next((keyword for keyword in conditions['subject'] if keyword.lower() in email.Subject.lower()), None)
-                            
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(conditions['subject'])
+                                    m, pat = self._any_regex_match(compiled, email.Subject)
+                                    if m:
+                                        match = True
+                                        matched_keyword = pat
+                                        self.log_print(f"Second-pass: Matched regex in subject: {matched_keyword}")
+                                else:
+                                    if any(keyword.lower() in email.Subject.lower() for keyword in conditions['subject']):
+                                        match = True
+                                        matched_keyword = next((keyword for keyword in conditions['subject'] if keyword.lower() in email.Subject.lower()), None)
+
+                            # BODY
                             if 'body' in conditions and not match:
-                                body_keywords = [keyword.lower() for keyword in conditions['body']]
-                                if any(keyword in email.Body.lower() for keyword in body_keywords):
-                                    match = True
-                                    matched_keyword = next((keyword for keyword in conditions['body'] if keyword.lower() in email.Body.lower()), None)
-                            
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(conditions['body'])
+                                    m, pat = self._any_regex_match(compiled, email.Body)
+                                    if m:
+                                        match = True
+                                        matched_keyword = pat
+                                        self.log_print(f"Second-pass: Matched regex in body: {matched_keyword}")
+                                else:
+                                    if any(keyword.lower() in email.Body.lower() for keyword in conditions['body']):
+                                        match = True
+                                        matched_keyword = next((keyword for keyword in conditions['body'] if keyword.lower() in email.Body.lower()), None)
+
+                            # HEADER
                             if 'header' in conditions and not match:
-                                header_keywords = [keyword.lower() for keyword in conditions['header']]
-                                if any(keyword in email_header.lower() for keyword in header_keywords):
-                                    match = True
-                                    matched_keyword = next((keyword for keyword in conditions['header'] if keyword.lower() in email_header.lower()), None)
-                            
-                            # Check exceptions (simplified version)
-                            if match:
-                                if 'from' in exceptions:
-                                    sender_email_lower = email.SenderEmailAddress.lower()
-                                    
-                                    for keyword in exceptions['from']:
-                                        keyword_lower = keyword.lower()
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(conditions['header'])
+                                    m, pat = self._regex_match_header_any(compiled, email_header, email.SenderEmailAddress)
+                                    if m:
+                                        match = True
+                                        matched_keyword = pat
+                                        self.log_print(f"Second-pass: Matched regex in header: {matched_keyword}")
+                                else:
+                                    # Legacy: only compare against trimmed From and Domain tokens
+                                    from_tok = (self.header_from(email_header) or "").strip().lower()
+                                    sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                                    header_vals = [(kw or "").strip().lower() for kw in conditions['header']]
+                                    def legacy_match(pat: str, val: str) -> bool:
+                                        if not pat:
+                                            return False
+                                        if pat.startswith('*'):
+                                            return val.endswith(pat[1:])
+                                        return pat in val
+                                    for kw in header_vals:
+                                        if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
+                                            match = True
+                                            matched_keyword = kw
+                                            break
+
+                            # Exceptions
+                            if match and 'from' in exceptions:
+                                sender_email_lower = (email.SenderEmailAddress or '').lower()
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(exceptions['from'])
+                                    m, pat = self._any_regex_match(compiled, sender_email_lower)
+                                    if m:
+                                        match = False
+                                        matched_keyword = pat
+                                else:
+                                    from_addresses = [addr.lower() for addr in exceptions['from']]
+                                    for addr in from_addresses:
+                                        addr_lower = addr.lower()
                                         exception_matched = False
-                                        
-                                        if keyword_lower.startswith('*'):
-                                            # Handle wildcard patterns like "*@greyhub.com"
-                                            pattern_without_wildcard = keyword_lower[1:]  # Remove the '*'
+                                        if addr_lower.startswith('*'):
+                                            pattern_without_wildcard = addr_lower[1:]
                                             if sender_email_lower.endswith(pattern_without_wildcard):
                                                 exception_matched = True
                                         else:
-                                            # Handle exact patterns or simple substring matches
-                                            if keyword_lower in sender_email_lower:
+                                            if addr_lower in sender_email_lower:
                                                 exception_matched = True
-                                        
                                         if exception_matched:
                                             match = False
+                                            matched_keyword = addr
                                             break
-                                if 'subject' in exceptions and match:
+
+                            if match and 'subject' in exceptions:
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(exceptions['subject'])
+                                    m, pat = self._any_regex_match(compiled, email.Subject)
+                                    if m:
+                                        match = False
+                                        matched_keyword = pat
+                                else:
                                     if any(keyword.lower() in email.Subject.lower() for keyword in exceptions['subject']):
                                         match = False
-                                if 'body' in exceptions and match:
+                                        matched_keyword = next((keyword for keyword in exceptions['subject'] if keyword.lower() in email.Subject.lower()), None)
+
+                            if match and 'body' in exceptions:
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(exceptions['body'])
+                                    m, pat = self._any_regex_match(compiled, email.Body)
+                                    if m:
+                                        match = False
+                                        matched_keyword = pat
+                                else:
                                     if any(keyword.lower() in email.Body.lower() for keyword in exceptions['body']):
                                         match = False
-                                if 'header' in exceptions and match:
-                                    if any(keyword.lower() in email_header.lower() for keyword in exceptions['header']):
+                                        matched_keyword = next((keyword for keyword in exceptions['body'] if keyword.lower() in email.Body.lower()), None)
+
+                            if match and 'header' in exceptions:
+                                if use_regex:
+                                    compiled = self._compile_pattern_list(exceptions['header'])
+                                    m, pat = self._regex_match_header_any(compiled, email_header, email.SenderEmailAddress)
+                                    if m:
                                         match = False
+                                        matched_keyword = pat
+                                else:
+                                    from_tok = (self.header_from(email_header) or "").strip().lower()
+                                    sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                                    exc_vals = [(kw or "").strip().lower() for kw in exceptions['header']]
+                                    def legacy_match(pat: str, val: str) -> bool:
+                                        if not pat:
+                                            return False
+                                        if pat.startswith('*'):
+                                            return val.endswith(pat[1:])
+                                        return pat in val
+                                    for kw in exc_vals:
+                                        if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
+                                            match = False
+                                            matched_keyword = kw
+                                            break
                             
                             # Update email info
                             if match:
@@ -2907,9 +3007,9 @@ class OutlookSecurityAgent:
                                 second_pass_added_info[email_index]["rule"] = rule
                                 second_pass_added_info[email_index]["matched_keyword"] = matched_keyword
                                 second_pass_added_info[email_index]["processed"] = True
-                                
+
                                 self.log_print(f"Second-pass: Email matches rule: {rule['name']}")
-                                
+
                                 # Process actions (focus on delete action for second pass)
                                 actions = rule['actions']
                                 if 'delete' in actions and actions['delete']:
@@ -2921,25 +3021,23 @@ class OutlookSecurityAgent:
                                         break
                                     except Exception as e:
                                         self.log_print(f"Second-pass: Error deleting email: {str(e)}")
-                            if match:
-                                second_pass_added_info[email_index]["match"] = True
-                                second_pass_added_info[email_index]["rule"] = rule
-                                second_pass_added_info[email_index]["matched_keyword"] = matched_keyword
-                                second_pass_added_info[email_index]["processed"] = True
-                                
-                                self.log_print(f"Second-pass: Email matches rule: {rule['name']}")
-                                
-                                # Process actions (focus on delete action for second pass)
-                                actions = rule['actions']
-                                if 'delete' in actions and actions['delete']:
-                                    try:
-                                        self.delete_email_with_retry(email)
-                                        email_deleted = True
-                                        second_pass_deleted += 1
-                                        self.log_print(f"Second-pass: Email deleted by rule: {rule['name']}")
-                                        break
-                                    except Exception as e:
-                                        self.log_print(f"Second-pass: Error deleting email: {str(e)}")
+                            # Duplicated action block below was causing double-processing; keeping for history but disabled
+                            # if match:
+                            #     second_pass_added_info[email_index]["match"] = True
+                            #     second_pass_added_info[email_index]["rule"] = rule
+                            #     second_pass_added_info[email_index]["matched_keyword"] = matched_keyword
+                            #     second_pass_added_info[email_index]["processed"] = True
+                            #     self.log_print(f"Second-pass: Email matches rule: {rule['name']}")
+                            #     actions = rule['actions']
+                            #     if 'delete' in actions and actions['delete']:
+                            #         try:
+                            #             self.delete_email_with_retry(email)
+                            #             email_deleted = True
+                            #             second_pass_deleted += 1
+                            #             self.log_print(f"Second-pass: Email deleted by rule: {rule['name']}")
+                            #             break
+                            #         except Exception as e:
+                            #             self.log_print(f"Second-pass: Error deleting email: {str(e)}")
                         
                         # Check phishing indicators for unmatched emails
                         if not email_deleted and not second_pass_added_info[email_index]["match"]:
