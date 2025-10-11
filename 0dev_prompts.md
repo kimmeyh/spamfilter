@@ -1,49 +1,16 @@
 Next:
-@workspace 'withOutlookRulesYAM.py' "do not use 0dev_prompts.md" 'memory-bank/*'
-It does not appear to be using either the rulesregex.yaml or rules_safe_sendersreges.yaml as requested via 
-CLI content or it is not using the same logic on the second pass for processing regex patterns
-Can you check and identify why this is happening?
-
-
-
-
-Reminder to use the memory-bank MCP server and memory-bank/ files to understand the workspace
-
-
-
+@workspace 'withOutlookRulesYAM.py' 'memory-bank/*' "do NOT use 0dev_prompts.md"
+Can you review all the memory-bank/ files and ensure they are current based on the contents of withoutlookRulesYAML.py and the REGEX files: rulesregex.yanl and rules_safe_senderregex.yanl
+Propose updates to memory-bank/*.* files and needed
 use memory-bank to understand the workspace
 Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
 
-
-
-Convert all strings that are enclosed in double quotes to be enclosed in single quotes instead.
-Make the strings regex-compatible by escaping any special regex characters. For example, a . should become \..
-To perform this task, you will work in chunks:
-
-Read 100 lines at a time, starting from line 2146.
-Apply the changes to that 100-line chunk.
-Save the changes to the file.
-Move to the next 100-line chunk and repeat the process until you reach the end of the file.
-Do not show me the proposed changes in the chat. Just apply them directly to the file."
-
-
-In rulesregex.yaml please update all the current header, body, subject, and from strings to ensure they are regex compatible.
-Assume all lines prior to 2146 and after 2146 are appropriately spaced (do not change)
-Assume all lines prior to 2146 are correct (do not change them)
-Covert all strings from start/ending with double quotes to single quotes
-Make all the changes in the file, start at line 2146, reading 100 rows at a time and changing those 100 rows, until all approximately 3,100 rows are changed.
-No need to show a list of proposed changes, just make the changes.
-
-
-Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
-
 Template:
-@workspace 'memory-bank\config.json' 'memory-bank\development-standards.md' 'memory-bank\enhancement-second-pass-processing.md' 'memory-bank\memory-bank.json' 'rules.yaml' 'withOutlookRulesYAML.py'
-
+@workspace 'withOutlookRulesYAM.py' 'memory-bank/*' "do NOT use 0dev_prompts.md"
+use memory-bank to understand the workspace
 Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
-Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
 
 
 
@@ -77,11 +44,13 @@ DAYS_BACK_DEFAULT = 365 # default number of days to go back in the calendar
 
 
 
-@workspace 
-
 
 
 Completed:
+It does not appear to be using either the rulesregex.yaml or rules_safe_sendersreges.yaml as requested via 
+CLI content or it is not using the same logic on the second pass for processing regex patterns
+Can you check and identify why this is happening?
+
 Just ran 'withOutlookRulesYAM.py' and it did not match the following from address to regex in rulesregxx.yaml 
 Can you help me understand why and fix so that it does
 
