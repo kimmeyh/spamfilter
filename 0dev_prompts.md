@@ -1,13 +1,23 @@
 Next:
-@workspace 'withOutlookRulesYAM.py' 'memory-bank/*' "do NOT use 0dev_prompts.md"
-Can you review all the memory-bank/ files and ensure they are current based on the contents of withoutlookRulesYAML.py and the REGEX files: rulesregex.yaml and rules_safe_senderregex.yaml
-Propose updates to memory-bank/*.* files and needed
+@workspace use 'memory-bank/*' to understand the workspace 
+'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
+During user input for "Add <> to SpamAutoDeleteHeader rule or safe_senders? (d/e/s):" can you add 
+and then implement an additional response "sd" for Add "Senders Domain".
+Implementation should be adding a regex similar to example '^[^@\s]+@(?:[a-z0-9-]+\.)*lifeway\.com$'
+Where it includes the top-level domain (.com) and sub-level domain (lifeway), with any number of prior sub-domains and any email
+name.  Ask if you have any questions.
 use memory-bank to understand the workspace
 Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
 
+Is there a way to complete the following Outlook Classic Client menu process in the codebase:
+Home > Delete > Junk > Never Block Sender's Domain 
+
+
 Template:
-@workspace 'withOutlookRulesYAM.py' 'memory-bank/*' "do NOT use 0dev_prompts.md"
+@workspace use 'memory-bank/*' to understand the workspace 
+'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
+
 use memory-bank to understand the workspace
 Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
@@ -42,6 +52,11 @@ YAML_INTERNATIONAL_RULES_FILE   = YAML_RULES_PATH + "rules_international.yaml"  
 OUTLOOK_RULES_SUBSET            = "SpamAutoDelete"
 DAYS_BACK_DEFAULT = 365 # default number of days to go back in the calendar
 
+
+
+Often needed:
+Can you review all the memory-bank/ files and ensure they are current based on the contents of withOutlookRulesYAML.py and the REGEX files: rulesregex.yaml and rules_safe_senderregex.yaml
+Propose updates to memory-bank/*.* files
 
 
 

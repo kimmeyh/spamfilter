@@ -38,6 +38,7 @@
     - '@(?:[a-z0-9-]+\.)*backdroportugal\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*bagned\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*bamebe\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*bandotting\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*barin\-sk\-evilin\-stroy\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*bbby\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*bearangzhen\.[a-z0-9.-]+$'
@@ -203,6 +204,7 @@
     - '@(?:[a-z0-9-]+\.)*goodnewsinstead\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*goodnightmoonbooks\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*googlegroups\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*gootiles\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*gordedph\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*gotkdo\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*govdelivery\.[a-z0-9.-]+$'
@@ -732,6 +734,7 @@
     - '@(?:[a-z0-9-]+\.)*pressrundown\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*primemobiletv\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*printerval\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*priyagarg\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*projectsanata\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*promptero\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*propospher\.[a-z0-9.-]+$'
@@ -819,6 +822,7 @@
     - '@(?:[a-z0-9-]+\.)*rozemix\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*rsschef\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*ruaysi\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*rufficem\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*runtym\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*rutgeb\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*rwsentosa\.[a-z0-9.-]+$'
@@ -1407,7 +1411,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-11T22:13:02.550860'
+    'last_modified': '2025-10-12T15:12:24.517402'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2557,7 +2561,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-11T22:13:02.550860'
+    'last_modified': '2025-10-12T15:12:24.517402'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2596,7 +2600,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-11T22:13:02.550860'
+    'last_modified': '2025-10-12T15:12:24.517402'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2661,7 +2665,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-11T22:13:02.550860'
+    'last_modified': '2025-10-12T15:12:24.517402'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2701,7 +2705,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-11T22:13:02.550860'
+    'last_modified': '2025-10-12T15:12:24.517402'
     'created_by': 'system'
     'tags':
     - 'spam'
