@@ -1,6 +1,6 @@
 Next:
 @workspace 'withOutlookRulesYAM.py' 'memory-bank/*' "do NOT use 0dev_prompts.md"
-Can you review all the memory-bank/ files and ensure they are current based on the contents of withoutlookRulesYAML.py and the REGEX files: rulesregex.yanl and rules_safe_senderregex.yanl
+Can you review all the memory-bank/ files and ensure they are current based on the contents of withoutlookRulesYAML.py and the REGEX files: rulesregex.yaml and rules_safe_senderregex.yaml
 Propose updates to memory-bank/*.* files and needed
 use memory-bank to understand the workspace
 Any code that should be removed should be commented out and not deleted.

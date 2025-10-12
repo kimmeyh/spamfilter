@@ -1,20 +1,8 @@
 #------------------List of future enhancements------------------
 # - Need to add Next ****
-#       Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
-#       Completed - create updated rules.yaml with all regex strings as rulesregex.yaml
-#       Create updated rules_safe_senders.yaml with all regex strings as rules_safe_sendersregex.yaml
-#       Independent program that reads all rules.yaml entries and if missing adds them to rulesregex.yaml
-#       Independent program that reads all rules_safe_senders.yaml entries and if missing adds them to rules_safe_sendersregex.yaml
 #       rename rulesregex.yaml back to rules.yaml
 #       rename rules_safe_sendersregex.yaml back to rules_safe_senders.yaml
-#       Need to analyze and change all rules.yaml strings to regex patterns. Examples:
-#            ".<domain>.<org>" and "/<domain>.<org>" to "[./\<domain>.<org>"
-#            add a "*.*.jp" (and othe org's) and then remove all entries with .jp
-#            add a "*.*.cz" (and othe org's) and then remove all entries with .cz...
-#       Update all new regex in rules.yaml to use wildcards
-#       Update all new regex in rules_safe_senders.yaml to use wildcards
-#       Updated rules_safe_senders.yaml to all be regex pattern
-#            update entries for "@<sub-domain>.ibm.com" to "@*.ibm.com" regex patterns
+
 # ----------------------------------------------------
 # (not in this order, probably later) Convert from using win32com to using o365
 #
@@ -74,6 +62,18 @@
 #  COMPLETED - Move backup files to a archive/"backup directory"
 #  COMPLETED - Update mail processing to use safe_senders list for all header exceptions
 #  08/25/2025 Harold Kimmey - Update so that it can run with no input by default.  New flag -u -update to update via user input
+#  10/09/2025 Harold Kimmey - Updates to convert code to regex patterns and update rules.yaml and rules_safe_senders.yaml to REGEX
+#       Completed - Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
+#       Completed - create updated rules.yaml with all regex strings as rulesregex.yaml
+#       Completed - Create updated rules_safe_senders.yaml with all regex strings as rules_safe_sendersregex.yaml
+#       Completed - Independent program that reads all rules.yaml entries and if missing adds them to rulesregex.yaml
+#       Completed - Independent program that reads all rules_safe_senders.yaml entries and if missing adds them to rules_safe_sendersregex.yaml
+#       Completed - Need to analyze and change all rules.yaml strings to regex patterns.
+#       Completed - Update all new regex in rules.yaml to use wildcards
+#       Completed - Update all new regex in rules_safe_senders.yaml to use wildcards
+#       Completed - Updated rules_safe_senders.yaml to all be regex pattern
+#       Completed - update entries for "@<sub-domain>.ibm.com" to "@*.ibm.com" regex patterns
+# 10/10/2025 Harold Kimmey - Updated all memory-bank files and README.md
 
 #------------------General Documentation------------------
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:

@@ -49,8 +49,10 @@
   ],
   "file_structure": {
     "configuration_files": [
-      "rules.yaml - Main spam filtering rules",
-      "rules_safe_senders.yaml - Trusted sender whitelist",
+      "rules.yaml - Main spam filtering rules (legacy)",
+      "rulesregex.yaml - Regex-mode spam filtering rules (default)",
+      "rules_safe_senders.yaml - Trusted sender whitelist (legacy)",
+      "rules_safe_sendersregex.yaml - Regex-mode trusted sender whitelist (default)",
       "requirements.txt - Python dependencies"
     ],
     "main_scripts": [
@@ -77,7 +79,12 @@
     "log_locations": [
       "D:/data/harold/OutlookRulesProcessing/OutlookRulesProcessingDEBUG_INFO.log",
       "D:/data/harold/OutlookRulesProcessing/OutlookRulesProcessingSimple.log"
-    ]
+    ],
+    "active_mode": "regex (default)",
+    "active_files": {
+      "rules": "rulesregex.yaml",
+      "safe_senders": "rules_safe_sendersregex.yaml"
+    }
   },
   "rule_types": {
     "SpamAutoDeleteHeader": "Filters based on email headers and sender domains",
@@ -149,8 +156,8 @@
     }
   },
   "recent_development": {
-    "current_branch": "feature/20250605SeeCommits",
-    "last_major_update": "July 2025",
+    "current_branch": "feature/20251010_update_memory_bank",
+    "last_major_update": "October 2025",
     "key_improvements": [
       "Migrated from CSV to YAML rule configuration",
       "Memory bank integration for better rule learning",
@@ -160,7 +167,9 @@
       "Added interactive rule update prompts",
       "Implemented multi-folder processing support",
       "Added recursive folder search capability",
-      "Implemented second-pass email reprocessing after rule updates"
+      "Implemented second-pass email reprocessing after rule updates",
+      "Established REGEX-default mode with parallel legacy compatibility",
+      "Added YAML converters for rules and safe_senders to regex variants"
     ],
     "development_methodology": {
       "followed_standards": true,
@@ -182,10 +191,10 @@
     "Email volume reporting and summary statistics"
   ],
   "usage_workflow": [
-    "1. Activate Python virtual environment (.venv\\scripts\\activate)",
+    "1. Activate Python virtual environment (PowerShell: ./.venv/Scripts/Activate.ps1 | bash: source .venv/bin/activate)",
     "2. Run main script (python .\\withOutlookRulesYAML.py)",
     "3. System processes emails in configured folders (Bulk Mail, bulk)",
-    "4. Applies filtering rules from rules.yaml to each folder",
+    "4. Applies filtering rules from rulesregex.yaml by default (legacy via --use-legacy-files)",
     "5. Checks against safe sender lists",
     "6. Performs phishing detection",
     "7. Takes configured actions (delete, move, flag)",

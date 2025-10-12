@@ -6,6 +6,18 @@ Automated Python-based email spam and phishing filter for Microsoft Outlook that
 
 This tool provides intelligent filtering and removal of SPAM and phishing emails from Outlook accounts using pattern-based rules and safe sender management. The system processes emails from configurable folder lists and applies comprehensive filtering criteria including header analysis, body content scanning, subject pattern matching, and sender verification.
 
+## Recent Updates (October 2025)
+
+- ✅ Regex mode is now the default using YAML regex files:
+	- Rules: `rulesregex.yaml`
+	- Safe senders: `rules_safe_sendersregex.yaml`
+- ✅ Legacy files still supported via flag:
+	- Rules: `rules.yaml`
+	- Safe senders: `rules_safe_senders.yaml`
+- ✅ CLI flags added for mode control and one-shot conversions
+- ✅ Exporters enforce consistency (lowercase, trimmed, de-duped, sorted) and create timestamped backups in `archive/`
+- ✅ Memory bank updated with processing flow, schemas, and regex conventions
+
 ## Recent Updates (July 2025)
 
 - ✅ **Multi-Folder Processing**: Updated to process multiple folders instead of single folder
@@ -16,22 +28,41 @@ This tool provides intelligent filtering and removal of SPAM and phishing emails
 ## Key Features
 
 - **Multi-Folder Processing**: Process emails from configurable list of folders
-- **YAML-Based Configuration**: Easy-to-maintain rule files (rules.yaml, rules_safe_senders.yaml)
+- **YAML-Based Configuration**: Easy-to-maintain rule files (regex default: `rulesregex.yaml`, `rules_safe_sendersregex.yaml`; legacy: `rules.yaml`, `rules_safe_senders.yaml`)
+- **Regex-Default Mode**: Regex YAMLs are used by default; legacy mode available via CLI
 - **Multi-Criteria Filtering**: Header, body, subject, and sender-based filtering
 - **Phishing Detection**: Suspicious URL and domain analysis
 - **Safe Sender Management**: Whitelist trusted senders and domains
 - **Comprehensive Logging**: Detailed audit trails of all processing activities
 - **Interactive Rule Updates**: Prompts for adding rules based on unmatched emails
 - **Backup System**: Automatic timestamped backups of rule changes
+- **Second Pass Reprocessing**: Re-checks remaining emails after interactive updates for additional cleanup
 
 ## How to Run
 
+```powershell
+# Activate Python virtual environment (PowerShell)
+./.venv/Scripts/Activate.ps1
+```
 ```bash
-# Activate Python virtual environment
-.venv\scripts\activate
-
-# Run the main application
+# Activate Python virtual environment (Bash)
+source .venv/bin/activate
+```
+# Run the main application (regex mode is default)
 python .\withOutlookRulesYAML.py
+
+# Optional: enable interactive update prompts during the run
+python .\withOutlookRulesYAML.py -u
+
+# Force legacy YAML files instead of regex
+python .\withOutlookRulesYAML.py --use-legacy-files
+
+# Explicitly use regex files (default behavior)
+python .\withOutlookRulesYAML.py --use-regex-files
+
+# One-shot conversions to create/update regex YAMLs from legacy files
+python .\withOutlookRulesYAML.py --convert-rules-to-regex
+python .\withOutlookRulesYAML.py --convert-safe-senders-to-regex
 ```
 
 ## Configuration
@@ -47,12 +78,22 @@ Configuration can be modified in the script constants:
 ## File Structure
 
 - **withOutlookRulesYAML.py** - Main application script
-- **rules.yaml** - Primary spam filtering rules
-- **rules_safe_senders.yaml** - Trusted sender whitelist
+- **rulesregex.yaml** - Regex-mode spam filtering rules (default)
+- **rules_safe_sendersregex.yaml** - Regex-mode trusted sender whitelist (default)
+- **rules.yaml** - Legacy spam filtering rules
+- **rules_safe_senders.yaml** - Legacy trusted sender whitelist
 - **requirements.txt** - Python dependencies
 - **pytest/** - All test files and test configuration
 - **Archive/** - Historical backups and development files
 - **memory-bank/** - Configuration for GitHub Copilot memory enhancement
+
+## CLI Flags
+
+- `-u`, `--update_rules`: enable interactive prompts to add header regexes or safe senders during processing
+- `--use-regex-files`: use regex YAML files (default behavior)
+- `--use-legacy-files`: force legacy YAML files for a run
+- `--convert-rules-to-regex`: generate/update `rulesregex.yaml` from `rules.yaml`
+- `--convert-safe-senders-to-regex`: generate/update `rules_safe_sendersregex.yaml` from `rules_safe_senders.yaml`
 
 ## Testing
 
@@ -80,6 +121,22 @@ Test files include:
 - yaml (YAML file processing)
 - logging (Application logging)
 - Standard Python libraries (re, datetime, os, etc.)
+
+## Backups and Exporter Invariants
+
+- All list fields (rules conditions/exceptions and safe_senders) are normalized on export:
+	- lowercased, trimmed, de-duplicated, and sorted
+	- regex YAMLs are written using single quotes to reduce escape noise
+- Before overwriting active YAML files, a timestamped backup is created in `archive/`
+
+## Schemas and Conventions
+
+For details, see memory-bank docs:
+- `memory-bank/processing-flow.md` — high-level processing, interactive updates, second pass
+- `memory-bank/yaml-schemas.md` — effective YAML schemas for rules and safe senders
+- `memory-bank/regex-conventions.md` — quoting, glob-to-regex, and domain anchor patterns
+- `memory-bank/quality-invariants.md` — exporter and processing invariants
+- `memory-bank/cli-usage.md` — CLI usage reference
 
 ## Future Enhancements
 
