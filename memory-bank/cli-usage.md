@@ -7,6 +7,12 @@ Developer setup
 
 - Interactive updates
   - python withOutlookRulesYAML.py -u
+  - During prompts: enter d/e/s/sd/?
+    - d  - Add sender domain regex to SpamAutoDeleteHeader (blocks by domain)
+    - e  - Add full sender email to SpamAutoDeleteHeader (blocks this email)
+    - s  - Add literal address/domain to safe_senders (never block)
+    - sd - Add sender-domain regex to safe_senders (never block any subdomain)
+    - ?  - Show help for options
 - Force legacy files
   - python withOutlookRulesYAML.py --use-legacy-files
 - Explicit regex files (default)

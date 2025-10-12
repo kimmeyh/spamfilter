@@ -17,6 +17,7 @@ This tool provides intelligent filtering and removal of SPAM and phishing emails
 - ✅ CLI flags added for mode control and one-shot conversions
 - ✅ Exporters enforce consistency (lowercase, trimmed, de-duped, sorted) and create timestamped backups in `archive/`
 - ✅ Memory bank updated with processing flow, schemas, and regex conventions
+- ✅ Interactive prompt gains new options: 'sd' (add sender-domain regex to safe_senders) and '?' (help)
 
 ## Recent Updates (July 2025)
 
@@ -35,6 +36,12 @@ This tool provides intelligent filtering and removal of SPAM and phishing emails
 - **Safe Sender Management**: Whitelist trusted senders and domains
 - **Comprehensive Logging**: Detailed audit trails of all processing activities
 - **Interactive Rule Updates**: Prompts for adding rules based on unmatched emails
+	- Options during -u prompts: d/e/s/sd/?
+		- d: add domain regex to SpamAutoDeleteHeader (block)
+		- e: add full sender email to SpamAutoDeleteHeader (block)
+		- s: add literal to safe_senders (allow)
+		- sd: add sender-domain regex to safe_senders (allow any subdomain)
+		- ?: show brief help
 - **Backup System**: Automatic timestamped backups of rule changes
 - **Second Pass Reprocessing**: Re-checks remaining emails after interactive updates for additional cleanup
 
@@ -135,6 +142,7 @@ For details, see memory-bank docs:
 - `memory-bank/processing-flow.md` — high-level processing, interactive updates, second pass
 - `memory-bank/yaml-schemas.md` — effective YAML schemas for rules and safe senders
 - `memory-bank/regex-conventions.md` — quoting, glob-to-regex, and domain anchor patterns
+	- Includes sender-domain safe-senders regex: `^[^@\s]+@(?:[a-z0-9-]+\.)*<domain>$`
 - `memory-bank/quality-invariants.md` — exporter and processing invariants
 - `memory-bank/cli-usage.md` — CLI usage reference
 

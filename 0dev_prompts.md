@@ -1,17 +1,10 @@
 Next:
 @workspace use 'memory-bank/*' to understand the workspace 
 'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
-During user input for "Add <> to SpamAutoDeleteHeader rule or safe_senders? (d/e/s):" can you add 
-and then implement an additional response "sd" for Add "Senders Domain".
-Implementation should be adding a regex similar to example '^[^@\s]+@(?:[a-z0-9-]+\.)*lifeway\.com$'
-Where it includes the top-level domain (.com) and sub-level domain (lifeway), with any number of prior sub-domains and any email
-name.  Ask if you have any questions.
+
 use memory-bank to understand the workspace
 Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
-
-Is there a way to complete the following Outlook Classic Client menu process in the codebase:
-Home > Delete > Junk > Never Block Sender's Domain 
 
 
 Template:
@@ -62,6 +55,15 @@ Propose updates to memory-bank/*.* files
 
 
 Completed:
+Is there a way to complete the following Outlook Classic Client menu process in the codebase:
+Home > Delete > Junk > Never Block Sender's Domain 
+
+During user input for "Add <> to SpamAutoDeleteHeader rule or safe_senders? (d/e/s):" can you add 
+and then implement an additional response "sd" for Add "Senders Domain".
+Implementation should be adding a regex similar to example '^[^@\s]+@(?:[a-z0-9-]+\.)*lifeway\.com$'
+Where it includes the top-level domain (.com) and sub-level domain (lifeway), with any number of prior sub-domains and any email
+name.  Ask if you have any questions.
+
 It does not appear to be using either the rulesregex.yaml or rules_safe_sendersreges.yaml as requested via 
 CLI content or it is not using the same logic on the second pass for processing regex patterns
 Can you check and identify why this is happening?

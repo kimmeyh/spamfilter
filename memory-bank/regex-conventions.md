@@ -12,7 +12,13 @@ Domain header patterns
   - Anchor chosen from first meaningful subdomain left of TLD
   - Fallback: '@(?:[a-z0-9-]+\.)*[a-z0-9-]+\.[a-z0-9.-]+$'
 
+Sender domain safe-senders patterns
+- build_sender_domain_safe_regex(addr_or_domain)
+  - Produces '^[^@\s]+@(?:[a-z0-9-]+\.)*<domain>$'
+  - Matches any local part at the exact domain and any subdomains
+
 Examples
 - 'mailer\-daemon@aol\.com'
 - '@(?:[a-z0-9-]+\.)*example\.com$'
 - '@(?:[a-z0-9-]+\.)*example\.[a-z0-9.-]+$' (generic TLD)
+- '^[^@\s]+@(?:[a-z0-9-]+\.)*lifeway\.com$' (safe-senders sender-domain)
