@@ -7,15 +7,24 @@ Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
 When complete, update the memory-bank/* files and README.md
 
+Assigned to Copilot:
+@workspace use 'memory-bank/*' to understand the workspace 
+'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
+Now we can comment out/deprecate all the functionality for CLI  switch """--use-legacy-files"""
+Can you help draft the code for review in the files
+Any code that should be removed should be commented out and not deleted.
+Do not remove any commented out code.
+When complete, update the memory-bank/* files and README.md
 
 Template:
 @workspace use 'memory-bank/*' to understand the workspace 
 'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
 
-use memory-bank to understand the workspace
+Can you help draft the code for review in the files
 Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
-
+When complete, update the memory-bank/* files and README.md
+----------
 
 
 create an optional YAML config files for all the major global variables.  List:

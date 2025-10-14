@@ -374,6 +374,7 @@
     - '@(?:[a-z0-9-]+\.)*ivinsco\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*ixcomb\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*jaggedrinse\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*jamiemayo\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*jarvany\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*jdisonline\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*jeffbullas\.[a-z0-9.-]+$'
@@ -1417,7 +1418,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-14T07:48:56.365993'
+    'last_modified': '2025-10-14T08:21:43.347026'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2567,7 +2568,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-14T07:48:56.365993'
+    'last_modified': '2025-10-14T08:21:43.347026'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2606,7 +2607,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-14T07:48:56.365993'
+    'last_modified': '2025-10-14T08:21:43.347026'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2676,7 +2677,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-14T07:48:56.365993'
+    'last_modified': '2025-10-14T08:21:43.347026'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2716,7 +2717,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-14T07:48:56.365993'
+    'last_modified': '2025-10-14T08:21:43.347026'
     'created_by': 'system'
     'tags':
     - 'spam'
