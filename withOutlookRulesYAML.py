@@ -74,6 +74,16 @@
 #       Completed - Updated rules_safe_senders.yaml to all be regex pattern
 #       Completed - update entries for "@<sub-domain>.ibm.com" to "@*.ibm.com" regex patterns
 # 10/10/2025 Harold Kimmey - Updated all memory-bank files and README.md
+# 10/14/2025 DEPRECATION - Legacy YAML file support removed:
+#       - Commented out --use-legacy-files CLI flag (kept for reference)
+#       - Commented out all legacy_match() functions in process_emails() and second-pass processing
+#       - Updated set_active_mode() to always use regex files (parameter kept for backward compatibility)
+#       - Updated test_mode_selection.py to reflect regex-only mode
+#       - Updated memory-bank/cli-usage.md and memory-bank/processing-flow.md
+#       - Updated README.md to indicate legacy files are deprecated
+#       - Regex mode is now the only supported mode (rulesregex.yaml and rules_safe_sendersregex.yaml)
+#       - Legacy files (rules.yaml and rules_safe_senders.yaml) are no longer used
+#       - All legacy code commented out with DEPRECATED 10/14/2025 markers for reference
 
 #------------------General Documentation------------------
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:

@@ -1,12 +1,12 @@
 # Processing flow (current)
 
 - Load mode and active files
-  - OutlookSecurityAgent.set_active_mode() picks regex vs legacy files
+  - OutlookSecurityAgent.set_active_mode() always uses regex files (legacy mode deprecated 10/14/2025)
   - OutlookSecurityAgent.get_rules() returns (rules_json, safe_senders)
 - Primary processing
   - OutlookSecurityAgent.process_emails()
     - Safe senders are checked first
-    - Rule evaluation honors regex patterns in regex mode
+    - Rule evaluation honors regex patterns (only supported mode)
     - Two-pass: reprocess after interactive updates
 - Interactive updates (optional)
   - Enabled with -u/--update_rules
