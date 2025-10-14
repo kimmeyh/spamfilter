@@ -1,8 +1,11 @@
 Next:
 @workspace use 'memory-bank/*' to understand the workspace 
 'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
-
-use memory-bank to understand the workspace
+for the "sd" input value, it looks like it has been adding the top-level domain, first sub-domain and second sub-domain.  Can you 
+help adjust so that it only includes the top-level domain, and first sub-domain.
+Example input:  something@mail.cursor.com resulted in - '^[^@\s]+@(?:[a-z0-9-]+\.)*mail\.cursor\.com$' but
+should result in - '^[^@\s]+@(?:[a-z0-9-]+\.)*cursor\.com$'
+Can you help fix.
 Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
 
@@ -51,8 +54,9 @@ Often needed:
 Can you review all the memory-bank/ files and ensure they are current based on the contents of withOutlookRulesYAML.py and the REGEX files: rulesregex.yaml and rules_safe_senderregex.yaml
 Propose updates to memory-bank/*.* files
 
-
-
+How to Run from command line (best practice):
+cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py -u
+cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py
 
 Completed:
 Is there a way to complete the following Outlook Classic Client menu process in the codebase:

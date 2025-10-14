@@ -56,20 +56,20 @@ This tool provides intelligent filtering and removal of SPAM and phishing emails
 source .venv/bin/activate
 ```
 # Run the main application (regex mode is default)
-python .\withOutlookRulesYAML.py
+cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py
 
 # Optional: enable interactive update prompts during the run
-python .\withOutlookRulesYAML.py -u
+cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py -u
 
 # Force legacy YAML files instead of regex
-python .\withOutlookRulesYAML.py --use-legacy-files
+cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py --use-legacy-files
 
 # Explicitly use regex files (default behavior)
-python .\withOutlookRulesYAML.py --use-regex-files
+cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py --use-regex-files
 
 # One-shot conversions to create/update regex YAMLs from legacy files
-python .\withOutlookRulesYAML.py --convert-rules-to-regex
-python .\withOutlookRulesYAML.py --convert-safe-senders-to-regex
+cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py --convert-rules-to-regex
+cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py --convert-safe-senders-to-regex
 ```
 
 ## Configuration

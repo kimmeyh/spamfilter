@@ -354,8 +354,26 @@ class OutlookSecurityAgent:
         dom = dom.strip('.')
         if not dom:
             return ''
-        # Anchor: any local part, then any number of subdomains, then the exact domain
-        return f"^[^@\\s]+@(?:[a-z0-9-]+\\.)*{re.escape(dom)}$"
+
+        # Reduce to registrable domain (SLD + TLD), with a small set of common multi-part public suffixes.
+        labels = [p for p in dom.split('.') if p]
+        base = dom
+        if len(labels) >= 2:
+            # Common multi-part public suffixes. Extend as needed.
+            MULTI_PART_SUFFIXES = {
+                'co.uk', 'ac.uk', 'gov.uk', 'org.uk',
+                'com.au', 'net.au', 'org.au',
+                'com.br', 'com.cn', 'co.jp'
+            }
+            last2 = '.'.join(labels[-2:])
+            if last2 in MULTI_PART_SUFFIXES and len(labels) >= 3:
+                base = '.'.join(labels[-3:])  # e.g., example.co.uk
+            else:
+                base = '.'.join(labels[-2:])  # e.g., cursor.com
+
+        # Anchor: any local part, then any number of subdomains, then the registrable domain
+        # return f"^[^@\\s]+@(?:[a-z0-9-]+\\.)*{re.escape(dom)}$"  # prior behavior (kept for reference)
+        return f"^[^@\\s]+@(?:[a-z0-9-]+\\.)*{re.escape(base)}$"
 
     def set_active_mode(self, use_regex_files: bool):
         r"""Set active read/write files based on desired mode and log the selection."""
