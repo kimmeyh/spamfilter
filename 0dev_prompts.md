@@ -1,23 +1,30 @@
 Next:
 @workspace use 'memory-bank/*' to understand the workspace 
 'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
-for the "sd" input value, it looks like it has been adding the top-level domain, first sub-domain and second sub-domain.  Can you 
-help adjust so that it only includes the top-level domain, and first sub-domain.
-Example input:  something@mail.cursor.com resulted in - '^[^@\s]+@(?:[a-z0-9-]+\.)*mail\.cursor\.com$' but
-should result in - '^[^@\s]+@(?:[a-z0-9-]+\.)*cursor\.com$'
-Can you help fix.
+Now we can comment out/deprecate all the functionality for CLI  switch """--use-legacy-files"""
+Can you help draft the code for review in the files
 Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
+When complete, update the memory-bank/* files and README.md
 
+Assigned to Copilot:
+@workspace use 'memory-bank/*' to understand the workspace 
+'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
+Now we can comment out/deprecate all the functionality for CLI  switch """--use-legacy-files"""
+Can you help draft the code for review in the files
+Any code that should be removed should be commented out and not deleted.
+Do not remove any commented out code.
+When complete, update the memory-bank/* files and README.md
 
 Template:
 @workspace use 'memory-bank/*' to understand the workspace 
 'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
 
-use memory-bank to understand the workspace
+Can you help draft the code for review in the files
 Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
-
+When complete, update the memory-bank/* files and README.md
+----------
 
 
 create an optional YAML config files for all the major global variables.  List:
@@ -59,6 +66,12 @@ cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 &
 cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py
 
 Completed:
+for the "sd" input value, it looks like it has been adding the top-level domain, first sub-domain and second sub-domain.  Can you 
+help adjust so that it only includes the top-level domain, and first sub-domain.
+Example input:  something@mail.cursor.com resulted in - '^[^@\s]+@(?:[a-z0-9-]+\.)*mail\.cursor\.com$' but
+should result in - '^[^@\s]+@(?:[a-z0-9-]+\.)*cursor\.com$'
+Can you help fix.
+
 Is there a way to complete the following Outlook Classic Client menu process in the codebase:
 Home > Delete > Junk > Never Block Sender's Domain 
 

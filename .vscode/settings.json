@@ -8,6 +8,15 @@
         "protonmail",
         "safesenders"
     ],
-    "python-envs.defaultEnvManager": "ms-python.python:system",
-    "python-envs.pythonProjects": []
+    // Ensure VS Code uses the local venv interpreter for this workspace
+    "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+    // If you use the 'python-envs' extension, prefer venv manager and register this workspace
+    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    "python-envs.pythonProjects": [
+        {
+            "workspace": "${workspaceFolder}",
+            "envFolder": ".venv",
+            "interpreter": ".venv/Scripts/python.exe"
+        }
+    ]
 }
