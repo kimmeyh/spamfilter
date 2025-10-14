@@ -376,10 +376,20 @@ class OutlookSecurityAgent:
         return f"^[^@\\s]+@(?:[a-z0-9-]+\\.)*{re.escape(base)}$"
 
     def set_active_mode(self, use_regex_files: bool):
-        r"""Set active read/write files based on desired mode and log the selection."""
-        self.active_rules_file = YAML_RULES_FILE_REGEX if use_regex_files else YAML_RULES_FILE
-        self.active_safe_senders_file = YAML_RULES_SAFE_SENDERS_FILE_REGEX if use_regex_files else YAML_RULES_SAFE_SENDERS_FILE
-        self.log_print(f"Operating mode: {'REGEX (default)' if use_regex_files else 'LEGACY (fallback flag)'}")
+        r"""Set active read/write files based on desired mode and log the selection.
+        
+        DEPRECATED 10/14/2025: Legacy mode is deprecated. Parameter kept for backward compatibility.
+        """
+        # DEPRECATED 10/14/2025: Legacy mode support removed - always use regex files
+        # Legacy logic commented out - keeping for reference:
+        # self.active_rules_file = YAML_RULES_FILE_REGEX if use_regex_files else YAML_RULES_FILE
+        # self.active_safe_senders_file = YAML_RULES_SAFE_SENDERS_FILE_REGEX if use_regex_files else YAML_RULES_SAFE_SENDERS_FILE
+        # self.log_print(f"Operating mode: {'REGEX (default)' if use_regex_files else 'LEGACY (fallback flag)'}")
+        
+        # Always use regex files now
+        self.active_rules_file = YAML_RULES_FILE_REGEX
+        self.active_safe_senders_file = YAML_RULES_SAFE_SENDERS_FILE_REGEX
+        self.log_print(f"Operating mode: REGEX (only supported mode)")
         self.log_print(f"Using rules file: {self.active_rules_file}")
         self.log_print(f"Using safe_senders file: {self.active_safe_senders_file}")
 
@@ -2311,7 +2321,9 @@ class OutlookSecurityAgent:
         self.log_print(f"Target folders: {[folder.Name for folder in self.target_folders]}", "DEBUG")
         self.log_print(f"Processing emails from last {days_back} days")
         self.log_print(f"Regex mode: {'enabled' if use_regex else 'disabled'}")
-        self.log_print(f"Matching semantics: {'regex' if use_regex else 'legacy substring/wildcard'}")
+        # DEPRECATED 10/14/2025: Legacy matching removed - always using regex
+        # self.log_print(f"Matching semantics: {'regex' if use_regex else 'legacy substring/wildcard'}")
+        self.log_print(f"Matching semantics: regex (only supported mode)")
         self.log_print(f"Interactive rule updates: {'enabled' if update_rules else 'disabled'}")
 
         try:
@@ -2415,29 +2427,30 @@ class OutlookSecurityAgent:
                                 all_emails_to_process.remove(email)
                             self.log_print(f"Email moved to inbox")
                             continue
-                    else:
-                        # Legacy safe_senders: only compare against trimmed From and Domain tokens
-                        from_tok = (self.header_from(email_header) or "").strip().lower()
-                        sender_tok = (email.SenderEmailAddress or "").strip().lower()
-                        for sender_pat in safe_senders["safe_senders"]:
-                            pat_lower = (sender_pat or "").strip().lower()
-                            # Wildcard prefix semantics: '*foo' means any ending with 'foo'
-                            def legacy_match(pat: str, val: str) -> bool:
-                                if not pat:
-                                    return False
-                                if pat.startswith('*'):
-                                    return val.endswith(pat[1:])
-                                return pat in val
-                            if legacy_match(pat_lower, from_tok) or legacy_match(pat_lower, sender_tok):
-                                self.log_print(f"Safe sender matched (legacy) on token: {pat_lower}")
-                                self.move_email_with_retry(email, self.inbox_folder)
-                                self.delete_email_with_retry(email)
-                                email_deleted = True
-                                if email in all_emails_to_process:
-                                    all_emails_to_process.remove(email)
-                                self.log_print(f"Email moved to inbox")
-                                break
-                               # no processing of rules needed if found in safe_senders
+                    # DEPRECATED 10/14/2025: Legacy safe_senders matching removed
+                    # else:
+                    #     # Legacy safe_senders: only compare against trimmed From and Domain tokens
+                    #     from_tok = (self.header_from(email_header) or "").strip().lower()
+                    #     sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                    #     for sender_pat in safe_senders["safe_senders"]:
+                    #         pat_lower = (sender_pat or "").strip().lower()
+                    #         # Wildcard prefix semantics: '*foo' means any ending with 'foo'
+                    #         def legacy_match(pat: str, val: str) -> bool:
+                    #             if not pat:
+                    #                 return False
+                    #             if pat.startswith('*'):
+                    #                 return val.endswith(pat[1:])
+                    #             return pat in val
+                    #         if legacy_match(pat_lower, from_tok) or legacy_match(pat_lower, sender_tok):
+                    #             self.log_print(f"Safe sender matched (legacy) on token: {pat_lower}")
+                    #             self.move_email_with_retry(email, self.inbox_folder)
+                    #             self.delete_email_with_retry(email)
+                    #             email_deleted = True
+                    #             if email in all_emails_to_process:
+                    #                 all_emails_to_process.remove(email)
+                    #             self.log_print(f"Email moved to inbox")
+                    #             break
+                    #            # no processing of rules needed if found in safe_senders
 
                     for rule in rules:
                         if not isinstance(rule, dict) or 'actions' not in rule:
@@ -2537,29 +2550,30 @@ class OutlookSecurityAgent:
                                     self.log_print(f"Matched regex in header: {matched_keyword}")
                                     self.log_print(f"Rule matched: {rule['name']} via HEADER pattern: {matched_keyword}")
                                     # No need to scan header lines; match is against tokens only
-                            else:
-                                # Legacy: only compare against trimmed From and Domain tokens
-                                from_tok = (self.header_from(email_header) or "").strip().lower()
-                                sender_tok = (email.SenderEmailAddress or "").strip().lower()
-                                header_vals = [(kw or "").strip().lower() for kw in conditions['header']]
-                                def legacy_match(pat: str, val: str) -> bool:
-                                    if not pat:
-                                        return False
-                                    if pat.startswith('*'):
-                                        return val.endswith(pat[1:])
-                                    return pat in val
-                                for kw in header_vals:
-                                    if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
-                                        match = True
-                                        matched_keyword = kw
-                                        self.log_print(f"Matched keyword in header (legacy token): {matched_keyword}")
-                                        break
-                                # below will print all the body lines that match if needed for debugging
-                                # for header in email_header.splitlines():
-                                if DEBUG:
-                                    for header in email_header.splitlines():
-                                        if any(keyword.lower() in header.lower() for keyword in conditions['header']):
-                                            self.log_print(f"Header: {header}", "DEBUG")
+                            # DEPRECATED 10/14/2025: Legacy header matching removed
+                            # else:
+                            #     # Legacy: only compare against trimmed From and Domain tokens
+                            #     from_tok = (self.header_from(email_header) or "").strip().lower()
+                            #     sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                            #     header_vals = [(kw or "").strip().lower() for kw in conditions['header']]
+                            #     def legacy_match(pat: str, val: str) -> bool:
+                            #         if not pat:
+                            #             return False
+                            #         if pat.startswith('*'):
+                            #             return val.endswith(pat[1:])
+                            #         return pat in val
+                            #     for kw in header_vals:
+                            #         if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
+                            #             match = True
+                            #             matched_keyword = kw
+                            #             self.log_print(f"Matched keyword in header (legacy token): {matched_keyword}")
+                            #             break
+                            #     # below will print all the body lines that match if needed for debugging
+                            #     # for header in email_header.splitlines():
+                            #     if DEBUG:
+                            #         for header in email_header.splitlines():
+                            #             if any(keyword.lower() in header.lower() for keyword in conditions['header']):
+                            #                 self.log_print(f"Header: {header}", "DEBUG")
 
                         # Check for attachments - not using. could be added later - will need to be updated; will not work as-is
                         # if 'has_attachments' in conditions:
@@ -2642,22 +2656,23 @@ class OutlookSecurityAgent:
                                     matched_keyword = pat
                                     self.log_print(f"Exception matched regex in header: {matched_keyword}")
                                     # Match was against tokens; no need to list header lines
-                            else:
-                                from_tok = (self.header_from(email_header) or "").strip().lower()
-                                sender_tok = (email.SenderEmailAddress or "").strip().lower()
-                                exc_vals = [(kw or "").strip().lower() for kw in exceptions['header']]
-                                def legacy_match(pat: str, val: str) -> bool:
-                                    if not pat:
-                                        return False
-                                    if pat.startswith('*'):
-                                        return val.endswith(pat[1:])
-                                    return pat in val
-                                for kw in exc_vals:
-                                    if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
-                                        match = False
-                                        matched_keyword = kw
-                                        self.log_print(f"Exception matched keyword in header (legacy token): {matched_keyword}")
-                                        break
+                            # DEPRECATED 10/14/2025: Legacy header exception matching removed
+                            # else:
+                            #     from_tok = (self.header_from(email_header) or "").strip().lower()
+                            #     sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                            #     exc_vals = [(kw or "").strip().lower() for kw in exceptions['header']]
+                            #     def legacy_match(pat: str, val: str) -> bool:
+                            #         if not pat:
+                            #             return False
+                            #         if pat.startswith('*'):
+                            #             return val.endswith(pat[1:])
+                            #         return pat in val
+                            #     for kw in exc_vals:
+                            #         if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
+                            #             match = False
+                            #             matched_keyword = kw
+                            #             self.log_print(f"Exception matched keyword in header (legacy token): {matched_keyword}")
+                            #             break
 
                         # # Check for attachments - not using. could be added later - will need to be updated; will not work as-is
                         # if 'has_attachments' in conditions:
@@ -2905,24 +2920,25 @@ class OutlookSecurityAgent:
                                 self.move_email_with_retry(email, self.inbox_folder)
                                 self.delete_email_with_retry(email)
                                 email_deleted = True
-                        else:
-                            # Legacy safe_senders: only compare against trimmed From and Domain tokens
-                            from_tok = (self.header_from(email_header) or "").strip().lower()
-                            sender_tok = (email.SenderEmailAddress or "").strip().lower()
-                            def legacy_match(pat: str, val: str) -> bool:
-                                if not pat:
-                                    return False
-                                if pat.startswith('*'):
-                                    return val.endswith(pat[1:])
-                                return pat in val
-                            for sender_pat in safe_senders.get("safe_senders", []):
-                                pat_lower = (sender_pat or "").strip().lower()
-                                if legacy_match(pat_lower, from_tok) or legacy_match(pat_lower, sender_tok):
-                                    self.log_print(f"Second-pass: Safe sender matched (legacy token): {pat_lower}")
-                                    self.move_email_with_retry(email, self.inbox_folder)
-                                    self.delete_email_with_retry(email)
-                                    email_deleted = True
-                                    break
+                        # DEPRECATED 10/14/2025: Legacy safe_senders matching removed (second pass)
+                        # else:
+                        #     # Legacy safe_senders: only compare against trimmed From and Domain tokens
+                        #     from_tok = (self.header_from(email_header) or "").strip().lower()
+                        #     sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                        #     def legacy_match(pat: str, val: str) -> bool:
+                        #         if not pat:
+                        #             return False
+                        #         if pat.startswith('*'):
+                        #             return val.endswith(pat[1:])
+                        #         return pat in val
+                        #     for sender_pat in safe_senders.get("safe_senders", []):
+                        #         pat_lower = (sender_pat or "").strip().lower()
+                        #         if legacy_match(pat_lower, from_tok) or legacy_match(pat_lower, sender_tok):
+                        #             self.log_print(f"Second-pass: Safe sender matched (legacy token): {pat_lower}")
+                        #             self.move_email_with_retry(email, self.inbox_folder)
+                        #             self.delete_email_with_retry(email)
+                        #             email_deleted = True
+                        #             break
                         
                         if email_deleted:
                             second_pass_processed += 1
@@ -3006,22 +3022,23 @@ class OutlookSecurityAgent:
                                         match = True
                                         matched_keyword = pat
                                         self.log_print(f"Second-pass: Matched regex in header: {matched_keyword}")
-                                else:
-                                    # Legacy: only compare against trimmed From and Domain tokens
-                                    from_tok = (self.header_from(email_header) or "").strip().lower()
-                                    sender_tok = (email.SenderEmailAddress or "").strip().lower()
-                                    header_vals = [(kw or "").strip().lower() for kw in conditions['header']]
-                                    def legacy_match(pat: str, val: str) -> bool:
-                                        if not pat:
-                                            return False
-                                        if pat.startswith('*'):
-                                            return val.endswith(pat[1:])
-                                        return pat in val
-                                    for kw in header_vals:
-                                        if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
-                                            match = True
-                                            matched_keyword = kw
-                                            break
+                                # DEPRECATED 10/14/2025: Legacy header matching removed (second pass)
+                                # else:
+                                #     # Legacy: only compare against trimmed From and Domain tokens
+                                #     from_tok = (self.header_from(email_header) or "").strip().lower()
+                                #     sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                                #     header_vals = [(kw or "").strip().lower() for kw in conditions['header']]
+                                #     def legacy_match(pat: str, val: str) -> bool:
+                                #         if not pat:
+                                #             return False
+                                #         if pat.startswith('*'):
+                                #             return val.endswith(pat[1:])
+                                #         return pat in val
+                                #     for kw in header_vals:
+                                #         if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
+                                #             match = True
+                                #             matched_keyword = kw
+                                #             break
 
                             # Exceptions
                             if match and 'from' in exceptions:
@@ -3080,21 +3097,22 @@ class OutlookSecurityAgent:
                                     if m:
                                         match = False
                                         matched_keyword = pat
-                                else:
-                                    from_tok = (self.header_from(email_header) or "").strip().lower()
-                                    sender_tok = (email.SenderEmailAddress or "").strip().lower()
-                                    exc_vals = [(kw or "").strip().lower() for kw in exceptions['header']]
-                                    def legacy_match(pat: str, val: str) -> bool:
-                                        if not pat:
-                                            return False
-                                        if pat.startswith('*'):
-                                            return val.endswith(pat[1:])
-                                        return pat in val
-                                    for kw in exc_vals:
-                                        if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
-                                            match = False
-                                            matched_keyword = kw
-                                            break
+                                # DEPRECATED 10/14/2025: Legacy header exception matching removed (second pass)
+                                # else:
+                                #     from_tok = (self.header_from(email_header) or "").strip().lower()
+                                #     sender_tok = (email.SenderEmailAddress or "").strip().lower()
+                                #     exc_vals = [(kw or "").strip().lower() for kw in exceptions['header']]
+                                #     def legacy_match(pat: str, val: str) -> bool:
+                                #         if not pat:
+                                #             return False
+                                #         if pat.startswith('*'):
+                                #             return val.endswith(pat[1:])
+                                #         return pat in val
+                                #     for kw in exc_vals:
+                                #         if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
+                                #             match = False
+                                #             matched_keyword = kw
+                                #             break
                             
                             # Update email info
                             if match:
@@ -3196,9 +3214,10 @@ def main():
     parser.add_argument('-u', '--update_rules', action='store_true', 
                        help='Enable interactive rule updates (default: disabled)')
     parser.add_argument('--use-regex-files', action='store_true',
-                       help='Load regex variants of YAML files (rulesregex.yaml and rules_safe_sendersregex.yaml). Default: ON (use --use-legacy-files to force legacy)')
-    parser.add_argument('--use-legacy-files', action='store_true',
-                       help='Force legacy YAML files (rules.yaml and rules_safe_senders.yaml) and legacy string matching')
+                       help='Load regex variants of YAML files (rulesregex.yaml and rules_safe_sendersregex.yaml). Default: ON')
+    # DEPRECATED 10/14/2025: Legacy YAML file support removed - regex mode is now the only supported mode
+    # parser.add_argument('--use-legacy-files', action='store_true',
+    #                    help='Force legacy YAML files (rules.yaml and rules_safe_senders.yaml) and legacy string matching')
     parser.add_argument('--convert-safe-senders-to-regex', action='store_true',
                         help='Convert rules_safe_senders.yaml to rules_safe_sendersregex.yaml and exit')
     parser.add_argument('--convert-rules-to-regex', action='store_true',
@@ -3227,16 +3246,21 @@ def main():
             agent.convert_rules_yaml_to_regex()
             return
 
-        # Determine effective mode: regex is default; legacy only if explicitly requested
+        # DEPRECATED 10/14/2025: Legacy mode removed - always use regex files
+        # Legacy mode logic commented out - keeping for reference
+        # # Determine effective mode: regex is default; legacy only if explicitly requested
+        # effective_use_regex_files = True
+        # if args.use_legacy_files and args.use_regex_files:
+        #     # Prefer legacy if both provided; log the conflict
+        #     agent.log_print("Both --use-regex-files and --use-legacy-files provided; defaulting to legacy for this run")
+        #     effective_use_regex_files = False
+        # elif args.use_legacy_files:
+        #     effective_use_regex_files = False
+        # else:
+        #     effective_use_regex_files = True
+        
+        # Always use regex mode now
         effective_use_regex_files = True
-        if args.use_legacy_files and args.use_regex_files:
-            # Prefer legacy if both provided; log the conflict
-            agent.log_print("Both --use-regex-files and --use-legacy-files provided; defaulting to legacy for this run")
-            effective_use_regex_files = False
-        elif args.use_legacy_files:
-            effective_use_regex_files = False
-        else:
-            effective_use_regex_files = True
 
         # Set mode and log file paths
         agent.set_active_mode(effective_use_regex_files)
