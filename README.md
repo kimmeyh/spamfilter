@@ -8,12 +8,13 @@ This tool provides intelligent filtering and removal of SPAM and phishing emails
 
 ## Recent Updates (October 2025)
 
-- ✅ Regex mode is now the default using YAML regex files:
+- ✅ **Legacy mode deprecated (10/14/2025)**: Regex mode is now the only supported mode
+- ✅ Regex mode uses YAML regex files:
 	- Rules: `rulesregex.yaml`
 	- Safe senders: `rules_safe_sendersregex.yaml`
-- ✅ Legacy files still supported via flag:
-	- Rules: `rules.yaml`
-	- Safe senders: `rules_safe_senders.yaml`
+- ✅ Legacy files deprecated (for reference only):
+	- Rules: `rules.yaml` - no longer used
+	- Safe senders: `rules_safe_senders.yaml` - no longer used
 - ✅ CLI flags added for mode control and one-shot conversions
 - ✅ Exporters enforce consistency (lowercase, trimmed, de-duped, sorted) and create timestamped backups in `archive/`
 - ✅ Memory bank updated with processing flow, schemas, and regex conventions
@@ -29,8 +30,8 @@ This tool provides intelligent filtering and removal of SPAM and phishing emails
 ## Key Features
 
 - **Multi-Folder Processing**: Process emails from configurable list of folders
-- **YAML-Based Configuration**: Easy-to-maintain rule files (regex default: `rulesregex.yaml`, `rules_safe_sendersregex.yaml`; legacy: `rules.yaml`, `rules_safe_senders.yaml`)
-- **Regex-Default Mode**: Regex YAMLs are used by default; legacy mode available via CLI
+- **YAML-Based Configuration**: Easy-to-maintain rule files (regex mode: `rulesregex.yaml`, `rules_safe_sendersregex.yaml`)
+- **Regex-Only Mode**: Regex YAMLs are the only supported format (legacy mode deprecated 10/14/2025)
 - **Multi-Criteria Filtering**: Header, body, subject, and sender-based filtering
 - **Phishing Detection**: Suspicious URL and domain analysis
 - **Safe Sender Management**: Whitelist trusted senders and domains
@@ -61,10 +62,11 @@ cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 &
 # Optional: enable interactive update prompts during the run
 cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py -u
 
-# Force legacy YAML files instead of regex
-cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py --use-legacy-files
+# DEPRECATED 10/14/2025: Legacy files no longer supported
+# # Force legacy YAML files instead of regex
+# cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py --use-legacy-files
 
-# Explicitly use regex files (default behavior)
+# Explicitly use regex files (default and only supported behavior)
 cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py --use-regex-files
 
 # One-shot conversions to create/update regex YAMLs from legacy files
@@ -85,10 +87,10 @@ Configuration can be modified in the script constants:
 ## File Structure
 
 - **withOutlookRulesYAML.py** - Main application script
-- **rulesregex.yaml** - Regex-mode spam filtering rules (default)
-- **rules_safe_sendersregex.yaml** - Regex-mode trusted sender whitelist (default)
-- **rules.yaml** - Legacy spam filtering rules
-- **rules_safe_senders.yaml** - Legacy trusted sender whitelist
+- **rulesregex.yaml** - Regex-mode spam filtering rules (only supported format)
+- **rules_safe_sendersregex.yaml** - Regex-mode trusted sender whitelist (only supported format)
+- **rules.yaml** - DEPRECATED: Legacy spam filtering rules (no longer used)
+- **rules_safe_senders.yaml** - DEPRECATED: Legacy trusted sender whitelist (no longer used)
 - **requirements.txt** - Python dependencies
 - **pytest/** - All test files and test configuration
 - **Archive/** - Historical backups and development files
@@ -97,10 +99,10 @@ Configuration can be modified in the script constants:
 ## CLI Flags
 
 - `-u`, `--update_rules`: enable interactive prompts to add header regexes or safe senders during processing
-- `--use-regex-files`: use regex YAML files (default behavior)
-- `--use-legacy-files`: force legacy YAML files for a run
-- `--convert-rules-to-regex`: generate/update `rulesregex.yaml` from `rules.yaml`
-- `--convert-safe-senders-to-regex`: generate/update `rules_safe_sendersregex.yaml` from `rules_safe_senders.yaml`
+- `--use-regex-files`: use regex YAML files (default and only supported behavior)
+- ~~`--use-legacy-files`~~: **DEPRECATED 10/14/2025** - legacy YAML files are no longer supported
+- `--convert-rules-to-regex`: generate/update `rulesregex.yaml` from `rules.yaml` (one-time conversion utility)
+- `--convert-safe-senders-to-regex`: generate/update `rules_safe_sendersregex.yaml` from `rules_safe_senders.yaml` (one-time conversion utility)
 
 ## Testing
 
