@@ -1,20 +1,8 @@
 #------------------List of future enhancements------------------
 # - Need to add Next ****
-#       Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
-#       Completed - create updated rules.yaml with all regex strings as rulesregex.yaml
-#       Create updated rules_safe_senders.yaml with all regex strings as rules_safe_sendersregex.yaml
-#       Independent program that reads all rules.yaml entries and if missing adds them to rulesregex.yaml
-#       Independent program that reads all rules_safe_senders.yaml entries and if missing adds them to rules_safe_sendersregex.yaml
 #       rename rulesregex.yaml back to rules.yaml
 #       rename rules_safe_sendersregex.yaml back to rules_safe_senders.yaml
-#       Need to analyze and change all rules.yaml strings to regex patterns. Examples:
-#            ".<domain>.<org>" and "/<domain>.<org>" to "[./\<domain>.<org>"
-#            add a "*.*.jp" (and othe org's) and then remove all entries with .jp
-#            add a "*.*.cz" (and othe org's) and then remove all entries with .cz...
-#       Update all new regex in rules.yaml to use wildcards
-#       Update all new regex in rules_safe_senders.yaml to use wildcards
-#       Updated rules_safe_senders.yaml to all be regex pattern
-#            update entries for "@<sub-domain>.ibm.com" to "@*.ibm.com" regex patterns
+
 # ----------------------------------------------------
 # (not in this order, probably later) Convert from using win32com to using o365
 #
@@ -74,6 +62,18 @@
 #  COMPLETED - Move backup files to a archive/"backup directory"
 #  COMPLETED - Update mail processing to use safe_senders list for all header exceptions
 #  08/25/2025 Harold Kimmey - Update so that it can run with no input by default.  New flag -u -update to update via user input
+#  10/09/2025 Harold Kimmey - Updates to convert code to regex patterns and update rules.yaml and rules_safe_senders.yaml to REGEX
+#       Completed - Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
+#       Completed - create updated rules.yaml with all regex strings as rulesregex.yaml
+#       Completed - Create updated rules_safe_senders.yaml with all regex strings as rules_safe_sendersregex.yaml
+#       Completed - Independent program that reads all rules.yaml entries and if missing adds them to rulesregex.yaml
+#       Completed - Independent program that reads all rules_safe_senders.yaml entries and if missing adds them to rules_safe_sendersregex.yaml
+#       Completed - Need to analyze and change all rules.yaml strings to regex patterns.
+#       Completed - Update all new regex in rules.yaml to use wildcards
+#       Completed - Update all new regex in rules_safe_senders.yaml to use wildcards
+#       Completed - Updated rules_safe_senders.yaml to all be regex pattern
+#       Completed - update entries for "@<sub-domain>.ibm.com" to "@*.ibm.com" regex patterns
+# 10/10/2025 Harold Kimmey - Updated all memory-bank files and README.md
 
 #------------------General Documentation------------------
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
@@ -331,6 +331,49 @@ class OutlookSecurityAgent:
                     
         self.log_print(f"Found selected highest sub-domain in add domain request: {re.escape(anchor)} from: {addr_or_domain}")
         return f"@(?:[a-z0-9-]+\\.)*{re.escape(anchor)}\\.[a-z0-9.-]+$"
+
+    def build_sender_domain_safe_regex(self, addr_or_domain: str) -> str:
+        r"""
+        Build a regex that matches any email at the sender's domain, with any number of subdomains.
+
+        Example output for lifeway.com:
+            '^[^@\s]+@(?:[a-z0-9-]+\.)*lifeway\.com$'
+
+        Inputs can be:
+          - full email (user@lifeway.com)
+          - domain with leading '@' (@lifeway.com)
+          - bare domain (lifeway.com)
+        """
+        s = (addr_or_domain or '').strip().lower()
+        if s.startswith('@'):
+            dom = s[1:]
+        elif '@' in s:
+            dom = s.split('@', 1)[1]
+        else:
+            dom = s
+        dom = dom.strip('.')
+        if not dom:
+            return ''
+
+        # Reduce to registrable domain (SLD + TLD), with a small set of common multi-part public suffixes.
+        labels = [p for p in dom.split('.') if p]
+        base = dom
+        if len(labels) >= 2:
+            # Common multi-part public suffixes. Extend as needed.
+            MULTI_PART_SUFFIXES = {
+                'co.uk', 'ac.uk', 'gov.uk', 'org.uk',
+                'com.au', 'net.au', 'org.au',
+                'com.br', 'com.cn', 'co.jp'
+            }
+            last2 = '.'.join(labels[-2:])
+            if last2 in MULTI_PART_SUFFIXES and len(labels) >= 3:
+                base = '.'.join(labels[-3:])  # e.g., example.co.uk
+            else:
+                base = '.'.join(labels[-2:])  # e.g., cursor.com
+
+        # Anchor: any local part, then any number of subdomains, then the registrable domain
+        # return f"^[^@\\s]+@(?:[a-z0-9-]+\\.)*{re.escape(dom)}$"  # prior behavior (kept for reference)
+        return f"^[^@\\s]+@(?:[a-z0-9-]+\\.)*{re.escape(base)}$"
 
     def set_active_mode(self, use_regex_files: bool):
         r"""Set active read/write files based on desired mode and log the selection."""
@@ -1707,7 +1750,7 @@ class OutlookSecurityAgent:
 
         return actions
 
-    def get_safe_input(self, prompt_text, valid_responses=None, isregex=False):
+    def get_safe_input(self, prompt_text, valid_responses=None, isregex=False, help_text=None):
         r"""
         Get user input with security validation.
 
@@ -1722,6 +1765,14 @@ class OutlookSecurityAgent:
         while True:
             # Get user input
             user_input = input(prompt_text).strip().lower()
+
+            # Provide contextual help when '?' is entered; then re-prompt
+            if user_input == '?':
+                if help_text:
+                    print(help_text)
+                else:
+                    print("Options: d=add domain regex to header rule, e=add email to header rule, s=add to safe_senders (literal), sd=add sender-domain regex to safe_senders, ?=help")
+                continue
 
             # Define dangerous patterns based on whether regex is allowed
             if isregex:
@@ -1878,9 +1929,17 @@ class OutlookSecurityAgent:
                 if from_domain:
                     if domains_with_individual_emails:
                         # For individual email domains, suggest adding full email address
-                        expected_responses = ['d', 'e', 's']   # Treat 'd' and 'e' as 'e' for adding to header rule
+                        expected_responses = ['d', 'e', 's', 'sd', '?']   # Treat 'd' and 'e' as 'e' for adding to header rule; 'sd' adds sender domain regex to safe_senders
                         prompt = f"{CRLF}Add '{from_email}' to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
-                        response = self.get_safe_input(prompt, expected_responses)
+                        help_text = (
+                            "Options:\n"
+                            "  d  - Add sender domain regex to SpamAutoDeleteHeader (blocks by domain)\n"
+                            "  e  - Add full sender email to SpamAutoDeleteHeader (blocks this email)\n"
+                            "  s  - Add literal address/domain to safe_senders (never block)\n"
+                            "  sd - Add sender-domain regex to safe_senders (never block any subdomain)\n"
+                            "  ?  - Show this help"
+                        )
+                        response = self.get_safe_input(prompt, expected_responses, help_text=help_text)
                         if response in ['e', 'd']:  # Treat 'd' and 'e' as 'e' for adding to header rule
                             # Add from_email to safe_senders list
                             for rule in rules_json["rules"]:
@@ -1908,14 +1967,36 @@ class OutlookSecurityAgent:
                                 self.log_print(f"Appended to: {self.active_safe_senders_file}")
                             except Exception:
                                 pass
+                        elif response == 'sd':
+                            # Add sender's domain as a regex to safe_senders (any local part, any subdomains)
+                            domain_regex = self.build_sender_domain_safe_regex(from_domain or from_email)
+                            if domain_regex:
+                                if domain_regex not in safe_senders.get("safe_senders", []):
+                                    safe_senders["safe_senders"].append(domain_regex)
+                                self.log_print(f"Added sender-domain regex '{domain_regex}' to safe_senders list")
+                                simple_print(f"Added sender-domain regex to safe_senders: {domain_regex}")
+                                rule_updated = True
+                                try:
+                                    self.export_safe_senders_to_yaml(safe_senders)
+                                    self.log_print(f"Appended to: {self.active_safe_senders_file}")
+                                except Exception:
+                                    pass
                         # else:
                         #     expected_responses = ['d', 'e','s']
                         #     prompt = f"{CRLF}Add '{from_domain}' or email domain to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
                         #     response = self.get_safe_input(prompt, expected_responses)
                     else:
-                        expected_responses = ['d', 'e', 's']   # Treat 'd' and 'e' as 'e' for adding to header rule
+                        expected_responses = ['d', 'e', 's', 'sd', '?']   # 'sd' adds sender domain regex to safe_senders
                         prompt = f"{CRLF}Add '{from_email}' to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
-                        response = self.get_safe_input(prompt, expected_responses)
+                        help_text = (
+                            "Options:\n"
+                            "  d  - Add sender domain regex to SpamAutoDeleteHeader (blocks by domain)\n"
+                            "  e  - Add full sender email to SpamAutoDeleteHeader (blocks this email)\n"
+                            "  s  - Add literal address/domain to safe_senders (never block)\n"
+                            "  sd - Add sender-domain regex to safe_senders (never block any subdomain)\n"
+                            "  ?  - Show this help"
+                        )
+                        response = self.get_safe_input(prompt, expected_responses, help_text=help_text)
                         if response == 'd':
                             # Find the SpamAutoDeleteHeader rule in the rules list and append to its header conditions
                             # On 'd', add a domain-based regex anchored on the first meaningful subdomain below the TLD
@@ -1957,6 +2038,20 @@ class OutlookSecurityAgent:
                                 self.log_print(f"Appended to: {self.active_safe_senders_file}")
                             except Exception:
                                 pass
+                        elif response == 'sd':
+                            # Add sender's domain as a regex to safe_senders (any local part, any subdomains)
+                            domain_regex = self.build_sender_domain_safe_regex(from_domain or from_email)
+                            if domain_regex:
+                                if domain_regex not in safe_senders.get("safe_senders", []):
+                                    safe_senders["safe_senders"].append(domain_regex)
+                                self.log_print(f"Added sender-domain regex '{domain_regex}' to safe_senders list")
+                                simple_print(f"Added sender-domain regex to safe_senders: {domain_regex}")
+                                rule_updated = True
+                                try:
+                                    self.export_safe_senders_to_yaml(safe_senders)
+                                    self.log_print(f"Appended to: {self.active_safe_senders_file}")
+                                except Exception:
+                                    pass
 
             except Exception as e:
                 self.log_print(f"Error processing email for rule updates: {str(e)} {email_header}")

@@ -38,8 +38,11 @@
     - '@(?:[a-z0-9-]+\.)*backdroportugal\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*bagned\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*bamebe\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*bandotting\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*barin\-sk\-evilin\-stroy\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*bbby\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*bearangzhen\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*beniastudio\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*bidsnow\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*biefie\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*bigrecip\.[a-z0-9.-]+$'
@@ -59,6 +62,7 @@
     - '@(?:[a-z0-9-]+\.)*ccsend\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*chopabuy\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*chuaour\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*chuhaloff\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*cjminori\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*cleasion\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*cliffieco\.[a-z0-9.-]+$'
@@ -193,6 +197,7 @@
     - '@(?:[a-z0-9-]+\.)*globiser\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*gocapitalhomefinances\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*gocience\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*goinggoing\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*goldenpage\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*golfobx\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*golfshopnetwork\.[a-z0-9.-]+$'
@@ -202,6 +207,7 @@
     - '@(?:[a-z0-9-]+\.)*goodnewsinstead\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*goodnightmoonbooks\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*googlegroups\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*gootiles\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*gordedph\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*gotkdo\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*govdelivery\.[a-z0-9.-]+$'
@@ -383,6 +389,7 @@
     - '@(?:[a-z0-9-]+\.)*judge\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*judield\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*jujitby\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*junyuaninfo\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*jusgonow\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*kalitkb\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*kalpchopra\.[a-z0-9.-]+$'
@@ -577,6 +584,7 @@
     - '@(?:[a-z0-9-]+\.)*mypwdrace\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*myrarest\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*mystagename\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*mysticroar\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*mystore\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*mysugr\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*naeemdi\.[a-z0-9.-]+$'
@@ -693,6 +701,7 @@
     - '@(?:[a-z0-9-]+\.)*paykartim\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*paymentgw\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*pbdxw\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*pdrautoil\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*pearlar\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*pebplace\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*pefxdqaxrdzf\.[a-z0-9.-]+$'
@@ -729,6 +738,7 @@
     - '@(?:[a-z0-9-]+\.)*pressrundown\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*primemobiletv\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*printerval\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*priyagarg\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*projectsanata\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*promptero\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*propospher\.[a-z0-9.-]+$'
@@ -816,6 +826,7 @@
     - '@(?:[a-z0-9-]+\.)*rozemix\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*rsschef\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*ruaysi\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*rufficem\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*runtym\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*rutgeb\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*rwsentosa\.[a-z0-9.-]+$'
@@ -964,6 +975,7 @@
     - '@(?:[a-z0-9-]+\.)*suddenlink\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*sugaristmeadi\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*supatx\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*supinix\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*sureconsultores\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*surveyjunkie\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*swedenced\.[a-z0-9.-]+$'
@@ -1097,6 +1109,7 @@
     - '@(?:[a-z0-9-]+\.)*uysalauto\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*va5x\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*valetant\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*validatore\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*varite\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*velmarab\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*velofitter\.[a-z0-9.-]+$'
@@ -1404,7 +1417,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-11T14:22:09.766266'
+    'last_modified': '2025-10-14T07:48:56.365993'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2554,7 +2567,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-11T14:22:09.766266'
+    'last_modified': '2025-10-14T07:48:56.365993'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2593,7 +2606,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-11T14:22:09.766266'
+    'last_modified': '2025-10-14T07:48:56.365993'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2609,33 +2622,38 @@
     'from': []
     'header': []
     'subject':
-    - '5\-second\ morning\ hack'
-    - 'aarp'
-    - 'construction\-jobsearch'
-    - 'dates\ with\ me'
-    - 'dating\ me'
-    - 'dating\ site'
-    - 'dating\ website'
-    - 'desire\ a\ lady'
-    - 'eharmony'
-    - 'harbor\ freight'
-    - 'home\ warranty'
-    - 'life\ line'
-    - 'norton\ anti\-virus'
-    - 'norton\-anti\-virus'
-    - 'nugenix'
-    - 'one\ night\ stand'
-    - 'online\ casino'
-    - 'online\ dating'
-    - 'pro\ lights'
-    - 'proud\ patriots'
-    - 'ready\ for\ a\ relationship'
-    - 'romantic\ relationship'
-    - 'topamax'
-    - 'trumpvictory45'
-    - 'trumpvictory47'
-    - 'valvoline\ oil'
-    - 'walmart\ surprise'
+    - '(?i).*5\-second\ morning\ hack.*'
+    - '(?i).*aarp.*'
+    - '(?i).*construction\-jobsearch.*'
+    - '(?i).*dates\ with\ me.*'
+    - '(?i).*dating\ me.*'
+    - '(?i).*dating\ site.*'
+    - '(?i).*dating\ website.*'
+    - '(?i).*debt\ consolidation.*'
+    - '(?i).*desire\ a\ lady.*'
+    - '(?i).*eharmony.*'
+    - '(?i).*free\ amazon\ fire.*'
+    - '(?i).*harbor\ freight.*'
+    - '(?i).*home\ warranty.*'
+    - '(?i).*life\ line.*'
+    - '(?i).*new\ home\ security.*'
+    - '(?i).*norton\ anti\-virus.*'
+    - '(?i).*norton\-anti\-virus.*'
+    - '(?i).*nugenix.*'
+    - '(?i).*one\ night\ stand.*'
+    - '(?i).*online\ casino.*'
+    - '(?i).*online\ dating.*'
+    - '(?i).*painful\ neuropathy.*'
+    - '(?i).*pro\ lights.*'
+    - '(?i).*proud\ patriots.*'
+    - '(?i).*ready\ for\ a\ relationship.*'
+    - '(?i).*romantic\ relationship.*'
+    - '(?i).*stay\ rock\ hard.*'
+    - '(?i).*topamax.*'
+    - '(?i).*trumpvictory45.*'
+    - '(?i).*trumpvictory47.*'
+    - '(?i).*valvoline\ oil.*'
+    - '(?i).*walmart\ surprise.*'
   'actions':
     'assign_to_category':
       'category_name': 'SpamSubject'
@@ -2658,7 +2676,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-11T14:22:09.766266'
+    'last_modified': '2025-10-14T07:48:56.365993'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2698,7 +2716,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-11T14:22:09.766266'
+    'last_modified': '2025-10-14T07:48:56.365993'
     'created_by': 'system'
     'tags':
     - 'spam'
