@@ -84,6 +84,11 @@
 #       - Regex mode is now the only supported mode (rulesregex.yaml and rules_safe_sendersregex.yaml)
 #       - Legacy files (rules.yaml and rules_safe_senders.yaml) are no longer used
 #       - All legacy code commented out with DEPRECATED 10/14/2025 markers for reference
+# 10/18/2025 Harold Kimmey - Enhanced interactive rule filtering during user input:
+#       - Fixed prompt_update_rules() to use regex matching for newly added rules and safe senders
+#       - Replaced literal string checks with _compile_pattern_list() and _regex_match_header_any()
+#       - Emails matching newly added domain rules (d) or safe domain rules (sd) are now properly skipped
+#       - Updated memory-bank/processing-flow.md and README.md to document the enhancement
 
 #------------------General Documentation------------------
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
@@ -1892,25 +1897,29 @@ class OutlookSecurityAgent:
                 unique_urls = self.get_unique_URL_stubs(email.Body) # Extract URLs
                 self.log_print(f"Unique URLs: {unique_urls}")
 
-                # if the from_email matches a the safe_senders list, skip this email
-                if from_domain in safe_senders["safe_senders"]: # or from_email in safe_senders["safe_senders"]:
-                    count += 1
-                    self.log_print(f"Skipping email from safe sender: {from_email}")
-                    simple_print(f"Skipping email from safe sender: {from_email}")
+                # Check if the email matches any safe_senders patterns (using regex matching for newly added patterns)
+                # Compile safe_senders patterns before checking to include any newly added patterns
+                compiled_safe_senders = self._compile_pattern_list(safe_senders.get("safe_senders", []))
+                matched_safe, matched_safe_pat = self._regex_match_header_any(compiled_safe_senders, email_header, from_email)
+                if matched_safe:
+                    self.log_print(f"Skipping email from safe sender (matched pattern: {matched_safe_pat}): {from_email}")
+                    simple_print(f"Skipping email from safe sender (matched pattern: {matched_safe_pat}): {from_email}")
                     continue
 
-                # if the from_domain matches a rule in rules_json header condition, then print a message and skip this email
-                if any(from_domain in rule.get("conditions", {}).get("header", []) for rule in rules_json["rules"]):
-                    count += 1
-                    self.log_print(f"Skipping email from domain as '{from_domain}' already exists in rules.")
-                    simple_print(f"Skipping email from domain as '{from_domain}' already exists in rules.")
-                    continue
-
-                # if the from_email matches a rule in rules_json header condition, then print a message and skip this email
-                if any(from_email in rule.get("conditions", {}).get("header", []) for rule in rules_json["rules"]):
-                    count += 1
-                    self.log_print(f"Skipping email from email as '{from_email}' already exists in rules.")
-                    simple_print(f"Skipping email from email as '{from_email}' already exists in rules.")
+                # Check if the email matches any header rules (using regex matching for newly added patterns)
+                # Compile header patterns from all rules before checking to include any newly added patterns
+                skip_email = False
+                for rule in rules_json["rules"]:
+                    header_patterns = rule.get("conditions", {}).get("header", [])
+                    if header_patterns:
+                        compiled_headers = self._compile_pattern_list(header_patterns)
+                        matched_header, matched_header_pat = self._regex_match_header_any(compiled_headers, email_header, from_email)
+                        if matched_header:
+                            self.log_print(f"Skipping email as it matches rule '{rule['name']}' (matched pattern: {matched_header_pat})")
+                            simple_print(f"Skipping email as it matches rule '{rule['name']}' (matched pattern: {matched_header_pat})")
+                            skip_email = True
+                            break
+                if skip_email:
                     continue
 
                 # For now assume user wants to process all non-deleted emails

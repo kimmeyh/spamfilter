@@ -20,6 +20,9 @@
       - sd: add sender-domain regex to safe_senders (allow any subdomain)
       - ?: show brief help
     - Persists immediately via export_rules_to_yaml() and export_safe_senders_to_yaml()
+    - Skips emails during interactive input that match newly added rules or safe senders (10/18/2025)
+      - Uses regex matching via _compile_pattern_list() and _regex_match_header_any()
+      - Prevents duplicate prompts for emails from same domain after user adds rule
 - End-of-run persistence
   - Always exports active structures:
     - export_rules_to_yaml()
