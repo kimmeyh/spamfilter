@@ -84,6 +84,11 @@
 #       - Regex mode is now the only supported mode (rulesregex.yaml and rules_safe_sendersregex.yaml)
 #       - Legacy files (rules.yaml and rules_safe_senders.yaml) are no longer used
 #       - All legacy code commented out with DEPRECATED 10/14/2025 markers for reference
+# 10/18/2025 Harold Kimmey - Enhanced interactive rule filtering during user input:
+#       - Fixed prompt_update_rules() to use regex matching for newly added rules and safe senders
+#       - Replaced literal string checks with _compile_pattern_list() and _regex_match_header_any()
+#       - Emails matching newly added domain rules (d) or safe domain rules (sd) are now properly skipped
+#       - Updated memory-bank/processing-flow.md and README.md to document the enhancement
 
 #------------------General Documentation------------------
 # I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:

@@ -8,6 +8,7 @@ This tool provides intelligent filtering and removal of SPAM and phishing emails
 
 ## Recent Updates (October 2025)
 
+- ✅ **Interactive rule filtering enhanced (10/18/2025)**: During user input, emails matching newly added rules or safe senders are now properly skipped using regex matching
 - ✅ **Legacy mode deprecated (10/14/2025)**: Regex mode is now the only supported mode
 - ✅ Regex mode uses YAML regex files:
 	- Rules: `rulesregex.yaml`
@@ -43,6 +44,7 @@ This tool provides intelligent filtering and removal of SPAM and phishing emails
 		- s: add literal to safe_senders (allow)
 		- sd: add sender-domain regex to safe_senders (allow any subdomain)
 		- ?: show brief help
+	- **Smart filtering**: Emails matching newly added rules are automatically skipped during the interactive session (10/18/2025)
 - **Backup System**: Automatic timestamped backups of rule changes
 - **Second Pass Reprocessing**: Re-checks remaining emails after interactive updates for additional cleanup
 
