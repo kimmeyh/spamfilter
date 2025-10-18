@@ -1,8 +1,7 @@
 Next:
 @workspace use 'memory-bank/*' to understand the workspace 
 'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
-Now we can comment out/deprecate all the functionality for CLI  switch """--use-legacy-files"""
-Can you help draft the code for review in the files
+The spam filtering is working as expected, except during the user input. For example, if the user enters "d" to add the domain rule, it should add that rule so that any future occurrences of that domain are filtered before input is requested.  Same for "sd".  Can you help
 Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.
 When complete, update the memory-bank/* files and README.md
