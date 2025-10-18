@@ -1902,7 +1902,6 @@ class OutlookSecurityAgent:
                 compiled_safe_senders = self._compile_pattern_list(safe_senders.get("safe_senders", []))
                 matched_safe, matched_safe_pat = self._regex_match_header_any(compiled_safe_senders, email_header, from_email)
                 if matched_safe:
-                    count += 1
                     self.log_print(f"Skipping email from safe sender (matched pattern: {matched_safe_pat}): {from_email}")
                     simple_print(f"Skipping email from safe sender (matched pattern: {matched_safe_pat}): {from_email}")
                     continue
@@ -1916,7 +1915,6 @@ class OutlookSecurityAgent:
                         compiled_headers = self._compile_pattern_list(header_patterns)
                         matched_header, matched_header_pat = self._regex_match_header_any(compiled_headers, email_header, from_email)
                         if matched_header:
-                            count += 1
                             self.log_print(f"Skipping email as it matches rule '{rule['name']}' (matched pattern: {matched_header_pat})")
                             simple_print(f"Skipping email as it matches rule '{rule['name']}' (matched pattern: {matched_header_pat})")
                             skip_email = True
