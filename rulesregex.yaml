@@ -20,6 +20,7 @@
     - '@(?:[a-z0-9-]+\.)*\-offers\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*abstandida\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*aematopoie\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*aeroquark\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*agendust\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*ageofbig\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*ahealthyliving\.[a-z0-9.-]+$'
@@ -29,6 +30,7 @@
     - '@(?:[a-z0-9-]+\.)*allaylam\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*alongerpiece\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*alpderi\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*ama\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*americasurveys\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*andgcv\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*aoyglossifflow\.[a-z0-9.-]+$'
@@ -87,7 +89,9 @@
     - '@(?:[a-z0-9-]+\.)*depiqueo\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*deutchdds\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*dicitive\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*dickensonlab\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*discussel\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*dnuparz\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*dogdiri\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*dreamfathom\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*dronacharya\.[a-z0-9.-]+$'
@@ -478,6 +482,7 @@
     - '@(?:[a-z0-9-]+\.)*limitgov\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*linhkienaudio\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*listssa\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*litecsys\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*litiancorp\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*livelmh\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*livingsimply\.[a-z0-9.-]+$'
@@ -832,6 +837,7 @@
     - '@(?:[a-z0-9-]+\.)*richmaco\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*richpeoplenetworks\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*rightbraintechnology\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*rinshaus\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*risegene\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*rivals\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*rntness\.[a-z0-9.-]+$'
@@ -845,6 +851,7 @@
     - '@(?:[a-z0-9-]+\.)*rouption\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*royone\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*rozemix\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*rspetstore\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*rsschef\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*ruaysi\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*rufficem\.[a-z0-9.-]+$'
@@ -1026,6 +1033,7 @@
     - '@(?:[a-z0-9-]+\.)*tecksuite\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*teckviews\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*tecnocasa\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*teicagia\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*tekfortune\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*tellinoises\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*temu\.[a-z0-9.-]+$'
@@ -1138,6 +1146,7 @@
     - '@(?:[a-z0-9-]+\.)*velofitter\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*velosera\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*veloserat\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*ventfito\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*venusinsights\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*vermalopf\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*vernonparker\.[a-z0-9.-]+$'
@@ -1441,7 +1450,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-17T22:27:43.471268'
+    'last_modified': '2025-10-18T22:25:19.648445'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2592,7 +2601,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-17T22:27:43.471268'
+    'last_modified': '2025-10-18T22:25:19.648445'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2631,7 +2640,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-17T22:27:43.471268'
+    'last_modified': '2025-10-18T22:25:19.648445'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2701,7 +2710,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-17T22:27:43.471268'
+    'last_modified': '2025-10-18T22:25:19.648445'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2741,7 +2750,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-10-17T22:27:43.471268'
+    'last_modified': '2025-10-18T22:25:19.648445'
     'created_by': 'system'
     'tags':
     - 'spam'

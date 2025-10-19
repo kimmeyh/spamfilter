@@ -1,4 +1,5 @@
 'safe_senders':
+- '@chargerback.com'
 - '@gorilladesk.com'
 - '^19scottsharp@gmail\.com$'
 - '^2163579227@tmomail\.net$'
