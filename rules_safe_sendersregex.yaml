@@ -1,5 +1,6 @@
 'safe_senders':
 - '@chargerback.com'
+- '@googlemail.com'
 - '@gorilladesk.com'
 - '^19scottsharp@gmail\.com$'
 - '^2163579227@tmomail\.net$'
@@ -136,6 +137,7 @@
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*hpsmart\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*humblebundle\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*ibm\.com$'
+- '^[^@\s]+@(?:[a-z0-9-]+\.)*identogo\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*ieee\.org$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*inspirafinancial\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*intuit\.com$'
@@ -288,6 +290,7 @@
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*whirlpool\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*wolfram\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*yahoo\-inc\.com$'
+- '^[^@\s]+@(?:[a-z0-9-]+\.)*youtube\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*youversion\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*zendesk\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*zillow\.com$'
