@@ -56,16 +56,11 @@ This tool provides intelligent filtering and removal of SPAM and phishing emails
 # Activate Python virtual environment (Bash)
 source .venv/bin/activate
 ```
-# Standard processing (read-only, processes emails)
+# Standard processing (no interactive updates)
 cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py
 
 # Interactive mode (prompts to add rules)
 cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py -u
-
-# DEPRECATED 10/18/2025: One-shot conversions no longer needed
-# # One-shot conversions to create/update regex YAMLs from legacy files
-# cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py --convert-rules-to-regex
-# cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py --convert-safe-senders-to-regex
 ```
 
 ## Configuration
