@@ -120,6 +120,7 @@
     - '@(?:[a-z0-9-]+\.)*dnuparz\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*dogdiri\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*dowelos\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*dowinners\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*dreamfathom\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*dronacharya\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*duckdns\.[a-z0-9.-]+$'
@@ -1734,7 +1735,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-09T20:11:23.301286'
+    'last_modified': '2025-11-10T07:26:14.783788'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2885,7 +2886,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-09T20:11:23.301286'
+    'last_modified': '2025-11-10T07:26:14.783788'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2924,7 +2925,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-09T20:11:23.301286'
+    'last_modified': '2025-11-10T07:26:14.783788'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2994,7 +2995,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-09T20:11:23.301286'
+    'last_modified': '2025-11-10T07:26:14.783788'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -3034,7 +3035,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-09T20:11:23.301286'
+    'last_modified': '2025-11-10T07:26:14.783788'
     'created_by': 'system'
     'tags':
     - 'spam'
