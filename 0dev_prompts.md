@@ -1,18 +1,17 @@
 Next:
 @workspace use 'memory-bank/*' to understand the workspace 
 
+can you help rename rulesregex.yaml back to rules.yaml and rules_safe_sendersregex.yaml back to rules_safe_senders.yaml, updating code and files as needed
+
+Can you help draft the code for review in the files
 Any code that should be removed should be commented out and not deleted.
-Do not remove any commented out code.
+Do not remove any commented out code.  Do not update 0dev_prompts.md
 When complete, update the memory-bank/* files and README.md
 
 Assigned to Copilot:
-@workspace use 'memory-bank/*' to understand the workspace 
-'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
-Now we can comment out/deprecate all the functionality for CLI  switch """--use-legacy-files"""
-Can you help draft the code for review in the files
-Any code that should be removed should be commented out and not deleted.
-Do not remove any commented out code.
-When complete, update the memory-bank/* files and README.md
+
+
+
 
 Template:
 @workspace use 'memory-bank/*' to understand the workspace 
@@ -20,8 +19,9 @@ Template:
 
 Can you help draft the code for review in the files
 Any code that should be removed should be commented out and not deleted.
-Do not remove any commented out code.
+Do not remove any commented out code.  Do not update 0dev_prompts.md
 When complete, update the memory-bank/* files and README.md
+
 ----------
 
 
@@ -63,8 +63,11 @@ cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 &
 
 ------------------------------------------------------------------------------
 Completed:
-'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
+
 The spam filtering is working as expected, except during the user input. For example, if the user enters "d" to add the domain rule, it should add that rule so that any future occurrences of that domain are filtered before input is requested.  Same for "sd".  Can you help
+
+Now we can comment out/deprecate all the functionality for CLI  switch """--use-legacy-files"""
+Can you help draft the code for review in the files
 
 for the "sd" input value, it looks like it has been adding the top-level domain, first sub-domain and second sub-domain.  Can you 
 help adjust so that it only includes the top-level domain, and first sub-domain.

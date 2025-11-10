@@ -1,7 +1,9 @@
 #------------------List of future enhancements------------------
-# - Need to add Next ****
-#       rename rulesregex.yaml back to rules.yaml
-#       rename rules_safe_sendersregex.yaml back to rules_safe_senders.yaml
+# COMPLETED 10/18/2025:
+#       Renamed rulesregex.yaml back to rules.yaml
+#       Renamed rules_safe_sendersregex.yaml back to rules_safe_senders.yaml
+#       Updated all code references to use consolidated filenames
+#       Files now contain regex patterns (legacy mode deprecated 10/14/2025)
 
 # ----------------------------------------------------
 # (not in this order, probably later) Convert from using win32com to using o365
@@ -174,10 +176,11 @@ YAML_RULES_FILE = YAML_RULES_PATH + "rules.yaml"
 #YAML_RULES_FILE = YAML_RULES_PATH + "rules_new.yaml" # this was temporary and no longer needed
 YAML_RULES_SAFE_SENDERS_FILE    = YAML_RULES_PATH + "rules_safe_senders.yaml"
 
-# Regex-mode YAML variants (used when --use-regex-files is enabled)
+# DEPRECATED 10/18/2025: Regex-specific file names removed - consolidated to single filenames
+# Regex mode is the only supported mode, so separate _regex suffixes are no longer needed
 # Keeping originals; do not remove commented-out lines.
-YAML_RULES_FILE_REGEX = YAML_RULES_PATH + "rulesregex.yaml"
-YAML_RULES_SAFE_SENDERS_FILE_REGEX = YAML_RULES_PATH + "rules_safe_sendersregex.yaml"
+# YAML_RULES_FILE_REGEX = YAML_RULES_PATH + "rulesregex.yaml"
+# YAML_RULES_SAFE_SENDERS_FILE_REGEX = YAML_RULES_PATH + "rules_safe_sendersregex.yaml"
 
 # not sure if these will be used
 YAML_RULES_BODY_FILE            = YAML_RULES_PATH + "rules_body.yaml"
@@ -226,10 +229,11 @@ class OutlookSecurityAgent:
             self.outlook = win32com.client.Dispatch(WIN32_CLIENT_DISPATCH)
             self.namespace = self.outlook.GetNamespace(OUTLOOK_GETNAMESPACE)
 
-        # Default file paths (legacy by default)
+        # DEPRECATED 10/18/2025: Consolidated to single YAML filenames (regex mode is default and only mode)
+        # Default file paths
         self.YAMO_RULES_PATH = YAML_RULES_PATH  # Set appropriate default path
-        self.YAML_RULES_FILE = YAML_RULES_FILE  # Default legacy rules file
-        self.YAML_SAFE_SENDERS_FILE = YAML_RULES_SAFE_SENDERS_FILE  # Default legacy safe senders file
+        self.YAML_RULES_FILE = YAML_RULES_FILE  # Now points to rules.yaml (regex patterns)
+        self.YAML_SAFE_SENDERS_FILE = YAML_RULES_SAFE_SENDERS_FILE  # Now points to rules_safe_senders.yaml (regex patterns)
 
         # Active files used for all reads/writes; main() will set these based on CLI flags
         self.active_rules_file = self.YAML_RULES_FILE
@@ -394,22 +398,28 @@ class OutlookSecurityAgent:
         r"""Set active read/write files based on desired mode and log the selection.
         
         DEPRECATED 10/14/2025: Legacy mode is deprecated. Parameter kept for backward compatibility.
+        DEPRECATED 10/18/2025: Regex-specific filenames removed - consolidated to single filenames.
         """
         # DEPRECATED 10/14/2025: Legacy mode support removed - always use regex files
+        # DEPRECATED 10/18/2025: Regex-specific filename variants removed
         # Legacy logic commented out - keeping for reference:
         # self.active_rules_file = YAML_RULES_FILE_REGEX if use_regex_files else YAML_RULES_FILE
         # self.active_safe_senders_file = YAML_RULES_SAFE_SENDERS_FILE_REGEX if use_regex_files else YAML_RULES_SAFE_SENDERS_FILE
         # self.log_print(f"Operating mode: {'REGEX (default)' if use_regex_files else 'LEGACY (fallback flag)'}")
         
-        # Always use regex files now
-        self.active_rules_file = YAML_RULES_FILE_REGEX
-        self.active_safe_senders_file = YAML_RULES_SAFE_SENDERS_FILE_REGEX
+        # Always use consolidated YAML files now (regex patterns only)
+        self.active_rules_file = YAML_RULES_FILE
+        self.active_safe_senders_file = YAML_RULES_SAFE_SENDERS_FILE
         self.log_print(f"Operating mode: REGEX (only supported mode)")
         self.log_print(f"Using rules file: {self.active_rules_file}")
         self.log_print(f"Using safe_senders file: {self.active_safe_senders_file}")
 
-    def convert_safe_senders_yaml_to_regex(self, source_file=YAML_RULES_SAFE_SENDERS_FILE, dest_file=YAML_RULES_SAFE_SENDERS_FILE_REGEX):
+    # DEPRECATED 10/18/2025: Conversion utilities no longer needed - files already use regex patterns
+    # def convert_safe_senders_yaml_to_regex(self, source_file=YAML_RULES_SAFE_SENDERS_FILE, dest_file=YAML_RULES_SAFE_SENDERS_FILE_REGEX):
+    def convert_safe_senders_yaml_to_regex(self, source_file=YAML_RULES_SAFE_SENDERS_FILE, dest_file=None):
         r"""Convert safe_senders.yaml entries into regex-compatible patterns and write to parallel file.
+        
+        DEPRECATED 10/18/2025: This utility is no longer needed as files now use consolidated regex filenames.
 
         - Treat '*' as glob wildcard -> '.*'
         - Escape other regex metacharacters
@@ -417,6 +427,10 @@ class OutlookSecurityAgent:
         - Create backups via export method
         """
         try:
+            # If no dest_file specified, overwrite source (in-place conversion)
+            if dest_file is None:
+                dest_file = source_file
+                
             src = self.get_safe_senders_rules(source_file)
             patterns = src.get("safe_senders", []) if isinstance(src, dict) else []
 
@@ -448,8 +462,12 @@ class OutlookSecurityAgent:
             self.log_print(f"Error converting safe_senders to regex: {str(e)}")
             return False
 
-    def convert_rules_yaml_to_regex(self, source_file=YAML_RULES_FILE, dest_file=YAML_RULES_FILE_REGEX):
+    # DEPRECATED 10/18/2025: Conversion utilities no longer needed - files already use regex patterns
+    # def convert_rules_yaml_to_regex(self, source_file=YAML_RULES_FILE, dest_file=YAML_RULES_FILE_REGEX):
+    def convert_rules_yaml_to_regex(self, source_file=YAML_RULES_FILE, dest_file=None):
         r"""Convert rules.yaml to rulesregex.yaml by converting header/body/subject/from lists to regex.
+        
+        DEPRECATED 10/18/2025: This utility is no longer needed as files now use consolidated regex filenames.
 
         - Replace '*' with '.*' (glob to regex)
         - Escape other regex metacharacters using re.escape
@@ -458,6 +476,10 @@ class OutlookSecurityAgent:
         - Use export_rules_to_yaml to sort/dedupe lists and back up
         """
         try:
+            # If no dest_file specified, overwrite source (in-place conversion)
+            if dest_file is None:
+                dest_file = source_file
+                
             doc = self.get_yaml_rules(source_file)
             if not doc or not isinstance(doc, dict) or 'rules' not in doc:
                 self.log_print(f"No rules found in {source_file}")
@@ -1071,8 +1093,11 @@ class OutlookSecurityAgent:
 
             try:
                 with open(rules_file, 'w', encoding='utf-8') as yaml_file:
+                    # DEPRECATED 10/18/2025: Regex filename check removed - all files now use single quotes for regex stability
                     # Prefer single quotes when writing the regex safe_senders file to avoid escape churn
-                    default_style = "'" if os.path.basename(rules_file) == os.path.basename(YAML_RULES_SAFE_SENDERS_FILE_REGEX) else '"'
+                    # default_style = "'" if os.path.basename(rules_file) == os.path.basename(YAML_RULES_SAFE_SENDERS_FILE_REGEX) else '"'
+                    # Always use single quotes for regex pattern stability
+                    default_style = "'"
                     yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False, default_style=default_style)
                 self.log_print(f"Successfully exported {len(standardized_rules['safe_senders'])} safe_senders to YAML file: {rules_file}")
 
@@ -1227,8 +1252,11 @@ class OutlookSecurityAgent:
             try:
 
                 with open(rules_file, 'w', encoding='utf-8') as yaml_file:
+                    # DEPRECATED 10/18/2025: Regex filename check removed - all files now use single quotes for regex stability
                     # Prefer single quotes when writing the regex rules file to avoid escape churn
-                    default_style = "'" if os.path.basename(rules_file) == os.path.basename(YAML_RULES_FILE_REGEX) else '"'
+                    # default_style = "'" if os.path.basename(rules_file) == os.path.basename(YAML_RULES_FILE_REGEX) else '"'
+                    # Always use single quotes for regex pattern stability
+                    default_style = "'"
                     yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False, default_style=default_style, width=4096)
                     self.log_print(f"Successfully exported {len(standardized_rules['rules'])} rules to YAML file: {rules_file}")
 
