@@ -1,19 +1,13 @@
 Next:
 @workspace use 'memory-bank/*' to understand the workspace 
-'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
-The spam filtering is working as expected, except during the user input. For example, if the user enters "d" to add the domain rule, it should add that rule so that any future occurrences of that domain are filtered before input is requested.  Same for "sd".  Can you help
+
+
+Can you help draft the code for review in the files
 Any code that should be removed should be commented out and not deleted.
-Do not remove any commented out code.
+Do not remove any commented out code.  Do not update 0dev_prompts.md
 When complete, update the memory-bank/* files and README.md
 
 Assigned to Copilot:
-@workspace use 'memory-bank/*' to understand the workspace 
-'withOutlookRulesYAM.py' "do NOT use 0dev_prompts.md"
-Now we can comment out/deprecate all the functionality for CLI  switch """--use-legacy-files"""
-Can you help draft the code for review in the files
-Any code that should be removed should be commented out and not deleted.
-Do not remove any commented out code.
-When complete, update the memory-bank/* files and README.md
 
 Template:
 @workspace use 'memory-bank/*' to understand the workspace 
@@ -21,8 +15,9 @@ Template:
 
 Can you help draft the code for review in the files
 Any code that should be removed should be commented out and not deleted.
-Do not remove any commented out code.
+Do not remove any commented out code.  Do not update 0dev_prompts.md
 When complete, update the memory-bank/* files and README.md
+
 ----------
 
 
@@ -54,8 +49,6 @@ YAML_INTERNATIONAL_RULES_FILE   = YAML_RULES_PATH + "rules_international.yaml"  
 OUTLOOK_RULES_SUBSET            = "SpamAutoDelete"
 DAYS_BACK_DEFAULT = 365 # default number of days to go back in the calendar
 
-
-
 Often needed:
 Can you review all the memory-bank/ files and ensure they are current based on the contents of withOutlookRulesYAML.py and the REGEX files: rulesregex.yaml and rules_safe_senderregex.yaml
 Propose updates to memory-bank/*.* files
@@ -64,7 +57,16 @@ How to Run from command line (best practice):
 cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py -u
 cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 && python withOutlookRulesYAML.py
 
+------------------------------------------------------------------------------
 Completed:
+
+can you help rename rulesregex.yaml back to rules.yaml and rules_safe_sendersregex.yaml back to rules_safe_senders.yaml, updating code and files as needed
+
+The spam filtering is working as expected, except during the user input. For example, if the user enters "d" to add the domain rule, it should add that rule so that any future occurrences of that domain are filtered before input is requested.  Same for "sd".  Can you help
+
+Now we can comment out/deprecate all the functionality for CLI  switch """--use-legacy-files"""
+Can you help draft the code for review in the files
+
 for the "sd" input value, it looks like it has been adding the top-level domain, first sub-domain and second sub-domain.  Can you 
 help adjust so that it only includes the top-level domain, and first sub-domain.
 Example input:  something@mail.cursor.com resulted in - '^[^@\s]+@(?:[a-z0-9-]+\.)*mail\.cursor\.com$' but

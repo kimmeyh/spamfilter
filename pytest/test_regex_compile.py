@@ -4,8 +4,11 @@ import re
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
-RULES_REGEX = os.path.join(ROOT, 'rulesregex.yaml')
-SAFE_SENDERS_REGEX = os.path.join(ROOT, 'rules_safe_sendersregex.yaml')
+# DEPRECATED 10/18/2025: Consolidated to single filenames
+# RULES_REGEX = os.path.join(ROOT, 'rulesregex.yaml')
+# SAFE_SENDERS_REGEX = os.path.join(ROOT, 'rules_safe_sendersregex.yaml')
+RULES_REGEX = os.path.join(ROOT, 'rules.yaml')
+SAFE_SENDERS_REGEX = os.path.join(ROOT, 'rules_safe_senders.yaml')
 
 
 def _iter_rule_patterns(rules_doc):
@@ -38,8 +41,11 @@ def _load_yaml(path):
         return yaml.safe_load(f)
 
 
-@pytest.mark.skipif(not os.path.exists(RULES_REGEX), reason='rulesregex.yaml not present')
+# DEPRECATED 10/18/2025: Updated test names to reflect consolidated filenames
+# @pytest.mark.skipif(not os.path.exists(RULES_REGEX), reason='rulesregex.yaml not present')
+@pytest.mark.skipif(not os.path.exists(RULES_REGEX), reason='rules.yaml not present')
 def test_rulesregex_patterns_compile():
+    """Test that all regex patterns in rules.yaml compile successfully"""
     doc = _load_yaml(RULES_REGEX)
     compiled = 0
     for patt in _iter_rule_patterns(doc):
@@ -47,12 +53,17 @@ def test_rulesregex_patterns_compile():
             re.compile(_normalize_for_compile(patt), re.IGNORECASE)
             compiled += 1
         except re.error as e:
-            pytest.fail(f'Invalid regex in rulesregex.yaml: {patt} ({e})')
+            # DEPRECATED 10/18/2025: Updated error message to reflect consolidated filename
+            # pytest.fail(f'Invalid regex in rulesregex.yaml: {patt} ({e})')
+            pytest.fail(f'Invalid regex in rules.yaml: {patt} ({e})')
     assert compiled >= 0  # no-op assert; main purpose is to fail on first invalid
 
 
-@pytest.mark.skipif(not os.path.exists(SAFE_SENDERS_REGEX), reason='rules_safe_sendersregex.yaml not present')
+# DEPRECATED 10/18/2025: Updated test names to reflect consolidated filenames
+# @pytest.mark.skipif(not os.path.exists(SAFE_SENDERS_REGEX), reason='rules_safe_sendersregex.yaml not present')
+@pytest.mark.skipif(not os.path.exists(SAFE_SENDERS_REGEX), reason='rules_safe_senders.yaml not present')
 def test_safe_sendersregex_patterns_compile():
+    """Test that all regex patterns in rules_safe_senders.yaml compile successfully"""
     doc = _load_yaml(SAFE_SENDERS_REGEX)
     # Support both {'safe_senders': [...]} and plain list forms
     if isinstance(doc, dict) and 'safe_senders' in doc:
@@ -63,4 +74,6 @@ def test_safe_sendersregex_patterns_compile():
         try:
             re.compile(_normalize_for_compile(patt), re.IGNORECASE)
         except re.error as e:
-            pytest.fail(f'Invalid regex in rules_safe_sendersregex.yaml: {patt} ({e})')
+            # DEPRECATED 10/18/2025: Updated error message to reflect consolidated filename
+            # pytest.fail(f'Invalid regex in rules_safe_sendersregex.yaml: {patt} ({e})')
+            pytest.fail(f'Invalid regex in rules_safe_senders.yaml: {patt} ({e})')

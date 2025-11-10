@@ -1,25 +1,25 @@
 #------------------List of future enhancements------------------
-# - Need to add Next ****
-#       rename rulesregex.yaml back to rules.yaml
-#       rename rules_safe_sendersregex.yaml back to rules_safe_senders.yaml
+
 
 # ----------------------------------------------------
 # (not in this order, probably later) Convert from using win32com to using o365
+# ***Review an dupdate before starting
 #
 # Change to a phone app that processes emails from cloud provider email accounts:  aol, gmail, yahoo, etc.
+#   - Start with aol email accounts
 #   - in a language that can be used on all platforms:  Android, iOS, Windows, Mac, Linux
-#   - use the same JSON rules file for all platforms
-#   - use the same JSON rules file for all email accounts
-#   - use the same JSON rules and allow uniqueness for different email accounts and account/folder combinations
+#   - use the same YAML rules file for all platforms
+#   - use the same YAML rules file for all email accounts
+#   - use the same YAML rules and allow uniqueness for different email accounts and account/folder combinations
 #   - allow for multiple email accounts to be processed
-#   - allow for multiple folders to be processed
+#   - allow for each email account, allow multiple folders to be processed
 #   - Allow options similar to Outlook Junk options: junk level (Safe Lists Only/High/Low/No automatic filtering - see Outlook window
 #   - Allow for option to notify of emails with suspicious domain names in email addresses and links in the body
 #   - Add a curated, updated list of suspicious domain names, why, level...
 #   - Parameterize some of the variables so they can be:
 #       - Saved to a file
 #       - Read from a file
-#       - Updated by a standars process: OUTLOOK_RULES_SUBSET,
+#       - Updated by a standars process: OUTLOOK_RULES_SUBSET
 #       OUTLOOK_RULES_PATH, OUTLOOK_RULES_FILE, EMAIL_ADDRESS, EMAIL_FOLDER_NAME, OUTLOOK_SECURITY_LOG,
 #       OUTLOOK_SIMPLE_LOG, DAYS_BACK_DEFAULT, DEBUG_EMAILS_TO_PROCESS...
 # Implement different processing rules for different folders?
@@ -50,29 +50,29 @@
 # 07/03/2025 Harold Kimmey - Add memory-bank to repository to enhance Github Copilot suggestions
 # 07/04/2025 Harold Kimmey - Updated EMAIL_BULK_FOLDER_NAME to EMAIL_BULK_FOLDER_NAMES list, added "bulk" folder, updated processing to handle multiple folders
 # 07/05/2025 Harold Kimmey - Added second-pass email reprocessing after rule updates for enhanced cleanup
-# Completed:  Add updates to rules for emails not deleted
-#   for each email not deleted
-#      show details of the email:  subject, from in header, URL's in the body
-#       Suggest to add new domains (based on from in header) to the header rules
-#       If N to header rule, suggest body rules
-#       If no body rules added, suggest subject rules
-#       Full commit after each of the above changes
-#  COMPLETED - Change folder to process to be a list of folders, add "bulk", change process to process a list of folders
-#  COMPLETED - Reprocess all emails in the EMAIL_BULK_FOLDER_NAMES folder list a second time, in case any of the remaining emails can no be moved or deleted.
-#  COMPLETED - Move backup files to a archive/"backup directory"
-#  COMPLETED - Update mail processing to use safe_senders list for all header exceptions
+#       - Add updates to rules for emails not deleted
+#           for each email not deleted
+#               show details of the email:  subject, from in header, URL's in the body
+#                   Suggest to add new domains (based on from in header) to the header rules
+#                   If N to header rule, suggest body rules
+#                   If no body rules added, suggest subject rules
+#                   Full commit after each of the above changes
+#       - Change folder to process to be a list of folders, add "bulk", change process to process a list of folders
+#       - Reprocess all emails in the EMAIL_BULK_FOLDER_NAMES folder list a second time, in case any of the remaining emails can no be moved or deleted.
+#       - Move backup files to a archive/"backup directory"
+#       - Update mail processing to use safe_senders list for all header exceptions
 #  08/25/2025 Harold Kimmey - Update so that it can run with no input by default.  New flag -u -update to update via user input
 #  10/09/2025 Harold Kimmey - Updates to convert code to regex patterns and update rules.yaml and rules_safe_senders.yaml to REGEX
-#       Completed - Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
-#       Completed - create updated rules.yaml with all regex strings as rulesregex.yaml
-#       Completed - Create updated rules_safe_senders.yaml with all regex strings as rules_safe_sendersregex.yaml
-#       Completed - Independent program that reads all rules.yaml entries and if missing adds them to rulesregex.yaml
-#       Completed - Independent program that reads all rules_safe_senders.yaml entries and if missing adds them to rules_safe_sendersregex.yaml
-#       Completed - Need to analyze and change all rules.yaml strings to regex patterns.
-#       Completed - Update all new regex in rules.yaml to use wildcards
-#       Completed - Update all new regex in rules_safe_senders.yaml to use wildcards
-#       Completed - Updated rules_safe_senders.yaml to all be regex pattern
-#       Completed - update entries for "@<sub-domain>.ibm.com" to "@*.ibm.com" regex patterns
+#       - Update to consider all Header, Body, Subject, From, lists strings to be regex patterns
+#       - create updated rules.yaml with all regex strings as rulesregex.yaml
+#       - Create updated rules_safe_senders.yaml with all regex strings as rules_safe_sendersregex.yaml
+#       - Independent program that reads all rules.yaml entries and if missing adds them to rulesregex.yaml
+#       - Independent program that reads all rules_safe_senders.yaml entries and if missing adds them to rules_safe_sendersregex.yaml
+#       - Need to analyze and change all rules.yaml strings to regex patterns.
+#       - Update all new regex in rules.yaml to use wildcards
+#       - Update all new regex in rules_safe_senders.yaml to use wildcards
+#       - Updated rules_safe_senders.yaml to all be regex pattern
+#       - update entries for "@<sub-domain>.ibm.com" to "@*.ibm.com" regex patterns
 # 10/10/2025 Harold Kimmey - Updated all memory-bank files and README.md
 # 10/14/2025 DEPRECATION - Legacy YAML file support removed:
 #       - Commented out --use-legacy-files CLI flag (kept for reference)
@@ -89,35 +89,14 @@
 #       - Replaced literal string checks with _compile_pattern_list() and _regex_match_header_any()
 #       - Emails matching newly added domain rules (d) or safe domain rules (sd) are now properly skipped
 #       - Updated memory-bank/processing-flow.md and README.md to document the enhancement
-
+# 11/10/2025:
+#       - Renamed rulesregex.yaml back to rules.yaml
+#       - Renamed rules_safe_sendersregex.yaml back to rules_safe_senders.yaml
+#       - Updated all code references to use consolidated filenames
+#       - Files now contain regex patterns (legacy mode deprecated 10/14/2025)
 #------------------General Documentation------------------
-# I've modified the security agent to specifically target the "Bulk Mail" folder in the kimmeyharold@aol.com account. Key changes include:
-
-# 1. Account/Folder Targeting:
-#    - Added account-specific folder lookup
-#    - Recursive folder search capability (in case "Bulk Mail" is nested)
-#    - Validation of account and folder existence
-
-# 2. Improved Structure:
-#    - Creates "Security Review" folder within the Bulk Mail folder
-#    - Only processes emails from the specified folder
-#    - Maintains all security checks and rule processing
-
-# 3. Better Error Handling:
-#    - Validates account and folder access
-#    - Detailed logging of folder navigation
-#    - Graceful handling of missing folders
-
-# To use this version:
-# 1. Make sure Outlook is running and the AOL account is connected
-# 2. Run the script - it will automatically target the Bulk Mail folder
-
-# Key Notes:
-# - The YAML_RULES_FILE and YAML_RULES_SAFE_SENDERS_FILE
-#   - all strings are maintained during export as trim(lowercase(str)))
-#   - all lists of strings are sorted and unique (no duplicates)
-
-
+#
+# See README.md and memory-bank/*.md files for detailed documentation
 
 #Imports for python base packages
 import re
@@ -174,10 +153,6 @@ YAML_RULES_FILE = YAML_RULES_PATH + "rules.yaml"
 #YAML_RULES_FILE = YAML_RULES_PATH + "rules_new.yaml" # this was temporary and no longer needed
 YAML_RULES_SAFE_SENDERS_FILE    = YAML_RULES_PATH + "rules_safe_senders.yaml"
 
-# Regex-mode YAML variants (used when --use-regex-files is enabled)
-# Keeping originals; do not remove commented-out lines.
-YAML_RULES_FILE_REGEX = YAML_RULES_PATH + "rulesregex.yaml"
-YAML_RULES_SAFE_SENDERS_FILE_REGEX = YAML_RULES_PATH + "rules_safe_sendersregex.yaml"
 
 # not sure if these will be used
 YAML_RULES_BODY_FILE            = YAML_RULES_PATH + "rules_body.yaml"
@@ -226,10 +201,10 @@ class OutlookSecurityAgent:
             self.outlook = win32com.client.Dispatch(WIN32_CLIENT_DISPATCH)
             self.namespace = self.outlook.GetNamespace(OUTLOOK_GETNAMESPACE)
 
-        # Default file paths (legacy by default)
+        # Default file paths
         self.YAMO_RULES_PATH = YAML_RULES_PATH  # Set appropriate default path
-        self.YAML_RULES_FILE = YAML_RULES_FILE  # Default legacy rules file
-        self.YAML_SAFE_SENDERS_FILE = YAML_RULES_SAFE_SENDERS_FILE  # Default legacy safe senders file
+        self.YAML_RULES_FILE = YAML_RULES_FILE  # Now points to rules.yaml (regex patterns)
+        self.YAML_SAFE_SENDERS_FILE = YAML_RULES_SAFE_SENDERS_FILE  # Now points to rules_safe_senders.yaml (regex patterns)
 
         # Active files used for all reads/writes; main() will set these based on CLI flags
         self.active_rules_file = self.YAML_RULES_FILE
@@ -392,24 +367,21 @@ class OutlookSecurityAgent:
 
     def set_active_mode(self, use_regex_files: bool):
         r"""Set active read/write files based on desired mode and log the selection.
-        
-        DEPRECATED 10/14/2025: Legacy mode is deprecated. Parameter kept for backward compatibility.
+        Args:
+            use_regex_files: If True, use regex-specific YAML files; else use legacy files.
         """
-        # DEPRECATED 10/14/2025: Legacy mode support removed - always use regex files
-        # Legacy logic commented out - keeping for reference:
-        # self.active_rules_file = YAML_RULES_FILE_REGEX if use_regex_files else YAML_RULES_FILE
-        # self.active_safe_senders_file = YAML_RULES_SAFE_SENDERS_FILE_REGEX if use_regex_files else YAML_RULES_SAFE_SENDERS_FILE
-        # self.log_print(f"Operating mode: {'REGEX (default)' if use_regex_files else 'LEGACY (fallback flag)'}")
-        
-        # Always use regex files now
-        self.active_rules_file = YAML_RULES_FILE_REGEX
-        self.active_safe_senders_file = YAML_RULES_SAFE_SENDERS_FILE_REGEX
+      
+        # Always use consolidated YAML files now (regex patterns only)
+        self.active_rules_file = YAML_RULES_FILE
+        self.active_safe_senders_file = YAML_RULES_SAFE_SENDERS_FILE
         self.log_print(f"Operating mode: REGEX (only supported mode)")
         self.log_print(f"Using rules file: {self.active_rules_file}")
         self.log_print(f"Using safe_senders file: {self.active_safe_senders_file}")
 
-    def convert_safe_senders_yaml_to_regex(self, source_file=YAML_RULES_SAFE_SENDERS_FILE, dest_file=YAML_RULES_SAFE_SENDERS_FILE_REGEX):
+    def convert_safe_senders_yaml_to_regex(self, source_file=YAML_RULES_SAFE_SENDERS_FILE, dest_file=None):
         r"""Convert safe_senders.yaml entries into regex-compatible patterns and write to parallel file.
+        
+        DEPRECATED 10/18/2025: This utility is no longer needed as files now use consolidated regex filenames.
 
         - Treat '*' as glob wildcard -> '.*'
         - Escape other regex metacharacters
@@ -417,6 +389,10 @@ class OutlookSecurityAgent:
         - Create backups via export method
         """
         try:
+            # If no dest_file specified, overwrite source (in-place conversion)
+            if dest_file is None:
+                dest_file = source_file
+                
             src = self.get_safe_senders_rules(source_file)
             patterns = src.get("safe_senders", []) if isinstance(src, dict) else []
 
@@ -446,60 +422,6 @@ class OutlookSecurityAgent:
             return ok
         except Exception as e:
             self.log_print(f"Error converting safe_senders to regex: {str(e)}")
-            return False
-
-    def convert_rules_yaml_to_regex(self, source_file=YAML_RULES_FILE, dest_file=YAML_RULES_FILE_REGEX):
-        r"""Convert rules.yaml to rulesregex.yaml by converting header/body/subject/from lists to regex.
-
-        - Replace '*' with '.*' (glob to regex)
-        - Escape other regex metacharacters using re.escape
-        - Lowercase/trim entries
-        - Preserve overall YAML structure (version/settings/metadata), but ensure rules are normalized
-        - Use export_rules_to_yaml to sort/dedupe lists and back up
-        """
-        try:
-            doc = self.get_yaml_rules(source_file)
-            if not doc or not isinstance(doc, dict) or 'rules' not in doc:
-                self.log_print(f"No rules found in {source_file}")
-                return False
-
-            def to_regex(p: str) -> str:
-                if not isinstance(p, str):
-                    p = str(p)
-                raw = p.strip().lower()
-                placeholder = "__WILDCARD__"
-                raw = raw.replace('*', placeholder)
-                escaped = re.escape(raw)
-                escaped = escaped.replace(placeholder, ".*")
-                return escaped
-
-            new_doc = json.loads(json.dumps(doc))  # deep copy via JSON
-            for rule in new_doc.get('rules', []):
-                if not isinstance(rule, dict):
-                    continue
-                # Convert conditions
-                cond = rule.get('conditions') or {}
-                for key in ['header', 'body', 'subject', 'from']:
-                    vals = cond.get(key)
-                    if isinstance(vals, list):
-                        cond[key] = [to_regex(v) for v in vals]
-                rule['conditions'] = cond
-                # Convert exceptions
-                exc = rule.get('exceptions') or {}
-                for key in ['header', 'body', 'subject', 'from']:
-                    vals = exc.get(key)
-                    if isinstance(vals, list):
-                        exc[key] = [to_regex(v) for v in vals]
-                rule['exceptions'] = exc
-
-            ok = self.export_rules_to_yaml(new_doc, rules_file=dest_file)
-            if ok:
-                self.log_print(f"Converted rules to regex and wrote {dest_file}")
-            else:
-                self.log_print(f"Failed to write converted rules to {dest_file}")
-            return ok
-        except Exception as e:
-            self.log_print(f"Error converting rules to regex: {str(e)}")
             return False
 
     def log_print(self, message, level="INFO"):
@@ -1071,8 +993,11 @@ class OutlookSecurityAgent:
 
             try:
                 with open(rules_file, 'w', encoding='utf-8') as yaml_file:
+                    # DEPRECATED 10/18/2025: Regex filename check removed - all files now use single quotes for regex stability
                     # Prefer single quotes when writing the regex safe_senders file to avoid escape churn
-                    default_style = "'" if os.path.basename(rules_file) == os.path.basename(YAML_RULES_SAFE_SENDERS_FILE_REGEX) else '"'
+                    # default_style = "'" if os.path.basename(rules_file) == os.path.basename(YAML_RULES_SAFE_SENDERS_FILE_REGEX) else '"'
+                    # Always use single quotes for regex pattern stability
+                    default_style = "'"
                     yaml.dump(standardized_rules, yaml_file, sort_keys=False, default_flow_style=False, default_style=default_style)
                 self.log_print(f"Successfully exported {len(standardized_rules['safe_senders'])} safe_senders to YAML file: {rules_file}")
 
@@ -1218,26 +1143,14 @@ class OutlookSecurityAgent:
                 except Exception as e:
                     self.log_print(f"Warning: Could not create backup file: {str(e)}")
 
-            #HK 05/13/25 - Removed use of temporary file and comparison before writing to file
-            # Create temporary file path
-            # temp_file = f"{os.path.splitext(rules_file)[0]}_temp.yaml"
-
-
             # Write to file
             try:
 
                 with open(rules_file, 'w', encoding='utf-8') as yaml_file:
-                    # Prefer single quotes when writing the regex rules file to avoid escape churn
-                    default_style = "'" if os.path.basename(rules_file) == os.path.basename(YAML_RULES_FILE_REGEX) else '"'
+                    # Always use single quotes for regex pattern stability
+                    default_style = "'"
                     yaml.dump(formatted_output, yaml_file, sort_keys=False, default_flow_style=False, default_style=default_style, width=4096)
                     self.log_print(f"Successfully exported {len(standardized_rules['rules'])} rules to YAML file: {rules_file}")
-
-                # Clean up - delete temporary file
-                # try:
-                #     os.remove(temp_file)
-                #     self.log_print(f"Deleted temporary file: {temp_file}")
-                # except Exception as e:
-                #     self.log_print(f"Warning: Could not delete temporary file: {str(e)}")
 
                 return True
 
@@ -1256,30 +1169,13 @@ class OutlookSecurityAgent:
     def get_rules(self, use_regex_files: bool = False):
 
         """Get rules from YAML file if available, otherwise from Outlook"""
-        # 03/31/2025 Harold Kimmey Changing import rules from CSV to YAML file (easy import/export via JSON/YAML)
 
         # Note: actual file chosen will be self.active_rules_file set by main()
         YAML_rules = self.get_yaml_rules()
         self.log_print(f"Import rules from YAML ({self.active_rules_file})")
 
-        #Stop getting Outlook Rules
-        # outlook_rules = []
-        # self.log_print(f"Import rules from Outlook")
-        # outlook_rules = self.get_outlook_rules()
-
-        # debugging - compare YAML_rules to Outlook_rules and print the differences between them
-        # self.output_rules_differences(outlook_rules, "Outlook", YAML_rules, "YAML")
-
-        # debugging - for future runs, no longer use Outlook rules
-        #rules = outlook_rules
-
         safe_senders = self.get_safe_senders_rules()
 
-        # **NOT needed - after verifying, these lines can be removed
-        # # Extract rules array from dictionary if needed
-        # if isinstance(rules, dict) and "rules" in rules:
-        #     self.log_print(f"Extracted rules array from dictionary wrapper")
-        #     return rules["rules"]
         self.log_print(f"Number of rules: {len(YAML_rules['rules'])}")
         # self.log_print(f"Show list of rules: {YAML_rules['rules']}")
         self.log_print(f"Number of safe_senders rules: {len(safe_senders['safe_senders'])}")
@@ -1429,6 +1325,12 @@ class OutlookSecurityAgent:
 
 
     def get_unique_URL_stubs(self, email_body):
+        r"""
+        Extract unique URL stubs from the email body in the formats "/<domain>.<>"
+        Args:
+            email_body (str): The body of the email.
+        """
+
         unique_stubs = []
         seen_stubs = set()
         url_pattern = re.compile(r'(\.[\w-]+\.[\w-]+)|(/[\w-]+\.[\w-]+)')
@@ -1874,9 +1776,6 @@ class OutlookSecurityAgent:
         self.log_print(f"Found {len(unfiltered_emails)} unfiltered emails. Processing for possible rule updates...")
         simple_print(f"\nBeginning interactive rule update for {len(unfiltered_emails)} unfiltered emails")
 
-        #*** What is the best way to ONLY ask once for each unique from_domain in unfiltered_emails
-        # create a list of those added and skip others
-
         # Process each unfiltered email
         # NOTE:  assumes user will only want to update 1 rule per email
         count = 0
@@ -1922,14 +1821,6 @@ class OutlookSecurityAgent:
                 if skip_email:
                     continue
 
-                # For now assume user wants to process all non-deleted emails
-                #
-                # if count > 0:   # Ask if user wants to continue with next email (but not first email)
-                #     continue_response = input("\nContinue to next email? (y/n): ").lower()
-                #     if continue_response != 'y':
-                #         simple_print("Rule update process exited by user")
-                #         break
-
                 # Display email details
                 print(f"{CRLF}" + "=" * 60)
                 print(f"Subject: {subject}")
@@ -1937,17 +1828,9 @@ class OutlookSecurityAgent:
                 print(f"Domain: {from_domain}")
                 print(f"Unique URLs: {unique_urls}")
 
-                # if unique_urls:
-                #     simple_print("\nUnique URLs in body:")
-                #     for url in unique_urls[:5]:  # Show just the first 5 to avoid overwhelming output
-                #         simple_print(f"  {url}")
-                #     if len(unique_urls) > 5:
-                #         simple_print(f"  ... and {len(unique_urls) - 5} more")
-
                 response = ""
 
                 # Step 1: Suggest header rule
-                #*** need to update to highly secure vetting of input from user
                 #*** for the following domains that host individual email addresses, only suggest adding full email address to header rules:
                 #   gmail.com, yahoo.com, hotmail.com, outlook.com, aol.com, protonmail.com,
                 domains_with_individual_emails = from_domain in [
@@ -2010,10 +1893,6 @@ class OutlookSecurityAgent:
                                     self.log_print(f"Appended to: {self.active_safe_senders_file}")
                                 except Exception:
                                     pass
-                        # else:
-                        #     expected_responses = ['d', 'e','s']
-                        #     prompt = f"{CRLF}Add '{from_domain}' or email domain to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
-                        #     response = self.get_safe_input(prompt, expected_responses)
                     else:
                         expected_responses = ['d', 'e', 's', 'sd', '?']   # 'sd' adds sender domain regex to safe_senders
                         prompt = f"{CRLF}Add '{from_email}' to SpamAutoDeleteHeader rule or safe_senders? ({'/'.join(expected_responses)}): "
@@ -2052,10 +1931,6 @@ class OutlookSecurityAgent:
                                         except Exception:
                                             pass
 
-                                    # Previous literal behavior retained for reference:
-                                    # rule["conditions"]["header"].append(from_domain)
-                                    # self.log_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
-                                    # simple_print(f"Added '{from_domain}' to SpamAutoDeleteHeader rule")
                         elif response == 's':
                             # Add from_domain to safe_senders list
                             safe_senders["safe_senders"].append(from_domain)  # working HK 05/18/25
@@ -2340,8 +2215,6 @@ class OutlookSecurityAgent:
         self.log_print(f"Target folders: {[folder.Name for folder in self.target_folders]}", "DEBUG")
         self.log_print(f"Processing emails from last {days_back} days")
         self.log_print(f"Regex mode: {'enabled' if use_regex else 'disabled'}")
-        # DEPRECATED 10/14/2025: Legacy matching removed - always using regex
-        # self.log_print(f"Matching semantics: {'regex' if use_regex else 'legacy substring/wildcard'}")
         self.log_print(f"Matching semantics: regex (only supported mode)")
         self.log_print(f"Interactive rule updates: {'enabled' if update_rules else 'disabled'}")
 
@@ -2446,30 +2319,6 @@ class OutlookSecurityAgent:
                                 all_emails_to_process.remove(email)
                             self.log_print(f"Email moved to inbox")
                             continue
-                    # DEPRECATED 10/14/2025: Legacy safe_senders matching removed
-                    # else:
-                    #     # Legacy safe_senders: only compare against trimmed From and Domain tokens
-                    #     from_tok = (self.header_from(email_header) or "").strip().lower()
-                    #     sender_tok = (email.SenderEmailAddress or "").strip().lower()
-                    #     for sender_pat in safe_senders["safe_senders"]:
-                    #         pat_lower = (sender_pat or "").strip().lower()
-                    #         # Wildcard prefix semantics: '*foo' means any ending with 'foo'
-                    #         def legacy_match(pat: str, val: str) -> bool:
-                    #             if not pat:
-                    #                 return False
-                    #             if pat.startswith('*'):
-                    #                 return val.endswith(pat[1:])
-                    #             return pat in val
-                    #         if legacy_match(pat_lower, from_tok) or legacy_match(pat_lower, sender_tok):
-                    #             self.log_print(f"Safe sender matched (legacy) on token: {pat_lower}")
-                    #             self.move_email_with_retry(email, self.inbox_folder)
-                    #             self.delete_email_with_retry(email)
-                    #             email_deleted = True
-                    #             if email in all_emails_to_process:
-                    #                 all_emails_to_process.remove(email)
-                    #             self.log_print(f"Email moved to inbox")
-                    #             break
-                    #            # no processing of rules needed if found in safe_senders
 
                     for rule in rules:
                         if not isinstance(rule, dict) or 'actions' not in rule:
@@ -2569,38 +2418,8 @@ class OutlookSecurityAgent:
                                     self.log_print(f"Matched regex in header: {matched_keyword}")
                                     self.log_print(f"Rule matched: {rule['name']} via HEADER pattern: {matched_keyword}")
                                     # No need to scan header lines; match is against tokens only
-                            # DEPRECATED 10/14/2025: Legacy header matching removed
-                            # else:
-                            #     # Legacy: only compare against trimmed From and Domain tokens
-                            #     from_tok = (self.header_from(email_header) or "").strip().lower()
-                            #     sender_tok = (email.SenderEmailAddress or "").strip().lower()
-                            #     header_vals = [(kw or "").strip().lower() for kw in conditions['header']]
-                            #     def legacy_match(pat: str, val: str) -> bool:
-                            #         if not pat:
-                            #             return False
-                            #         if pat.startswith('*'):
-                            #             return val.endswith(pat[1:])
-                            #         return pat in val
-                            #     for kw in header_vals:
-                            #         if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
-                            #             match = True
-                            #             matched_keyword = kw
-                            #             self.log_print(f"Matched keyword in header (legacy token): {matched_keyword}")
-                            #             break
-                            #     # below will print all the body lines that match if needed for debugging
-                            #     # for header in email_header.splitlines():
-                            #     if DEBUG:
-                            #         for header in email_header.splitlines():
-                            #             if any(keyword.lower() in header.lower() for keyword in conditions['header']):
-                            #                 self.log_print(f"Header: {header}", "DEBUG")
-
-                        # Check for attachments - not using. could be added later - will need to be updated; will not work as-is
-                        # if 'has_attachments' in conditions:
-                        #     if bool(email.Attachments.Count > 0) != conditions['has_attachments']:
-                        #         match = True
 
                         # Check exceptions
-
                         if match and 'from' in exceptions:
                             from_addresses = [addr.lower() for addr in exceptions['from']]
                             sender_email_lower = email.SenderEmailAddress.lower()
@@ -2675,28 +2494,6 @@ class OutlookSecurityAgent:
                                     matched_keyword = pat
                                     self.log_print(f"Exception matched regex in header: {matched_keyword}")
                                     # Match was against tokens; no need to list header lines
-                            # DEPRECATED 10/14/2025: Legacy header exception matching removed
-                            # else:
-                            #     from_tok = (self.header_from(email_header) or "").strip().lower()
-                            #     sender_tok = (email.SenderEmailAddress or "").strip().lower()
-                            #     exc_vals = [(kw or "").strip().lower() for kw in exceptions['header']]
-                            #     def legacy_match(pat: str, val: str) -> bool:
-                            #         if not pat:
-                            #             return False
-                            #         if pat.startswith('*'):
-                            #             return val.endswith(pat[1:])
-                            #         return pat in val
-                            #     for kw in exc_vals:
-                            #         if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
-                            #             match = False
-                            #             matched_keyword = kw
-                            #             self.log_print(f"Exception matched keyword in header (legacy token): {matched_keyword}")
-                            #             break
-
-                        # # Check for attachments - not using. could be added later - will need to be updated; will not work as-is
-                        # if 'has_attachments' in conditions:
-                        #     if bool(email.Attachments.Count > 0) != conditions['has_attachments']:
-                        #         match = False
 
                         # If match is true need to process 2 things, but do them in separate steps
                         # first, if matched save in the copy of emails, add the rule and the keyword matched
@@ -2939,25 +2736,6 @@ class OutlookSecurityAgent:
                                 self.move_email_with_retry(email, self.inbox_folder)
                                 self.delete_email_with_retry(email)
                                 email_deleted = True
-                        # DEPRECATED 10/14/2025: Legacy safe_senders matching removed (second pass)
-                        # else:
-                        #     # Legacy safe_senders: only compare against trimmed From and Domain tokens
-                        #     from_tok = (self.header_from(email_header) or "").strip().lower()
-                        #     sender_tok = (email.SenderEmailAddress or "").strip().lower()
-                        #     def legacy_match(pat: str, val: str) -> bool:
-                        #         if not pat:
-                        #             return False
-                        #         if pat.startswith('*'):
-                        #             return val.endswith(pat[1:])
-                        #         return pat in val
-                        #     for sender_pat in safe_senders.get("safe_senders", []):
-                        #         pat_lower = (sender_pat or "").strip().lower()
-                        #         if legacy_match(pat_lower, from_tok) or legacy_match(pat_lower, sender_tok):
-                        #             self.log_print(f"Second-pass: Safe sender matched (legacy token): {pat_lower}")
-                        #             self.move_email_with_retry(email, self.inbox_folder)
-                        #             self.delete_email_with_retry(email)
-                        #             email_deleted = True
-                        #             break
                         
                         if email_deleted:
                             second_pass_processed += 1
@@ -3041,23 +2819,6 @@ class OutlookSecurityAgent:
                                         match = True
                                         matched_keyword = pat
                                         self.log_print(f"Second-pass: Matched regex in header: {matched_keyword}")
-                                # DEPRECATED 10/14/2025: Legacy header matching removed (second pass)
-                                # else:
-                                #     # Legacy: only compare against trimmed From and Domain tokens
-                                #     from_tok = (self.header_from(email_header) or "").strip().lower()
-                                #     sender_tok = (email.SenderEmailAddress or "").strip().lower()
-                                #     header_vals = [(kw or "").strip().lower() for kw in conditions['header']]
-                                #     def legacy_match(pat: str, val: str) -> bool:
-                                #         if not pat:
-                                #             return False
-                                #         if pat.startswith('*'):
-                                #             return val.endswith(pat[1:])
-                                #         return pat in val
-                                #     for kw in header_vals:
-                                #         if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
-                                #             match = True
-                                #             matched_keyword = kw
-                                #             break
 
                             # Exceptions
                             if match and 'from' in exceptions:
@@ -3116,22 +2877,6 @@ class OutlookSecurityAgent:
                                     if m:
                                         match = False
                                         matched_keyword = pat
-                                # DEPRECATED 10/14/2025: Legacy header exception matching removed (second pass)
-                                # else:
-                                #     from_tok = (self.header_from(email_header) or "").strip().lower()
-                                #     sender_tok = (email.SenderEmailAddress or "").strip().lower()
-                                #     exc_vals = [(kw or "").strip().lower() for kw in exceptions['header']]
-                                #     def legacy_match(pat: str, val: str) -> bool:
-                                #         if not pat:
-                                #             return False
-                                #         if pat.startswith('*'):
-                                #             return val.endswith(pat[1:])
-                                #         return pat in val
-                                #     for kw in exc_vals:
-                                #         if legacy_match(kw, from_tok) or legacy_match(kw, sender_tok):
-                                #             match = False
-                                #             matched_keyword = kw
-                                #             break
                             
                             # Update email info
                             if match:
@@ -3153,23 +2898,6 @@ class OutlookSecurityAgent:
                                         break
                                     except Exception as e:
                                         self.log_print(f"Second-pass: Error deleting email: {str(e)}")
-                            # Duplicated action block below was causing double-processing; keeping for history but disabled
-                            # if match:
-                            #     second_pass_added_info[email_index]["match"] = True
-                            #     second_pass_added_info[email_index]["rule"] = rule
-                            #     second_pass_added_info[email_index]["matched_keyword"] = matched_keyword
-                            #     second_pass_added_info[email_index]["processed"] = True
-                            #     self.log_print(f"Second-pass: Email matches rule: {rule['name']}")
-                            #     actions = rule['actions']
-                            #     if 'delete' in actions and actions['delete']:
-                            #         try:
-                            #             self.delete_email_with_retry(email)
-                            #             email_deleted = True
-                            #             second_pass_deleted += 1
-                            #             self.log_print(f"Second-pass: Email deleted by rule: {rule['name']}")
-                            #             break
-                            #         except Exception as e:
-                            #             self.log_print(f"Second-pass: Error deleting email: {str(e)}")
                         
                         # Check phishing indicators for unmatched emails
                         if not email_deleted and not second_pass_added_info[email_index]["match"]:
@@ -3234,9 +2962,6 @@ def main():
                        help='Enable interactive rule updates (default: disabled)')
     parser.add_argument('--use-regex-files', action='store_true',
                        help='Load regex variants of YAML files (rulesregex.yaml and rules_safe_sendersregex.yaml). Default: ON')
-    # DEPRECATED 10/14/2025: Legacy YAML file support removed - regex mode is now the only supported mode
-    # parser.add_argument('--use-legacy-files', action='store_true',
-    #                    help='Force legacy YAML files (rules.yaml and rules_safe_senders.yaml) and legacy string matching')
     parser.add_argument('--convert-safe-senders-to-regex', action='store_true',
                         help='Convert rules_safe_senders.yaml to rules_safe_sendersregex.yaml and exit')
     parser.add_argument('--convert-rules-to-regex', action='store_true',
@@ -3265,19 +2990,6 @@ def main():
             agent.convert_rules_yaml_to_regex()
             return
 
-        # DEPRECATED 10/14/2025: Legacy mode removed - always use regex files
-        # Legacy mode logic commented out - keeping for reference
-        # # Determine effective mode: regex is default; legacy only if explicitly requested
-        # effective_use_regex_files = True
-        # if args.use_legacy_files and args.use_regex_files:
-        #     # Prefer legacy if both provided; log the conflict
-        #     agent.log_print("Both --use-regex-files and --use-legacy-files provided; defaulting to legacy for this run")
-        #     effective_use_regex_files = False
-        # elif args.use_legacy_files:
-        #     effective_use_regex_files = False
-        # else:
-        #     effective_use_regex_files = True
-        
         # Always use regex mode now
         effective_use_regex_files = True
 
