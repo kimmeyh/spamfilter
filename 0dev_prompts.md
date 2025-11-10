@@ -1,7 +1,6 @@
 Next:
 @workspace use 'memory-bank/*' to understand the workspace 
 
-can you help rename rulesregex.yaml back to rules.yaml and rules_safe_sendersregex.yaml back to rules_safe_senders.yaml, updating code and files as needed
 
 Can you help draft the code for review in the files
 Any code that should be removed should be commented out and not deleted.
@@ -9,9 +8,6 @@ Do not remove any commented out code.  Do not update 0dev_prompts.md
 When complete, update the memory-bank/* files and README.md
 
 Assigned to Copilot:
-
-
-
 
 Template:
 @workspace use 'memory-bank/*' to understand the workspace 
@@ -63,6 +59,8 @@ cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 &
 
 ------------------------------------------------------------------------------
 Completed:
+
+can you help rename rulesregex.yaml back to rules.yaml and rules_safe_sendersregex.yaml back to rules_safe_senders.yaml, updating code and files as needed
 
 The spam filtering is working as expected, except during the user input. For example, if the user enters "d" to add the domain rule, it should add that rule so that any future occurrences of that domain are filtered before input is requested.  Same for "sd".  Can you help
 
