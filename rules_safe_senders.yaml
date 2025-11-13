@@ -1,4 +1,5 @@
 'safe_senders':
+- '@sgu.edu'
 - '^19scottsharp@gmail\.com$'
 - '^2163579227@tmomail\.net$'
 - '^2163579229@tmomail\.net$'

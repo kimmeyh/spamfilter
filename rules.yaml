@@ -22,6 +22,7 @@
     - '@(?:[a-z0-9-]+\.)*abelrini\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*abstandida\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*acquia\-sites\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*acslogeg\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*activepipe\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*aematopoie\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*aeroquark\.[a-z0-9.-]+$'
@@ -46,6 +47,7 @@
     - '@(?:[a-z0-9-]+\.)*aoyglossifflow\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*appgiaoduc\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*appssaj\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*arches\-global\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*arecac\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*arkhsuha\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*aspecular\.[a-z0-9.-]+$'
@@ -1742,7 +1744,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-12T23:24:35.311921'
+    'last_modified': '2025-11-13T11:06:24.439883'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2893,7 +2895,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-12T23:24:35.311921'
+    'last_modified': '2025-11-13T11:06:24.439883'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2932,7 +2934,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-12T23:24:35.311921'
+    'last_modified': '2025-11-13T11:06:24.439883'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -3002,7 +3004,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-12T23:24:35.311921'
+    'last_modified': '2025-11-13T11:06:24.439883'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -3042,7 +3044,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-12T23:24:35.311921'
+    'last_modified': '2025-11-13T11:06:24.439883'
     'created_by': 'system'
     'tags':
     - 'spam'

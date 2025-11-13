@@ -2918,15 +2918,18 @@ class OutlookSecurityAgent:
                 
                 # Log second-pass summary
                 self.log_print(f"\nSecond-pass Processing Summary:")
-                self.log_print(f"Second-pass processed {second_pass_processed} emails")
-                self.log_print(f"Second-pass flagged {second_pass_flagged} emails as possible Phishing attempts")
-                self.log_print(f"Second-pass deleted {second_pass_deleted} emails")
-                
-                simple_print(f"\nSecond-pass Processing Summary:")
-                simple_print(f"Second-pass processed {second_pass_processed} emails")
-                simple_print(f"Second-pass flagged {second_pass_flagged} emails as possible Phishing attempts")
-                simple_print(f"Second-pass deleted {second_pass_deleted} emails")
-                
+                simple_print  (f"\nSecond-pass Processing Summary:")
+                print         (f"\nSecond-pass Processing Summary:")
+                self.log_print(f"Second-pass processed {second_pass_processed:>3} emails")
+                simple_print  (f"Second-pass processed {second_pass_processed:>3} emails")
+                print         (f"Second-pass processed {second_pass_processed:>3} emails")
+                self.log_print(f"Second-pass flagged   {second_pass_flagged:>3} emails as possible Phishing attempts")
+                simple_print  (f"Second-pass flagged   {second_pass_flagged:>3} emails as possible Phishing attempts")
+                print         (f"Second-pass flagged   {second_pass_flagged:>3} emails as possible Phishing attempts")
+                self.log_print(f"Second-pass deleted   {second_pass_deleted:>3} emails")
+                simple_print  (f"Second-pass deleted   {second_pass_deleted:>3} emails")
+                print         (f"Second-pass deleted   {second_pass_deleted:>3} emails")
+
                 # Update total counts to include second-pass results
                 processed_count += second_pass_processed
                 deleted_total += second_pass_deleted
@@ -2936,15 +2939,18 @@ class OutlookSecurityAgent:
                 simple_print(f"Second-pass: No emails found for reprocessing")
 
             self.log_print(f"\nFinal Processing Summary (including second-pass):")
-            self.log_print(f"Total processed {processed_count} emails")
-            self.log_print(f"Total flagged {flagged_count} emails as possible Phishing attempts")
-            self.log_print(f"Total deleted {deleted_total} emails")
+            simple_print  (f"\nFinal Processing Summary (including second-pass):")
+            print         (f"\nFinal Processing Summary (including second-pass):")
+            self.log_print(f"Total processed {processed_count:>3} emails")
+            simple_print  (f"Total processed {processed_count:>3} emails")
+            print         (f"Total processed {processed_count:>3} emails")
+            self.log_print(f"Total flagged   {flagged_count:>3} emails as possible Phishing attempts")
+            simple_print  (f"Total flagged   {flagged_count:>3} emails as possible Phishing attempts")
+            print         (f"Total flagged   {flagged_count:>3} emails as possible Phishing attempts")
+            self.log_print(f"Total deleted   {deleted_total:>3} emails")
+            simple_print  (f"Total deleted   {deleted_total:>3} emails")
+            print         (f"Total deleted   {deleted_total:>3} emails")
             self.log_print(f"END of Run =============================================================\n\n")
-
-            simple_print(f"\nProcessing Summary:")
-            simple_print(f"Processed {processed_count} emails")
-            simple_print(f"Flagged {flagged_count} emails as possible Phishing attempts")
-            simple_print(f"Deleted {deleted_total} emails")
 
         except Exception as e:
             self.log_print(f"Error in process_emails: {str(e)}")
@@ -2952,7 +2958,7 @@ class OutlookSecurityAgent:
 
 
 
-# Main program execution
+# Main program execution --------------------------------------------------------
 def main():
     """Main function to run the security agent"""
     
@@ -2960,13 +2966,6 @@ def main():
     parser = argparse.ArgumentParser(description='Outlook Mail Spam Filter')
     parser.add_argument('-u', '--update_rules', action='store_true', 
                        help='Enable interactive rule updates (default: disabled)')
-    # DEPRECATED 11/10/2025: Regex-only mode and removal of conversion utilities. Flags removed from parser.
-    # parser.add_argument('--use-regex-files', action='store_true',
-    #                    help='Load regex variants of YAML files (rulesregex.yaml and rules_safe_sendersregex.yaml). Default: ON')
-    # parser.add_argument('--convert-safe-senders-to-regex', action='store_true',
-    #                     help='Convert rules_safe_senders.yaml to rules_safe_sendersregex.yaml and exit')
-    # parser.add_argument('--convert-rules-to-regex', action='store_true',
-    #                     help='Convert rules.yaml to rulesregex.yaml and exit')
     
     # Backward-compat shim: ignore removed flags if present on CLI to prevent argparse errors
     removed_cli_flags = ['--use-regex-files', '--convert-safe-senders-to-regex', '--convert-rules-to-regex']
@@ -2984,14 +2983,16 @@ def main():
     agent = OutlookSecurityAgent()  # setup for calling functions in class OutlookSecurityAgent
 
     try:
-        simple_print(f"\n=============================================================")
-        simple_print(f"Starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")
-        simple_print(f"This will make changes")
-        simple_print(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")
+
         agent.log_print(f"\n=============================================================")
+        simple_print   (f"\n=============================================================")
         agent.log_print(f"Starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")
+        simple_print   (f"starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")
+        print          (f"starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")
         agent.log_print(f"This will make changes")
+        simple_print   (f"This will make changes")
         agent.log_print(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")
+        simple_print   (f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")
 
         # DEPRECATED 11/10/2025: Conversion utilities removed. Kept for reference only.
         # if getattr(args, 'convert_safe_senders_to_regex', False):
