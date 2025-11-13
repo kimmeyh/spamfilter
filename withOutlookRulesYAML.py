@@ -278,8 +278,8 @@ class OutlookSecurityAgent:
           - matches [a-z0-9-]+
 
         Example desired behavior:
-            Description of desired outcome: '@<any sub-domain>.<any-subdomain...>.<specific sub-domain, ex "yglic">.<any sub-domain>.<any-subdomain...>.<any top-level domain>" 
-                          should result in: '@(?:[a-z0-9-]+\.)*ygllc\.[a-z0-9.-]+$'
+            Description of desired outcome: '@<any sub-domain>.<any-subdomain...>.<specific sub-domain, ex "google">.<any sub-domain>.<any-subdomain...>.<any top-level domain>" 
+                          should result in: '@(?:[a-z0-9-]+\.)*google\.[a-z0-9.-]+$'
         """
         s = (addr_or_domain or '').strip().lower()
 
@@ -413,7 +413,7 @@ class OutlookSecurityAgent:
             # Build document structure compatible with export
             out_doc = {"safe_senders": converted}
 
-            # Reuse export to normalize (lowercase, dedupe, sort) and back up, writing to dest_file
+            # Reuse export to normalize (lowercase, deduplicate, sort) and back up, writing to dest_file
             ok = self.export_safe_senders_to_yaml(out_doc, rules_file=dest_file)
             if ok:
                 self.log_print(f"Converted {len(converted)} safe_senders to regex and wrote {dest_file}")
@@ -2960,12 +2960,23 @@ def main():
     parser = argparse.ArgumentParser(description='Outlook Mail Spam Filter')
     parser.add_argument('-u', '--update_rules', action='store_true', 
                        help='Enable interactive rule updates (default: disabled)')
-    parser.add_argument('--use-regex-files', action='store_true',
-                       help='Load regex variants of YAML files (rulesregex.yaml and rules_safe_sendersregex.yaml). Default: ON')
-    parser.add_argument('--convert-safe-senders-to-regex', action='store_true',
-                        help='Convert rules_safe_senders.yaml to rules_safe_sendersregex.yaml and exit')
-    parser.add_argument('--convert-rules-to-regex', action='store_true',
-                        help='Convert rules.yaml to rulesregex.yaml and exit')
+    # DEPRECATED 11/10/2025: Regex-only mode and removal of conversion utilities. Flags removed from parser.
+    # parser.add_argument('--use-regex-files', action='store_true',
+    #                    help='Load regex variants of YAML files (rulesregex.yaml and rules_safe_sendersregex.yaml). Default: ON')
+    # parser.add_argument('--convert-safe-senders-to-regex', action='store_true',
+    #                     help='Convert rules_safe_senders.yaml to rules_safe_sendersregex.yaml and exit')
+    # parser.add_argument('--convert-rules-to-regex', action='store_true',
+    #                     help='Convert rules.yaml to rulesregex.yaml and exit')
+    
+    # Backward-compat shim: ignore removed flags if present on CLI to prevent argparse errors
+    removed_cli_flags = ['--use-regex-files', '--convert-safe-senders-to-regex', '--convert-rules-to-regex']
+    for _flag in list(removed_cli_flags):
+        if _flag in sys.argv:
+            print(f"Warning: {_flag} is deprecated and ignored. Regex mode is always on; conversion utilities are removed.")
+            try:
+                sys.argv.remove(_flag)
+            except ValueError:
+                pass
     
     args = parser.parse_args()
 
@@ -2982,13 +2993,13 @@ def main():
         agent.log_print(f"This will make changes")
         agent.log_print(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")
 
-        # Optional one-shot conversion and exit
-        if args.convert_safe_senders_to_regex:
-            agent.convert_safe_senders_yaml_to_regex()
-            return
-        if args.convert_rules_to_regex:
-            agent.convert_rules_yaml_to_regex()
-            return
+        # DEPRECATED 11/10/2025: Conversion utilities removed. Kept for reference only.
+        # if getattr(args, 'convert_safe_senders_to_regex', False):
+        #     agent.convert_safe_senders_yaml_to_regex()
+        #     return
+        # if getattr(args, 'convert_rules_to_regex', False):
+        #     agent.convert_rules_yaml_to_regex()
+        #     return
 
         # Always use regex mode now
         effective_use_regex_files = True

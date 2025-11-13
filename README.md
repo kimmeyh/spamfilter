@@ -90,10 +90,10 @@ Historical files (deprecated):
 ## CLI Flags
 
 - `-u`, `--update_rules`: enable interactive prompts to add header regexes or safe senders during processing
-- ~~`--use-regex-files`~~: **DEPRECATED 10/18/2025** - regex is now the only mode, uses consolidated filenames
+- ~~`--use-regex-files`~~: **DEPRECATED and removed from CLI (11/10/2025)** - Regex mode is always on. If provided, it is ignored with a warning.
+- ~~`--convert-rules-to-regex`~~: **DEPRECATED and removed from CLI (11/10/2025)** - Conversion utilities were retired. If provided, it is ignored with a warning.
+- ~~`--convert-safe-senders-to-regex`~~: **DEPRECATED and removed from CLI (11/10/2025)** - Conversion utilities were retired. If provided, it is ignored with a warning.
 - ~~`--use-legacy-files`~~: **DEPRECATED 10/14/2025** - legacy YAML files are no longer supported
-- ~~`--convert-rules-to-regex`~~: **DEPRECATED 10/18/2025** - conversion utilities no longer needed
-- ~~`--convert-safe-senders-to-regex`~~: **DEPRECATED 10/18/2025** - conversion utilities no longer needed
 
 ## Testing
 

@@ -30,6 +30,7 @@
     - '@(?:[a-z0-9-]+\.)*ageofbig\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*ahealthyliving\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*aibn\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*alamnama\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*aleencell\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*alexaechosound\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*alfanpcp\.[a-z0-9.-]+$'
@@ -47,6 +48,7 @@
     - '@(?:[a-z0-9-]+\.)*appssaj\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*arecac\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*arkhsuha\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*aspecular\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*ataglance\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*aucherto\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*auto\-pijac\.[a-z0-9.-]+$'
@@ -128,6 +130,7 @@
     - '@(?:[a-z0-9-]+\.)*dzllc\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*easiereats\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*eatensition\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*edcpub\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*editaserlat\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*eignmen\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*elchgh\.[a-z0-9.-]+$'
@@ -164,6 +167,7 @@
     - '@(?:[a-z0-9-]+\.)*feelinggoodnow\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*fernandezdes\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*fgerdgaws\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*fictodim\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*fiderita\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*fieldigi\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*fiervi\.[a-z0-9.-]+$'
@@ -997,6 +1001,7 @@
     - '@(?:[a-z0-9-]+\.)*simon\-jones\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*singhgastro\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*siteomis\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*skyslope\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*skytuck\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*skyyscanners\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*sl9azoppyseparate\.[a-z0-9.-]+$'
@@ -1231,6 +1236,7 @@
     - '@(?:[a-z0-9-]+\.)*va5x\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*valetant\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*validatore\.[a-z0-9.-]+$'
+    - '@(?:[a-z0-9-]+\.)*vannaci\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*varite\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*velmarab\.[a-z0-9.-]+$'
     - '@(?:[a-z0-9-]+\.)*velofitter\.[a-z0-9.-]+$'
@@ -1687,6 +1693,7 @@
     - 'raz855291@gmail\.com'
     - 'realpeople4god@gmail.com'
     - 'retseaqkom@gmail\.com'
+    - 'sahabsingh123as@gmail.com'
     - 'saidsiddiqui945196@gmail\.com'
     - 'samarthdete1@gmail\.com'
     - 'sandeeptiwarisks@'
@@ -1735,7 +1742,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-10T12:55:26.742370'
+    'last_modified': '2025-11-12T22:52:21.669221'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2886,7 +2893,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-10T12:55:26.742370'
+    'last_modified': '2025-11-12T22:52:21.669221'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2925,7 +2932,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-10T12:55:26.742370'
+    'last_modified': '2025-11-12T22:52:21.669221'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -2995,7 +3002,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-10T12:55:26.742370'
+    'last_modified': '2025-11-12T22:52:21.669221'
     'created_by': 'system'
     'tags':
     - 'spam'
@@ -3035,7 +3042,7 @@
     'header': []
     'subject': []
   'metadata':
-    'last_modified': '2025-11-10T12:55:26.742370'
+    'last_modified': '2025-11-12T22:52:21.669221'
     'created_by': 'system'
     'tags':
     - 'spam'

@@ -1,6 +1,7 @@
 Next:
 @workspace use 'memory-bank/*' to understand the workspace 
 
+Can you help safely remove the following 3 lines
 
 Can you help draft the code for review in the files
 Any code that should be removed should be commented out and not deleted.
