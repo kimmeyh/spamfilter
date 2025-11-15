@@ -8,6 +8,7 @@
         "Kimmey",
         "levelname",
         "protonmail",
+        "rulesregex",
         "safesenders"
     ],
     // Ensure VS Code uses the local venv interpreter for this workspace

@@ -1,4 +1,4 @@
-# Processing flow (current as of 11/10/2025)
+# Processing flow (current as of 11/15/2025)
 
 ## File Structure (Consolidated Filenames)
 - **rules.yaml** - Main spam filtering rules (contains regex patterns)
@@ -6,6 +6,22 @@
 - Legacy files deprecated:
   - rulesregex.yaml → consolidated to rules.yaml (11/10/2025)
   - rules_safe_sendersregex.yaml → consolidated to rules_safe_senders.yaml (11/10/2025)
+
+## Logging and Output Functions
+- **print_to()** - Unified output function (added 11/15/2025)
+  - Replaces multiple concurrent calls to log_print(), simple_print(), and print()
+  - Parameters: `message, to_log=False, to_simple=False, to_console=False, log_instance=None`
+  - Automatically sanitizes messages for ASCII compatibility
+  - Examples:
+    - `print_to("Summary:", to_log=True, to_simple=True, to_console=True, log_instance=agent)`
+    - `print_to("Debug info", to_log=True, log_instance=agent)`
+    - `print_to("User prompt", to_console=True)`
+- **simple_print()** - Backward compatibility wrapper for print_to()
+  - Original function deprecated but maintained for backward compatibility
+  - Now calls print_to() internally
+- **OutlookSecurityAgent.log_print()** - Instance method for logging
+  - Writes to OUTLOOK_SECURITY_LOG via Python logging module
+  - Handles message sanitization and encoding errors
 
 ## Processing Flow
 

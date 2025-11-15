@@ -169,13 +169,65 @@ DAYS_BACK_DEFAULT = 365 # default number of days to go back in the calendar
 CRLF = "\n"             # Carriage return and line feed for formatting
 
 
+# DEPRECATED: Old simple_print function - replaced by print_to
+# def simple_print(message):
+#     r"""Print message to a file or stdout based on OUTLOOK_SIMPLE_LOG"""
+#     if OUTLOOK_SIMPLE_LOG:
+#         with open(OUTLOOK_SIMPLE_LOG, 'a') as f:
+#             f.write(message + '\n')
+#     else: #write to the console
+#         print(message)
+
+def print_to(message, to_log=False, to_simple=False, to_console=False, log_instance=None):
+    """
+    Print message to multiple destinations based on parameters.
+    
+    Args:
+        message (str): Message to print
+        to_log (bool): If True, write to debug/info log via log_print method
+        to_simple (bool): If True, write to simple log file (OUTLOOK_SIMPLE_LOG)
+        to_console (bool): If True, write to console (stdout)
+        log_instance: Instance of OutlookSecurityAgent for accessing log_print method
+    
+    Example:
+        print_to("Processing email...", to_log=True, to_simple=True, to_console=True, log_instance=agent)
+        print_to("User message", to_console=True)
+    """
+    # Sanitize message for logging
+    try:
+        sanitized_message = re.sub(r'[^\x00-\x7F]+', '', message)
+    except (TypeError, AttributeError):
+        sanitized_message = str(message)
+    
+    # Write to logging module via log_print method
+    if to_log and log_instance:
+        try:
+            log_instance.log_print(sanitized_message)
+        except Exception as e:
+            # Fallback if logging fails
+            if to_console:
+                print(f"Logging error: {str(e)}")
+    
+    # Write to simple log file
+    if to_simple and OUTLOOK_SIMPLE_LOG:
+        try:
+            with open(OUTLOOK_SIMPLE_LOG, 'a') as f:
+                f.write(sanitized_message + '\n')
+        except Exception as e:
+            if to_console:
+                print(f"Simple log write error: {str(e)}")
+    
+    # Write to console
+    if to_console:
+        print(sanitized_message)
+
+# Backward compatibility wrapper - maintains existing simple_print behavior
 def simple_print(message):
-    r"""Print message to a file or stdout based on OUTLOOK_SIMPLE_LOG"""
+    """Backward compatibility wrapper for simple_print - uses print_to"""
     if OUTLOOK_SIMPLE_LOG:
-        with open(OUTLOOK_SIMPLE_LOG, 'a') as f:
-            f.write(message + '\n')
-    else: #write to the console
-        print(message)
+        print_to(message, to_simple=True)
+    else:
+        print_to(message, to_console=True)
 
 class OutlookSecurityAgent:
     def __init__(self, email_address=EMAIL_ADDRESS, folder_names=EMAIL_BULK_FOLDER_NAMES, debug_mode=DEBUG, test_mode=False):
@@ -2917,18 +2969,19 @@ class OutlookSecurityAgent:
                         self.log_print(f"Second-pass: Error processing email: {str(e)}")
                 
                 # Log second-pass summary
-                self.log_print(f"\nSecond-pass Processing Summary:")
-                simple_print  (f"\nSecond-pass Processing Summary:")
-                print         (f"\nSecond-pass Processing Summary:")
-                self.log_print(f"Second-pass processed {second_pass_processed:>3} emails")
-                simple_print  (f"Second-pass processed {second_pass_processed:>3} emails")
-                print         (f"Second-pass processed {second_pass_processed:>3} emails")
-                self.log_print(f"Second-pass flagged   {second_pass_flagged:>3} emails as possible Phishing attempts")
-                simple_print  (f"Second-pass flagged   {second_pass_flagged:>3} emails as possible Phishing attempts")
-                print         (f"Second-pass flagged   {second_pass_flagged:>3} emails as possible Phishing attempts")
-                self.log_print(f"Second-pass deleted   {second_pass_deleted:>3} emails")
-                simple_print  (f"Second-pass deleted   {second_pass_deleted:>3} emails")
-                print         (f"Second-pass deleted   {second_pass_deleted:>3} emails")
+                # self.log_print(f"\nSecond-pass Processing Summary:")
+                # simple_print  (f"\nSecond-pass Processing Summary:")
+                # print         (f"\nSecond-pass Processing Summary:")
+                print_to(f"\nSecond-pass Processing Summary:", to_log=True, to_simple=True, to_console=True, log_instance=self)
+                # self.log_print(f"Second-pass processed {second_pass_processed:>3} emails")")
+                # print         (f"Second-pass processed {second_pass_processed:>3} emails")
+                print_to(f"Second-pass processed {second_pass_processed:>3} emails", to_log=True, to_simple=True, to_console=True, log_instance=self)
+                # self.log_print(f"Second-pass flagged   {second_pass_flagged:>3} emails as possible Phishing attempts")")
+                # print         (f"Second-pass flagged   {second_pass_flagged:>3} emails as possible Phishing attempts")
+                print_to(f"Second-pass flagged   {second_pass_flagged:>3} emails as possible Phishing attempts", to_log=True, to_simple=True, to_console=True, log_instance=self)
+                # self.log_print(f"Second-pass deleted   {second_pass_deleted:>3} emails")")
+                # print         (f"Second-pass deleted   {second_pass_deleted:>3} emails")
+                print_to(f"Second-pass deleted   {second_pass_deleted:>3} emails", to_log=True, to_simple=True, to_console=True, log_instance=self)
 
                 # Update total counts to include second-pass results
                 processed_count += second_pass_processed
@@ -2938,18 +2991,20 @@ class OutlookSecurityAgent:
                 self.log_print(f"Second-pass: No emails found for reprocessing")
                 simple_print(f"Second-pass: No emails found for reprocessing")
 
-            self.log_print(f"\nFinal Processing Summary (including second-pass):")
-            simple_print  (f"\nFinal Processing Summary (including second-pass):")
-            print         (f"\nFinal Processing Summary (including second-pass):")
-            self.log_print(f"Total processed {processed_count:>3} emails")
-            simple_print  (f"Total processed {processed_count:>3} emails")
-            print         (f"Total processed {processed_count:>3} emails")
-            self.log_print(f"Total flagged   {flagged_count:>3} emails as possible Phishing attempts")
-            simple_print  (f"Total flagged   {flagged_count:>3} emails as possible Phishing attempts")
-            print         (f"Total flagged   {flagged_count:>3} emails as possible Phishing attempts")
-            self.log_print(f"Total deleted   {deleted_total:>3} emails")
-            simple_print  (f"Total deleted   {deleted_total:>3} emails")
-            print         (f"Total deleted   {deleted_total:>3} emails")
+            # self.log_print(f"\nFinal Processing Summary (including second-pass):")
+            # simple_print  (f"\nFinal Processing Summary (including second-pass):")
+            # print         (f"\nFinal Processing Summary (including second-pass):")
+            print_to(f"\nFinal Processing Summary (including second-pass):", to_log=True, to_simple=True, to_console=True, log_instance=self)
+            # simple_print  (f"Total processed {processed_count:>3} emails")
+            # print         (f"Total processed {processed_count:>3} emails")
+            print_to(f"Total processed {processed_count:>3} emails", to_log=True, to_simple=True, to_console=True, log_instance=self)
+            # self.log_print(f"Total flagged   {flagged_count:>3} emails as possible Phishing attempts")")
+            # print         (f"Total flagged   {flagged_count:>3} emails as possible Phishing attempts")
+            print_to(f"Total flagged   {flagged_count:>3} emails as possible Phishing attempts", to_log=True, to_simple=True, to_console=True, log_instance=self)
+            # self.log_print(f"Total deleted   {deleted_total:>3} emails")
+            # simple_print  (f"Total deleted   {deleted_total:>3} emails")
+            # print         (f"Total deleted   {deleted_total:>3} emails")
+            print_to(f"Total deleted   {deleted_total:>3} emails", to_log=True, to_simple=True, to_console=True, log_instance=self)
             self.log_print(f"END of Run =============================================================\n\n")
 
         except Exception as e:
@@ -2984,15 +3039,16 @@ def main():
 
     try:
 
-        agent.log_print(f"\n=============================================================")
-        simple_print   (f"\n=============================================================")
-        agent.log_print(f"Starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")
-        simple_print   (f"starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")
-        print          (f"starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")
-        agent.log_print(f"This will make changes")
-        simple_print   (f"This will make changes")
-        agent.log_print(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")
-        simple_print   (f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")
+        # agent.log_print(f"\n=============================================================")
+        # simple_print   (f"\n=============================================================")
+        print_to(f"\n=============================================================", to_log=True, to_simple=True, log_instance=agent)
+        # agent.log_print(f"Starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")")
+        # print          (f"starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")
+        print_to(f"Starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}", to_log=True, to_simple=True, to_console=True, log_instance=agent)
+        # agent.log_print(f"This will make changes")")
+        print_to(f"This will make changes", to_log=True, to_simple=True, log_instance=agent)
+        # agent.log_print(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")")
+        print_to(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information", to_log=True, to_simple=True, log_instance=agent)
 
         # DEPRECATED 11/10/2025: Conversion utilities removed. Kept for reference only.
         # if getattr(args, 'convert_safe_senders_to_regex', False):
