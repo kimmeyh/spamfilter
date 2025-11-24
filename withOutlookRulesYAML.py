@@ -169,15 +169,6 @@ DAYS_BACK_DEFAULT = 365 # default number of days to go back in the calendar
 CRLF = "\n"             # Carriage return and line feed for formatting
 
 
-# DEPRECATED: Old simple_print function - replaced by print_to
-# def simple_print(message):
-#     r"""Print message to a file or stdout based on OUTLOOK_SIMPLE_LOG"""
-#     if OUTLOOK_SIMPLE_LOG:
-#         with open(OUTLOOK_SIMPLE_LOG, 'a') as f:
-#             f.write(message + '\n')
-#     else: #write to the console
-#         print(message)
-
 def print_to(message, to_log=False, to_simple=False, to_console=False, log_instance=None):
     """
     Print message to multiple destinations based on parameters.
