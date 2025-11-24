@@ -1,4 +1,5 @@
 'safe_senders':
+- '@insightfinancialassociates.com'
 - '^19scottsharp@gmail\.com$'
 - '^2163579227@tmomail\.net$'
 - '^2163579229@tmomail\.net$'
@@ -69,6 +70,7 @@
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*circuitoftheamericas\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*cisco\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*citi\.com$'
+- '^[^@\s]+@(?:[a-z0-9-]+\.)*clevnet\.org$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*clientportal\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*computerworld\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*conexus\.com$'
@@ -276,6 +278,7 @@
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*udemymail\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*uhhospitals\.org$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*underarmour\.com$'
+- '^[^@\s]+@(?:[a-z0-9-]+\.)*unicity\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*united\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*usa\.experian\.com$'
 - '^[^@\s]+@(?:[a-z0-9-]+\.)*usacsbill\.com$'

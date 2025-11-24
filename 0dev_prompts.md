@@ -1,7 +1,13 @@
 Next:
 @workspace use 'memory-bank/*' to understand the workspace 
 
+Would like your help planning to make this into a phone app (first android, then iPhone - but open to reasons for reverse)
+Need it to work with most phone/web-based email accounts:  aol, gmail, yahoo, hotmail, protomail
+What other email providers should I consider.
 
+Can you help draft a high-level plan that I can use.
+It should start with an MVP (minimal viable product) based on the existing app, and AOL mail while considering the other mail clients for architecture and setup purposes.
+The code for the application will be in a new code repository (not OutlookMailSpamFilter)
 
 Can you help draft the code for review in the files
 Any code that should be removed should be commented out and not deleted.
