@@ -2969,18 +2969,10 @@ class OutlookSecurityAgent:
                         self.log_print(f"Second-pass: Error processing email: {str(e)}")
                 
                 # Log second-pass summary
-                # self.log_print(f"\nSecond-pass Processing Summary:")
-                # simple_print  (f"\nSecond-pass Processing Summary:")
-                # print         (f"\nSecond-pass Processing Summary:")
+
                 print_to(f"\nSecond-pass Processing Summary:", to_log=True, to_simple=True, to_console=True, log_instance=self)
-                # self.log_print(f"Second-pass processed {second_pass_processed:>3} emails")")
-                # print         (f"Second-pass processed {second_pass_processed:>3} emails")
                 print_to(f"Second-pass processed {second_pass_processed:>3} emails", to_log=True, to_simple=True, to_console=True, log_instance=self)
-                # self.log_print(f"Second-pass flagged   {second_pass_flagged:>3} emails as possible Phishing attempts")")
-                # print         (f"Second-pass flagged   {second_pass_flagged:>3} emails as possible Phishing attempts")
                 print_to(f"Second-pass flagged   {second_pass_flagged:>3} emails as possible Phishing attempts", to_log=True, to_simple=True, to_console=True, log_instance=self)
-                # self.log_print(f"Second-pass deleted   {second_pass_deleted:>3} emails")")
-                # print         (f"Second-pass deleted   {second_pass_deleted:>3} emails")
                 print_to(f"Second-pass deleted   {second_pass_deleted:>3} emails", to_log=True, to_simple=True, to_console=True, log_instance=self)
 
                 # Update total counts to include second-pass results
@@ -2991,19 +2983,9 @@ class OutlookSecurityAgent:
                 self.log_print(f"Second-pass: No emails found for reprocessing")
                 simple_print(f"Second-pass: No emails found for reprocessing")
 
-            # self.log_print(f"\nFinal Processing Summary (including second-pass):")
-            # simple_print  (f"\nFinal Processing Summary (including second-pass):")
-            # print         (f"\nFinal Processing Summary (including second-pass):")
             print_to(f"\nFinal Processing Summary (including second-pass):", to_log=True, to_simple=True, to_console=True, log_instance=self)
-            # simple_print  (f"Total processed {processed_count:>3} emails")
-            # print         (f"Total processed {processed_count:>3} emails")
             print_to(f"Total processed {processed_count:>3} emails", to_log=True, to_simple=True, to_console=True, log_instance=self)
-            # self.log_print(f"Total flagged   {flagged_count:>3} emails as possible Phishing attempts")")
-            # print         (f"Total flagged   {flagged_count:>3} emails as possible Phishing attempts")
             print_to(f"Total flagged   {flagged_count:>3} emails as possible Phishing attempts", to_log=True, to_simple=True, to_console=True, log_instance=self)
-            # self.log_print(f"Total deleted   {deleted_total:>3} emails")
-            # simple_print  (f"Total deleted   {deleted_total:>3} emails")
-            # print         (f"Total deleted   {deleted_total:>3} emails")
             print_to(f"Total deleted   {deleted_total:>3} emails", to_log=True, to_simple=True, to_console=True, log_instance=self)
             self.log_print(f"END of Run =============================================================\n\n")
 
@@ -3039,24 +3021,14 @@ def main():
 
     try:
 
-        # agent.log_print(f"\n=============================================================")
-        # simple_print   (f"\n=============================================================")
-        print_to(f"\n=============================================================", to_log=True, to_simple=True, log_instance=agent)
-        # agent.log_print(f"Starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")")
-        # print          (f"starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")
-        print_to(f"Starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}", to_log=True, to_simple=True, to_console=True, log_instance=agent)
-        # agent.log_print(f"This will make changes")")
-        print_to(f"This will make changes", to_log=True, to_simple=True, log_instance=agent)
-        # agent.log_print(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")")
-        print_to(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information", to_log=True, to_simple=True, log_instance=agent)
-
-        # DEPRECATED 11/10/2025: Conversion utilities removed. Kept for reference only.
-        # if getattr(args, 'convert_safe_senders_to_regex', False):
-        #     agent.convert_safe_senders_yaml_to_regex()
-        #     return
-        # if getattr(args, 'convert_rules_to_regex', False):
-        #     agent.convert_rules_yaml_to_regex()
-        #     return
+        print_to(f"\n=============================================================", 
+                 to_log=True, to_simple=True, log_instance=agent)
+        print_to(f"Starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}", 
+                 to_log=True, to_simple=True, to_console=True, log_instance=agent)
+        print_to(f"This will make changes", 
+                 to_log=True, to_simple=True, log_instance=agent)
+        print_to(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information", 
+                 to_log=True, to_simple=True, log_instance=agent)
 
         # Always use regex mode now
         effective_use_regex_files = True
@@ -3079,10 +3051,10 @@ def main():
 
         agent.export_safe_senders_to_yaml(safe_senders)  # defaults to agent.active_safe_senders_file
 
-        simple_print(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}")
-        simple_print(f"=============================================================\n")
-        agent.log_print(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}")
-        agent.log_print(f"============================================================={CRLF}{CRLF}")
+        print_to(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}", 
+                 to_log=True, to_simple=True, to_console=True, log_instance=agent)
+        print_to(f"=============================================================\n", 
+                 to_log=True, to_simple=True, to_console=True, log_instance=agent)
 
     except Exception as e:
         simple_print(f"\nError: {str(e)}")
