@@ -23,11 +23,13 @@ cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 &
 ### Active Flags
 - `-u`, `--update_rules` - Enable interactive prompts to add header regexes or safe senders during processing
 
-### Deprecated Flags (Removed)
-- ~~`--use-regex-files`~~ - DEPRECATED 11/10/2025: Regex is now the only mode with consolidated filenames
-- ~~`--use-legacy-files`~~ - DEPRECATED 10/14/2025: Legacy wildcard mode removed
-- ~~`--convert-rules-to-regex`~~ - DEPRECATED 11/10/2025: Conversion utilities no longer needed
-- ~~`--convert-safe-senders-to-regex`~~ - DEPRECATED 11/10/2025: Conversion utilities no longer needed
+### Deprecated Flags (Removed from parser 11/10/2025)
+- ~~`--use-regex-files`~~ — Ignored if present; regex mode is always on
+- ~~`--convert-rules-to-regex`~~ — Ignored if present; conversion utilities removed
+- ~~`--convert-safe-senders-to-regex`~~ — Ignored if present; conversion utilities removed
+- ~~`--use-legacy-files`~~ — DEPRECATED 10/14/2025: Legacy wildcard mode removed
+
+**Note:** The application strips deprecated flags from argv and prints a warning to maintain backward compatibility.
 
 ## Interactive Update Options (-u flag)
 

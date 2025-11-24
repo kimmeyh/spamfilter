@@ -6,6 +6,15 @@ Automated Python-based email spam and phishing filter for Microsoft Outlook that
 
 This tool provides intelligent filtering and removal of SPAM and phishing emails from Outlook accounts using pattern-based rules and safe sender management. The system processes emails from configurable folder lists and applies comprehensive filtering criteria including header analysis, body content scanning, subject pattern matching, and sender verification.
 
+## Recent Updates (November 2025)
+
+- ✅ **Unified print_to() function (11/15/2025)**: Consolidated output functionality
+  - New `print_to()` function replaces multiple concurrent calls to log_print(), simple_print(), and print()
+  - Supports flexible output to any combination of: debug log, simple log, and console
+  - Automatically handles message sanitization for ASCII compatibility
+  - Backward-compatible: old simple_print() calls still work via wrapper function
+  - Reduces code duplication in summary reporting sections
+
 ## Recent Updates (October 2025)
 
 - ✅ **Consolidated YAML filenames (10/18/2025)**: Simplified to single filenames now that regex is the only mode
@@ -90,10 +99,10 @@ Historical files (deprecated):
 ## CLI Flags
 
 - `-u`, `--update_rules`: enable interactive prompts to add header regexes or safe senders during processing
-- ~~`--use-regex-files`~~: **DEPRECATED 10/18/2025** - regex is now the only mode, uses consolidated filenames
+- ~~`--use-regex-files`~~: **DEPRECATED and removed from CLI (11/10/2025)** - Regex mode is always on. If provided, it is ignored with a warning.
+- ~~`--convert-rules-to-regex`~~: **DEPRECATED and removed from CLI (11/10/2025)** - Conversion utilities were retired. If provided, it is ignored with a warning.
+- ~~`--convert-safe-senders-to-regex`~~: **DEPRECATED and removed from CLI (11/10/2025)** - Conversion utilities were retired. If provided, it is ignored with a warning.
 - ~~`--use-legacy-files`~~: **DEPRECATED 10/14/2025** - legacy YAML files are no longer supported
-- ~~`--convert-rules-to-regex`~~: **DEPRECATED 10/18/2025** - conversion utilities no longer needed
-- ~~`--convert-safe-senders-to-regex`~~: **DEPRECATED 10/18/2025** - conversion utilities no longer needed
 
 ## Testing
 
@@ -114,6 +123,47 @@ Test files include:
 - `test_folder_list_changes.py` - Multi-folder configuration tests
 - `test_import_compatibility.py` - Import compatibility validation
 - `test_second_pass_implementation.py` - Second-pass processing tests
+
+## Logging and Output Functions
+
+The application provides flexible output functions for different logging needs:
+
+### print_to()
+Unified output function that can write to multiple destinations simultaneously:
+```python
+print_to(message, to_log=False, to_simple=False, to_console=False, log_instance=None)
+```
+
+**Parameters:**
+- `message` (str): Message to output
+- `to_log` (bool): Write to debug/info log via OutlookSecurityAgent.log_print()
+- `to_simple` (bool): Write to simple log file (OUTLOOK_SIMPLE_LOG)
+- `to_console` (bool): Write to console (stdout)
+- `log_instance`: Instance of OutlookSecurityAgent (required if to_log=True)
+
+**Usage Examples:**
+```python
+# Write to all three destinations (common for important summaries)
+print_to("Processing complete", to_log=True, to_simple=True, to_console=True, log_instance=agent)
+
+# Console only (for user prompts)
+print_to("Enter choice: ", to_console=True)
+
+# Detailed logging only
+print_to("Debug info", to_log=True, log_instance=agent)
+```
+
+### simple_print()
+Backward compatibility wrapper maintained for existing code:
+```python
+simple_print(message)  # Writes to simple log or console based on OUTLOOK_SIMPLE_LOG
+```
+
+### OutlookSecurityAgent.log_print()
+Instance method for detailed logging with automatic sanitization:
+```python
+agent.log_print(message, level="INFO")  # Writes to OUTLOOK_SECURITY_LOG
+```
 
 ## Dependencies
 

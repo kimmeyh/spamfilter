@@ -169,13 +169,56 @@ DAYS_BACK_DEFAULT = 365 # default number of days to go back in the calendar
 CRLF = "\n"             # Carriage return and line feed for formatting
 
 
+def print_to(message, to_log=False, to_simple=False, to_console=False, log_instance=None):
+    """
+    Print message to multiple destinations based on parameters.
+    
+    Args:
+        message (str): Message to print
+        to_log (bool): If True, write to debug/info log via log_print method
+        to_simple (bool): If True, write to simple log file (OUTLOOK_SIMPLE_LOG)
+        to_console (bool): If True, write to console (stdout)
+        log_instance: Instance of OutlookSecurityAgent for accessing log_print method
+    
+    Example:
+        print_to("Processing email...", to_log=True, to_simple=True, to_console=True, log_instance=agent)
+        print_to("User message", to_console=True)
+    """
+    # Sanitize message for logging
+    try:
+        sanitized_message = re.sub(r'[^\x00-\x7F]+', '', message)
+    except (TypeError, AttributeError):
+        sanitized_message = str(message)
+    
+    # Write to logging module via log_print method
+    if to_log and log_instance:
+        try:
+            log_instance.log_print(sanitized_message)
+        except Exception as e:
+            # Fallback if logging fails
+            if to_console:
+                print(f"Logging error: {str(e)}")
+    
+    # Write to simple log file
+    if to_simple and OUTLOOK_SIMPLE_LOG:
+        try:
+            with open(OUTLOOK_SIMPLE_LOG, 'a') as f:
+                f.write(sanitized_message + '\n')
+        except Exception as e:
+            if to_console:
+                print(f"Simple log write error: {str(e)}")
+    
+    # Write to console
+    if to_console:
+        print(sanitized_message)
+
+# Backward compatibility wrapper - maintains existing simple_print behavior
 def simple_print(message):
-    r"""Print message to a file or stdout based on OUTLOOK_SIMPLE_LOG"""
+    """Backward compatibility wrapper for simple_print - uses print_to"""
     if OUTLOOK_SIMPLE_LOG:
-        with open(OUTLOOK_SIMPLE_LOG, 'a') as f:
-            f.write(message + '\n')
-    else: #write to the console
-        print(message)
+        print_to(message, to_simple=True)
+    else:
+        print_to(message, to_console=True)
 
 class OutlookSecurityAgent:
     def __init__(self, email_address=EMAIL_ADDRESS, folder_names=EMAIL_BULK_FOLDER_NAMES, debug_mode=DEBUG, test_mode=False):
@@ -278,8 +321,8 @@ class OutlookSecurityAgent:
           - matches [a-z0-9-]+
 
         Example desired behavior:
-            Description of desired outcome: '@<any sub-domain>.<any-subdomain...>.<specific sub-domain, ex "yglic">.<any sub-domain>.<any-subdomain...>.<any top-level domain>" 
-                          should result in: '@(?:[a-z0-9-]+\.)*ygllc\.[a-z0-9.-]+$'
+            Description of desired outcome: '@<any sub-domain>.<any-subdomain...>.<specific sub-domain, ex "google">.<any sub-domain>.<any-subdomain...>.<any top-level domain>" 
+                          should result in: '@(?:[a-z0-9-]+\.)*google\.[a-z0-9.-]+$'
         """
         s = (addr_or_domain or '').strip().lower()
 
@@ -413,7 +456,7 @@ class OutlookSecurityAgent:
             # Build document structure compatible with export
             out_doc = {"safe_senders": converted}
 
-            # Reuse export to normalize (lowercase, dedupe, sort) and back up, writing to dest_file
+            # Reuse export to normalize (lowercase, deduplicate, sort) and back up, writing to dest_file
             ok = self.export_safe_senders_to_yaml(out_doc, rules_file=dest_file)
             if ok:
                 self.log_print(f"Converted {len(converted)} safe_senders to regex and wrote {dest_file}")
@@ -2917,16 +2960,12 @@ class OutlookSecurityAgent:
                         self.log_print(f"Second-pass: Error processing email: {str(e)}")
                 
                 # Log second-pass summary
-                self.log_print(f"\nSecond-pass Processing Summary:")
-                self.log_print(f"Second-pass processed {second_pass_processed} emails")
-                self.log_print(f"Second-pass flagged {second_pass_flagged} emails as possible Phishing attempts")
-                self.log_print(f"Second-pass deleted {second_pass_deleted} emails")
-                
-                simple_print(f"\nSecond-pass Processing Summary:")
-                simple_print(f"Second-pass processed {second_pass_processed} emails")
-                simple_print(f"Second-pass flagged {second_pass_flagged} emails as possible Phishing attempts")
-                simple_print(f"Second-pass deleted {second_pass_deleted} emails")
-                
+
+                print_to(f"\nSecond-pass Processing Summary:", to_log=True, to_simple=True, to_console=True, log_instance=self)
+                print_to(f"Second-pass processed {second_pass_processed:>3} emails", to_log=True, to_simple=True, to_console=True, log_instance=self)
+                print_to(f"Second-pass flagged   {second_pass_flagged:>3} emails as possible Phishing attempts", to_log=True, to_simple=True, to_console=True, log_instance=self)
+                print_to(f"Second-pass deleted   {second_pass_deleted:>3} emails", to_log=True, to_simple=True, to_console=True, log_instance=self)
+
                 # Update total counts to include second-pass results
                 processed_count += second_pass_processed
                 deleted_total += second_pass_deleted
@@ -2935,16 +2974,11 @@ class OutlookSecurityAgent:
                 self.log_print(f"Second-pass: No emails found for reprocessing")
                 simple_print(f"Second-pass: No emails found for reprocessing")
 
-            self.log_print(f"\nFinal Processing Summary (including second-pass):")
-            self.log_print(f"Total processed {processed_count} emails")
-            self.log_print(f"Total flagged {flagged_count} emails as possible Phishing attempts")
-            self.log_print(f"Total deleted {deleted_total} emails")
+            print_to(f"\nFinal Processing Summary (including second-pass):", to_log=True, to_simple=True, to_console=True, log_instance=self)
+            print_to(f"Total processed {processed_count:>3} emails", to_log=True, to_simple=True, to_console=True, log_instance=self)
+            print_to(f"Total flagged   {flagged_count:>3} emails as possible Phishing attempts", to_log=True, to_simple=True, to_console=True, log_instance=self)
+            print_to(f"Total deleted   {deleted_total:>3} emails", to_log=True, to_simple=True, to_console=True, log_instance=self)
             self.log_print(f"END of Run =============================================================\n\n")
-
-            simple_print(f"\nProcessing Summary:")
-            simple_print(f"Processed {processed_count} emails")
-            simple_print(f"Flagged {flagged_count} emails as possible Phishing attempts")
-            simple_print(f"Deleted {deleted_total} emails")
 
         except Exception as e:
             self.log_print(f"Error in process_emails: {str(e)}")
@@ -2952,7 +2986,7 @@ class OutlookSecurityAgent:
 
 
 
-# Main program execution
+# Main program execution --------------------------------------------------------
 def main():
     """Main function to run the security agent"""
     
@@ -2960,12 +2994,16 @@ def main():
     parser = argparse.ArgumentParser(description='Outlook Mail Spam Filter')
     parser.add_argument('-u', '--update_rules', action='store_true', 
                        help='Enable interactive rule updates (default: disabled)')
-    parser.add_argument('--use-regex-files', action='store_true',
-                       help='Load regex variants of YAML files (rulesregex.yaml and rules_safe_sendersregex.yaml). Default: ON')
-    parser.add_argument('--convert-safe-senders-to-regex', action='store_true',
-                        help='Convert rules_safe_senders.yaml to rules_safe_sendersregex.yaml and exit')
-    parser.add_argument('--convert-rules-to-regex', action='store_true',
-                        help='Convert rules.yaml to rulesregex.yaml and exit')
+    
+    # Backward-compat shim: ignore removed flags if present on CLI to prevent argparse errors
+    removed_cli_flags = ['--use-regex-files', '--convert-safe-senders-to-regex', '--convert-rules-to-regex']
+    for _flag in list(removed_cli_flags):
+        if _flag in sys.argv:
+            print(f"Warning: {_flag} is deprecated and ignored. Regex mode is always on; conversion utilities are removed.")
+            try:
+                sys.argv.remove(_flag)
+            except ValueError:
+                pass
     
     args = parser.parse_args()
 
@@ -2973,22 +3011,15 @@ def main():
     agent = OutlookSecurityAgent()  # setup for calling functions in class OutlookSecurityAgent
 
     try:
-        simple_print(f"\n=============================================================")
-        simple_print(f"Starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")
-        simple_print(f"This will make changes")
-        simple_print(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")
-        agent.log_print(f"\n=============================================================")
-        agent.log_print(f"Starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}")
-        agent.log_print(f"This will make changes")
-        agent.log_print(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information")
 
-        # Optional one-shot conversion and exit
-        if args.convert_safe_senders_to_regex:
-            agent.convert_safe_senders_yaml_to_regex()
-            return
-        if args.convert_rules_to_regex:
-            agent.convert_rules_yaml_to_regex()
-            return
+        print_to(f"\n=============================================================", 
+                 to_log=True, to_simple=True, log_instance=agent)
+        print_to(f"Starting Outlook Security Agent at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}", 
+                 to_log=True, to_simple=True, to_console=True, log_instance=agent)
+        print_to(f"This will make changes", 
+                 to_log=True, to_simple=True, log_instance=agent)
+        print_to(f"Check the {OUTLOOK_SECURITY_LOG} for detailed information", 
+                 to_log=True, to_simple=True, log_instance=agent)
 
         # Always use regex mode now
         effective_use_regex_files = True
@@ -3011,10 +3042,10 @@ def main():
 
         agent.export_safe_senders_to_yaml(safe_senders)  # defaults to agent.active_safe_senders_file
 
-        simple_print(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}")
-        simple_print(f"=============================================================\n")
-        agent.log_print(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}")
-        agent.log_print(f"============================================================={CRLF}{CRLF}")
+        print_to(f"Execution complete at {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}. Check the log file for detailed analysis:\n{OUTLOOK_SECURITY_LOG}", 
+                 to_log=True, to_simple=True, to_console=True, log_instance=agent)
+        print_to(f"=============================================================\n", 
+                 to_log=True, to_simple=True, to_console=True, log_instance=agent)
 
     except Exception as e:
         simple_print(f"\nError: {str(e)}")

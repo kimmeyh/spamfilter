@@ -1,11 +1,20 @@
 Next:
 @workspace use 'memory-bank/*' to understand the workspace 
 
+Would like your help planning to make this into a phone app (first android, then iPhone - but open to reasons for reverse)
+Need it to work with most phone/web-based email accounts:  aol, gmail, yahoo, hotmail, protomail
+What other email providers should I consider.
+
+Can you help draft a high-level plan that I can use.
+It should start with an MVP (minimal viable product) based on the existing app, and AOL mail while considering the other mail clients for architecture and setup purposes.
+The code for the application will be in a new code repository (not OutlookMailSpamFilter)
 
 Can you help draft the code for review in the files
 Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.  Do not update 0dev_prompts.md
 When complete, update the memory-bank/* files and README.md
+
+------------------------------------------------------------------------------
 
 Assigned to Copilot:
 
@@ -18,8 +27,7 @@ Any code that should be removed should be commented out and not deleted.
 Do not remove any commented out code.  Do not update 0dev_prompts.md
 When complete, update the memory-bank/* files and README.md
 
-----------
-
+------------------------------------------------------------------------------
 
 create an optional YAML config files for all the major global variables.  List:
 EMAIL_BULK_FOLDER_NAMES # list of folders - example ["Bulk Mail", "bulk"] 
@@ -60,6 +68,9 @@ cd D:\Data\Harold\github\OutlookMailSpamFilter && ./.venv/Scripts/Activate.ps1 &
 ------------------------------------------------------------------------------
 Completed:
 
+Can you help the better solution, but call it print_to and then add parameters for the different places it should print to:  log, simple, console...
+can you update the code to add the method and update any place that currently uses more than one prints (log_print, simple_print, print) to use the new method.
+
 can you help rename rulesregex.yaml back to rules.yaml and rules_safe_sendersregex.yaml back to rules_safe_senders.yaml, updating code and files as needed
 
 The spam filtering is working as expected, except during the user input. For example, if the user enters "d" to add the domain rule, it should add that rule so that any future occurrences of that domain are filtered before input is requested.  Same for "sd".  Can you help
@@ -86,7 +97,7 @@ It does not appear to be using either the rulesregex.yaml or rules_safe_sendersr
 CLI content or it is not using the same logic on the second pass for processing regex patterns
 Can you check and identify why this is happening?
 
-Just ran 'withOutlookRulesYAM.py' and it did not match the following from address to regex in rulesregxx.yaml 
+Just ran 'withOutlookRulesYAM.py' and it did not match the following from address to regex in rulesregex.yaml 
 Can you help me understand why and fix so that it does
 
 Can you help me guide me on the order for doing the following upgrade to the withOutlookRulesYAM.py:
@@ -95,7 +106,7 @@ Can you help me guide me on the order for doing the following upgrade to the wit
 - convert the processing in 'withOutlookRulesYAM.py'of the rules.yaml rules so that it now expects regex strings as input and processing the rules as regex strings.
 - convert the processing in 'withOutlookRulesYAM.py'of the rules_safe_senders.yaml rules so that it now expects regex strings as input and processing the rules as regex strings.
 - for intermediate/small adjustments may want to add the rules as new files (with _regex) at the end of the filenames and an option to use either the current or _regex version of the files/processing in order to incrementally test changes.
-- provide pytests to insure all changes are working as expected.
+- provide pytest tests to insure all changes are working as expected.
 - provide a way to back out changes to the current working version if changes do not work as expected
 
 Can you help me add an input parameter, -update_rules or -u, to toggle if prompt_update_rules is called.  it should default to not call prompt_update_rules
